@@ -302,6 +302,54 @@ For dynamic resolution (when the route name is not known at compile time), use t
 
 ---
 
+## VersionedRouter / `reinhardt-router` crate (rc.27+)
+
+Since v0.1.0-rc.27, the `VersionedRouter` trait and the `RouteVersionInfo`
+value type live in their own published crate, **`reinhardt-router`**, which
+sits below `reinhardt-urls` in the dependency graph. This was extracted to
+break the previous `reinhardt-urls` ↔ `reinhardt-rest` circular dependency
+that had forced two `_stub` placeholders inside `reinhardt-rest::versioning`.
+
+### What it gives you
+
+- `DefaultRouter` and `SimpleRouter` (in `reinhardt-urls`) implement
+  `VersionedRouter`, exposing the registered routes' version metadata to
+  generic consumers.
+- `reinhardt-rest::versioning` now drives namespace-based versioning by
+  introspecting any `&impl VersionedRouter`, with the previously
+  `///ignore`-d doc examples now runnable.
+- A `cargo check` against `--target wasm32-unknown-unknown` keeps the trait
+  surface intact across native and WASM via the existing drift-detection
+  `const _: fn() = ...` block.
+
+### When you need it
+
+- Building tooling or middleware that needs to enumerate routes per version.
+- Feeding a custom `Versioning` implementation in `reinhardt-rest`.
+
+### When you do **not** need it
+
+- Standard route registration through `ServerRouter` / `UnifiedRouter`
+  continues to work unchanged. `Model::objects()` of routing — you only
+  reach for `VersionedRouter` when you want to introspect.
+
+### Out of scope (rc.29)
+
+`UnifiedRouter` does not yet implement `VersionedRouter` (~1.3 KLOC of
+unrelated code in a different module). Track upstream if your tooling
+needs it. (#4332)
+
+### Cross-target server-function stubs (rc.27+)
+
+`ServerRouterStub` (the WASM sibling of `ServerRouter`) gained a `server_fn`
+no-op stub so chains like `UnifiedRouter::new().server(|s|
+s.server_fn(marker))` compile on `wasm32-unknown-unknown` without
+`#[cfg(native)]` workarounds at the call site. The `#4185` drift-detection
+`const _` was extended to include `.server_fn(())` so future omissions are
+caught at WASM compile time. (#4263)
+
+---
+
 ## Duplicate Route Name Detection
 
 `UrlReverser::register()` returns `Result<(), DuplicateRouteError>` instead of `()`. `ServerRouter::register_all_routes()` collects all errors and reports them at startup. If two routes share the same `name`, the server will fail to start with a clear error message listing the conflicts.

@@ -537,3 +537,54 @@ let negotiator = ContentNegotiator::new();
 | Computed/derived fields | `SerializerMethodField` |
 | Non-model data (login, config) | Custom `Serializer` impl or `JsonSerializer` |
 | Simple serde round-trip | `JsonSerializer<T>` |
+
+---
+
+## ModelSerializer Meta Options (rc.23+ regression-fix)
+
+Since v0.1.0-rc.23, `ModelSerializer<M>::serialize` / `deserialize` /
+`validate` actually consult `MetaConfig` and the registered validators. In
+prior releases the public builder methods were accepted but the
+`Serializer` trait impl bypassed them entirely and fell through to a plain
+`serde_json` round-trip, so configured constraints were silently ignored —
+e.g. `password_hash` could leak despite `with_exclude`, and `id` could be
+overwritten despite `with_read_only_fields` (#3993, resolves #3992).
+
+### Honored Meta options
+
+| Builder method | Direction | Behavior (rc.23+) |
+|----------------|-----------|-------------------|
+| `.with_fields(Vec<String>)` | serialize + deserialize | Only the listed fields survive the round-trip. |
+| `.with_exclude(Vec<String>)` | serialize + deserialize | Listed keys are dropped from the output and stripped from input. |
+| `.with_read_only_fields(Vec<String>)` | deserialize | Listed keys are stripped from deserialize input (cannot be set by clients) but remain in serialize output. |
+| `.with_write_only_fields(Vec<String>)` | serialize | Listed keys are stripped from serialize output but accepted on deserialize input. |
+
+`.with_exclude` and `.with_fields` are mutually exclusive in practice;
+follow the existing MetaConfig precedence rules documented above.
+
+### Synchronous validators now run
+
+`ModelSerializer::validate` (sync) now executes any validators registered
+via the new `ModelLevelValidator<M>` trait and the
+`.with_model_validator(...)` builder. `validate_async` runs the sync
+`validate` first so registered sync validators fail-fast before any
+database round-trip.
+
+New public surface (non-breaking additions):
+
+- Trait: `ModelLevelValidator<M>`
+- Builder: `ModelSerializer::<M>::with_model_validator(...)`
+- `ValidatorConfig::validate` (sync) and
+  `ValidatorConfig::add_sync_model_validator`
+
+Validation failures surface as `SerializerError::Validation(...)`.
+
+### `WritableNestedSerializer::serialize`
+
+Previously emitted an output that silently ignored the parent. As of
+rc.23 it uses the same arena path as `NestedSerializer::serialize` and
+returns a complete parent JSON document. Nested *writes* still go through
+`extract_nested_data` — the synchronous trait API does not perform lazy
+loading; the caller drives the ORM.
+
+Source: kent8192/reinhardt-web (#3993), resolves #3992.

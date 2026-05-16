@@ -372,3 +372,55 @@ pub async fn get_user(Path(id): Path<i64>) -> ViewResult<Response> {
         .with_body(json::to_vec(&UserResponse::from(user))?))
 }
 ```
+
+## ModelViewSet / ReadOnlyModelViewSet (rc.23+)
+
+Since v0.1.0-rc.23, `ModelViewSet<M, S>` and `ReadOnlyModelViewSet<M, S>`
+actually execute database CRUD. In prior releases their `dispatch()` returned
+`json!([])` / `json!({})` placeholder responses for every verb regardless of
+ORM state, even though the surrounding `ModelViewSetHandler<T>` (with
+permissions, serializers, pagination, real DB I/O) already existed in the
+crate — it just was never wired into the public ViewSet types (#3991).
+
+The regression fix wires both `ModelViewSet::dispatch` and
+`ReadOnlyModelViewSet::dispatch` through `ModelViewSetHandler<M>`. A
+companion change to `GenericViewSet<T>::dispatch` replaces the bare
+`"Action not implemented"` error with a guidance message that points users
+at `ModelViewSet`, `ReadOnlyModelViewSet`, or a hand-written `impl ViewSet`.
+
+### Tightened trait bounds (breaking)
+
+`ModelViewSet<M, S>` and `ReadOnlyModelViewSet<M, S>` now require:
+
+- `M: Model + Serialize + DeserializeOwned + Clone + Send + Sync + 'static`
+  (previously only `M: Send + Sync`).
+- `S: Send + Sync + 'static` (previously only `Send + Sync`), so the
+  resulting ViewSet can flow through `ViewSetBuilder`.
+
+In practice these types were only meaningful with a real `Model`, so
+production call sites are unaffected. Tests or scaffolding that constructed
+`ModelViewSet::<(), ()>` must switch to a real `Model` type.
+
+### Wiring the database pool
+
+Configure the pool with the builder before mounting the ViewSet, otherwise
+the handler has nothing to dispatch against:
+
+```rust
+use reinhardt::views::viewsets::{DbBackend, ModelViewSet};
+
+let viewset = ModelViewSet::<Item, ItemSerializer>::new("items")
+    .with_pool(pool)
+    .with_db_backend(DbBackend::Postgres);
+```
+
+`ReadOnlyModelViewSet<M, S>` follows the same `.with_pool(...)
+.with_db_backend(...)` pattern but only exposes list/retrieve actions.
+
+### `GenericViewSet` error string change
+
+Tests that previously asserted exact-string equality on the
+`"Action not implemented"` error now need substring matching against the
+new guidance message.
+
+Source: kent8192/reinhardt-web (#3991), resolves #3985.
