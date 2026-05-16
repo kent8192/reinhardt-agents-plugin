@@ -55,7 +55,7 @@ For each migration task:
 
 - ALWAYS present the migration report to the user before making changes
 - NEVER modify code without user confirmation
-- For multi-version hops (e.g., rc.12 → rc.15), review each intermediate version's changes
+- For multi-version hops (e.g., rc.18 → rc.22), review each intermediate version's changes — see `references/upgrade-workflow.md` for the worked rc.18 → rc.22 example covering the rc.19 `urls/` directory move and the rc.22 `form!` `strip_arguments` migration
 - After all migrations, run `cargo check` and `cargo test` to verify
 - If `cargo check` fails after migration, diagnose and fix before proceeding
 
@@ -76,6 +76,12 @@ If migration fails or user wants to revert:
 
 On each invocation, read from source:
 1. `reinhardt/CHANGELOG.md` and `reinhardt/crates/*/CHANGELOG.md`
-2. `#[deprecated]` annotations in reinhardt source via Grep
-3. GitHub PR/Issue descriptions via `gh pr view` / `gh issue view`
-4. User's application code via Grep
+2. `reinhardt/announcements/v0.1.0-rc.N.md` — per-release Highlights, Breaking
+   Changes, and Related PRs (the announcement file is the canonical source for
+   migration recipes that go beyond a single CHANGELOG line)
+3. `#[deprecated]` annotations in reinhardt source via Grep
+4. GitHub PR/Issue descriptions via `gh pr view` / `gh issue view`
+5. GitHub discussions linked from announcement Breaking Changes via
+   `gh api repos/kent8192/reinhardt-web/discussions/<N>` (the `gh discussion`
+   subcommand is unavailable; use the REST API directly)
+6. User's application code via Grep

@@ -500,6 +500,36 @@ pub async fn get_users() -> Result<Vec<User>, ServerFnError> {
 | `endpoint` | `&str` | auto-generated | Custom endpoint path |
 | `codec` | `&str` | `"json"` | Serialization: `json`, `url`, `msgpack` |
 
+**`FromRequest` extractors as parameters (rc.18+):**
+
+Since rc.18, `#[server_fn]` accepts the same `FromRequest`-based extractors as
+`#[view]` handlers. The macro resolves them via `FromRequest::from_request`
+on the server side and excludes them from the WASM client's argument struct,
+so they do not appear in client-side call sites.
+
+```rust
+use reinhardt::pages::prelude::*;
+use reinhardt::http::{Json, Query, Path, Header, Cookie, Form, Body};
+use reinhardt::http::extractors::Validated;
+
+#[server_fn]
+pub async fn create_post(
+    title: String,                        // Sent from the client
+    body: String,                         // Sent from the client
+    Validated(payload): Validated<NewPostPayload>, // Server-side, not in client args
+    AuthUser(user): AuthUser<User>,       // Server-side
+) -> Result<Post, ServerFnError> {
+    // ...
+}
+```
+
+Supported extractor types include `Validated<T>`, `Json<T>`, `Form<T>`,
+`Header<H>`, `Cookie<C>`, `Path<P>`, `Query<Q>`, `Body`, and any type
+implementing `FromRequest`. The CSRF-specific implicit `__csrf_token`
+auto-injection that existed before rc.22 has been generalized into the
+explicit `form!` `strip_arguments` mechanism — see the `form!` reference
+in `proc-macros.md`.
+
 ---
 
 ## gRPC & GraphQL

@@ -70,6 +70,7 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 - For permission guards: `${CLAUDE_PLUGIN_ROOT}/skills/authorization/references/guards.md`
 - For auth user model: `${CLAUDE_PLUGIN_ROOT}/skills/authentication/references/user-models.md`
 - For view patterns: `${CLAUDE_PLUGIN_ROOT}/skills/api-development/references/view-patterns.md`
+- For pages frontend: `${CLAUDE_PLUGIN_ROOT}/skills/pages/references/page-macro.md`
 
 ## Dynamic References
 

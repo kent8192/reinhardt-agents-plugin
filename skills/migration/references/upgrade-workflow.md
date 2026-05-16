@@ -38,12 +38,12 @@ Goal: Build a complete picture of what changed between the current and target ve
 
 Read the project's `Cargo.toml` and extract the reinhardt dependency version:
 ```
-reinhardt = { version = "0.1.0-rc.12", features = [...] }
+reinhardt = { version = "0.1.0-rc.19", features = [...] }
 ```
 
 ### Step 1.2 — Resolve target version
 
-- If the user specifies an exact version (e.g., `0.1.0-rc.15`), use it directly.
+- If the user specifies an exact version (e.g., `0.1.0-rc.22`), use it directly.
 - If the user says `latest`, resolve via:
   ```bash
   gh release list -R kent8192/reinhardt-web --limit 1
@@ -104,7 +104,7 @@ Goal: Apply changes incrementally with verification at each step.
 
 Change the reinhardt version to the target:
 ```toml
-reinhardt = { version = "0.1.0-rc.15", features = [...] }
+reinhardt = { version = "0.1.0-rc.22", features = [...] }
 ```
 
 Run `cargo check` immediately after to identify compilation errors. This surfaces
@@ -180,58 +180,76 @@ uncommitted files or partial changes.
 
 ## Multi-Version Hop Guidance
 
-When upgrading across multiple RC versions (e.g., `rc.12` to `rc.15`), special
-care is needed because intermediate versions may have introduced and then removed
-deprecation aliases.
+When upgrading across multiple RC versions (e.g., `rc.18` to `rc.22`), special
+care is needed because intermediate versions may have introduced breaking
+scaffolding/path changes whose migration recipe lives in the version that
+introduced the change, not the version you are jumping to.
 
 ### Why intermediate versions matter
 
 Consider this scenario:
-- `rc.13` deprecates `OldType` with alias `pub type OldType = NewType`
-- `rc.14` keeps the alias (still compiles with deprecation warning)
-- `rc.15` removes the alias entirely
+- `rc.18` introduces `ClientLauncher` and removes `--template-type` CLI flag
+- `rc.19` moves `ws_url_resolvers` from `<app>/ws_urls.rs` to `<app>/urls/ws_urls.rs` (breaking)
+- `rc.21` removes a stray `pub mod ws_urls` line from the app-root template
+- `rc.22` generalizes implicit CSRF auto-injection into `form!` `strip_arguments`
 
-If you jump directly from `rc.12` to `rc.15`, you see a compilation error for
-`OldType` but miss the deprecation note that explained the replacement. The
-CHANGELOG for `rc.13` contains the migration guidance, not `rc.15`.
+If you jump directly from `rc.18` to `rc.22`, you see a module-not-found
+compilation error for `apps::<name>::ws_urls` but miss the rc.19 release
+note that explained the new layout. The CHANGELOG entry that contains the
+migration recipe is in `rc.19`, not `rc.22`.
 
 ### Procedure for multi-version hops
 
-1. **Read ALL intermediate CHANGELOGs** — extract entries for every version
-   between current and target, not just the target version.
+1. **Read ALL intermediate announcements** — extract entries for every
+   version between current and target, not just the target version. The
+   announcement files live under `reinhardt/announcements/v0.1.0-rc.N.md`.
 
-2. **Track deprecation lifecycle** — for each deprecated API:
-   - When was it deprecated? (which version's CHANGELOG)
-   - What is the replacement? (from the deprecation version's notes)
-   - When was it removed? (which version's CHANGELOG)
+2. **Track each breaking change's recipe** — for every breaking change:
+   - When was it introduced? (which version's CHANGELOG)
+   - What is the migration step? (from that version's release notes / linked discussion)
+   - Did a later version add or remove follow-up steps?
 
-3. **Apply migrations in logical order** — fix breaking changes from earlier
-   versions first, as later changes may depend on earlier migrations being
-   complete.
+3. **Apply migrations in logical order** — fix scaffolding/path changes
+   from earlier versions first, as later changes may depend on earlier
+   migrations being complete.
 
 4. **Update Cargo.toml once** — despite reviewing intermediate versions, only
    update `Cargo.toml` to the final target version. The intermediate review
    is for understanding migration paths, not for stepping through each version.
 
-### Example: rc.12 to rc.15
+### Example: rc.18 to rc.22
 
 ```
-rc.13 CHANGELOG:
-  - Deprecated: `Settings` trait (use `ProjectSettings` with `CoreSettings` fragment)
-  - Added: `CoreSettings` fragment type
+rc.19 announcement:
+  - Breaking: ws_url_resolvers path moved
+    - Old: src/apps/<app>/ws_urls.rs
+    - New: src/apps/<app>/urls/ws_urls.rs
+    - Per-app migration:
+        mkdir -p src/apps/<app>/urls
+        git mv src/apps/<app>/ws_urls.rs src/apps/<app>/urls/ws_urls.rs
+      Then declare in src/apps/<app>/urls.rs:
+        #[cfg(server)] pub mod ws_urls;
+  - Fixed: ws_urls scaffold template now returns WebSocketRouter (was ())
 
-rc.14 CHANGELOG:
-  - Changed: `ProjectSettings` now requires `Debug` bound
-  - Fixed: `CoreSettings` default values
+rc.21 announcement:
+  - Fixed: stray `pub mod ws_urls` removed from app-root template
+    (existing apps must remove that line manually if present)
 
-rc.15 CHANGELOG:
-  - Removed: `Settings` trait (deprecated in rc.13)
-  - Changed: `CoreSettings::new()` signature updated
+rc.22 announcement:
+  - Added: form! strip_arguments DSL — explicit CSRF / auxiliary arg routing
+  - Backward-compatible: existing form! blocks still compile via the legacy
+    auto-injection path; explicit migration is recommended
 ```
 
 Migration order:
-1. Replace `Settings` with `ProjectSettings` + `CoreSettings` (from rc.13 guidance)
-2. Add `Debug` bound to `ProjectSettings` impl (from rc.14)
-3. Update `CoreSettings::new()` call sites (from rc.15)
-4. Update `Cargo.toml` to rc.15
-5. Run `cargo check` and `cargo test`
+1. Move every `<app>/ws_urls.rs` to `<app>/urls/ws_urls.rs` (rc.19)
+2. Add `#[cfg(server)] pub mod ws_urls;` inside each `<app>/urls.rs`
+3. Remove the stray top-level `pub mod ws_urls;` from each app's `lib.rs`
+   if your scaffold predates rc.21
+4. (Optional) Migrate each `form!` block to use explicit `strip_arguments`
+   for CSRF (rc.22) — see
+   `${CLAUDE_PLUGIN_ROOT}/skills/macros/references/proc-macros.md`
+5. Update `Cargo.toml` to `0.1.0-rc.22`
+6. If any `cargo install reinhardt-admin-cli` invocation appears in
+   project scripts/docs, pin it: `--version "0.1.0-rc.22"` (rc.22 quick-start fix)
+7. Run `cargo check` and `cargo test`

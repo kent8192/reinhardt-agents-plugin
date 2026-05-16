@@ -168,17 +168,81 @@ head!({
 
 **Feature:** `pages`
 
-Type-safe form component with reactive bindings.
+Type-safe form component bound to a `#[server_fn]` submission handler.
+
+### Syntax (rc.22+)
 
 ```rust
 form! {
-    name: String,
-    email: String,
-    age: i32,
+    server_fn: submit_login,    // The #[server_fn] target
+    method: Post,               // Get | Post | Put | Patch | Delete
+    fields: {
+        username: CharField { required },
+        password: CharField { required, min_length: 8 },
+    },
+    strip_arguments: {
+        // Explicit, named expressions routed positionally to server_fn.
+        // Compiler-validated: rejects duplicate keys and field-name collisions.
+        csrf_token: ::reinhardt::reinhardt_pages::csrf::get_csrf_token()
+            .unwrap_or_default(),
+    },
 }
 ```
 
-Generates a form component with input fields bound to the specified types, including validation.
+The receiving `#[server_fn]` declares `csrf_token: String` (or `_csrf_token`
+if discarded) as an explicit parameter alongside the form fields.
+
+### `strip_arguments` semantics (added in rc.22)
+
+- The mechanism is **not CSRF-specific**. Any expression — context lookups,
+  feature-detection results, build-time constants — may be routed.
+- The validator rejects duplicate keys and collisions with declared form
+  fields at compile time.
+- Each entry is appended **positionally** to the `server_fn` call in the
+  order it appears, so the server-fn signature must match.
+
+### Backward-compatible auto-injection
+
+Unmigrated forms still compile: when `strip_arguments` is omitted and
+`method != Get`, the macro silently appends `__csrf_token: String` for
+backward compatibility (and emits a deprecation marker). New code should
+prefer the explicit `strip_arguments` form because it surfaces the wiring
+at the call site, lets the compiler validate arity, and makes the mechanism
+generalizable beyond CSRF.
+
+### Migration from pre-rc.22 implicit CSRF auto-inject
+
+```rust
+// Before (rc.21 and earlier) — silent argument arity surprise on WASM
+#[server_fn]
+pub async fn submit(payload: String) -> Result<(), ServerFnError> { /* ... */ }
+
+form! {
+    server_fn: submit,
+    method: Post,
+    fields: { payload: CharField { required } },
+}
+
+// After (rc.22 onward) — explicit, compiler-validated wiring
+#[server_fn]
+pub async fn submit(
+    payload: String,
+    _csrf_token: String,
+) -> Result<(), ServerFnError> { /* ... */ }
+
+form! {
+    server_fn: submit,
+    method: Post,
+    fields: { payload: CharField { required } },
+    strip_arguments: {
+        csrf_token: ::reinhardt::reinhardt_pages::csrf::get_csrf_token()
+            .unwrap_or_default(),
+    },
+}
+```
+
+CSRF verification continues to run in the server-side CSRF middleware; the
+receiving handler may discard the value (`_csrf_token`).
 
 ## Dynamic References
 

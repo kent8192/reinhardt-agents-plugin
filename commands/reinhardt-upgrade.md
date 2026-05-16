@@ -17,7 +17,7 @@ If no reinhardt dependency is found, inform the user this command is for reinhar
 ## Step 2: Ask Target Version
 
 Ask the user which version they want to upgrade to:
-- Accept specific versions (e.g., `0.1.0-rc.15`)
+- Accept specific versions (e.g., `0.1.0-rc.22`)
 - Accept `latest` — resolve via `gh release list -R kent8192/reinhardt-web --limit 1` or by reading `reinhardt/Cargo.toml` if the repo is available locally
 - If the target is the same as current, inform the user and exit
 

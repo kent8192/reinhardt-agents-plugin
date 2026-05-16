@@ -264,9 +264,9 @@ grep -rn '#\[deprecated' reinhardt/crates/ --include='*.rs'
 
 ### Filter by version range
 
-To find deprecations introduced between rc.12 and rc.15:
+To find deprecations introduced between rc.18 and rc.22:
 ```bash
-grep -rn '#\[deprecated' reinhardt/crates/ --include='*.rs' | grep -E 'since\s*=\s*"0\.1\.0-rc\.(1[3-5])"'
+grep -rn '#\[deprecated' reinhardt/crates/ --include='*.rs' | grep -E 'since\s*=\s*"0\.1\.0-rc\.(1[89]|2[0-2])"'
 ```
 
 ### Extract symbol names

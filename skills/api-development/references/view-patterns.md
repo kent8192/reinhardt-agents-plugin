@@ -273,7 +273,9 @@ impl ViewSet for UserViewSet {
 
 ## Server Functions (Pages/WASM)
 
-For full-stack applications using `--with-pages`, server functions allow RPC-style calls from client-side WASM. The decorator is `#[server_fn]` (NOT `#[server]`):
+For full-stack applications scaffolded with `--with-pages`, server functions
+allow RPC-style calls from client-side WASM. The decorator is `#[server_fn]`
+(NOT `#[server]`):
 
 ```rust
 use reinhardt::pages::prelude::*;
@@ -292,6 +294,37 @@ pub async fn get_user_profile(user_id: i64) -> Result<UserProfile, ServerFnError
     Ok(UserProfile::from(user))
 }
 ```
+
+### `FromRequest` extractors in server functions (rc.18+)
+
+Since rc.18, `#[server_fn]` accepts `FromRequest`-based extractors
+(`Validated`, `Json`, `Form`, `Header`, `Cookie`, `Path`, `Query`, `Body`,
+`AuthUser<U>`, etc.) as first-class parameters. They are resolved on the
+server via `FromRequest::from_request` and **excluded from the WASM client's
+argument struct**, so the client call site only passes the
+data-shaped parameters.
+
+```rust
+#[server_fn]
+pub async fn submit_vote(
+    poll_id: i64,                            // Sent from the client
+    choice_id: i64,                          // Sent from the client
+    AuthUser(user): AuthUser<User>,          // Server-side only
+    Validated(meta): Validated<VoteMetadata>, // Server-side only
+) -> Result<(), ServerFnError> {
+    Vote::record(user.id, poll_id, choice_id, meta).await?;
+    Ok(())
+}
+```
+
+### CSRF tokens via `form!` `strip_arguments` (rc.22+)
+
+Forms that submit through `#[server_fn]` should declare CSRF (or any other
+auxiliary value) **explicitly** via the `form!` macro's `strip_arguments`
+block instead of relying on the legacy implicit auto-injection. The
+auto-injection path remains for backward compatibility but is deprecated;
+new code should follow the explicit pattern documented in the `form!`
+reference (`${CLAUDE_PLUGIN_ROOT}/skills/macros/references/proc-macros.md`).
 
 ## Response Building
 

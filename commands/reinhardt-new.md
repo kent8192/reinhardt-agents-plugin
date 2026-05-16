@@ -50,4 +50,4 @@ After collecting all preferences, invoke the scaffolding skill to execute the pr
 
 - Do NOT execute any commands before collecting all preferences
 - Always confirm the full configuration with the user before executing
-- If `reinhardt-admin` is not installed, guide the user to install it: `cargo install reinhardt-admin-cli`
+- If `reinhardt-admin` is not installed, guide the user to install it: `cargo install reinhardt-admin-cli --version "0.1.0-rc.22"` (the `--version` flag is required during the RC phase because Cargo does not select pre-release versions by default)

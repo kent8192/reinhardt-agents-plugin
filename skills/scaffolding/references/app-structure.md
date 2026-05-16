@@ -43,13 +43,16 @@ my_project/
         └── api_tests.rs         # Cross-app integration tests
 ```
 
-### Pages (MTV) Project Layout
+### Pages Project Layout (`--with-pages`)
 
-Pages projects add WASM client-side code and shared modules:
+Pages projects add WASM client-side code and shared modules. The layout below
+reflects the rc.18–rc.22 evolution: `ClientLauncher`-based bootstrap (rc.18),
+the `urls/` directory module under each app (rc.19), and the `server_fn`
+placement that aligns with the basis tutorial (rc.22).
 
 ```
 my_project/
-├── Cargo.toml
+├── Cargo.toml                   # [[bin]] name = "manage", default-run = "manage"
 ├── build.rs                     # WASM build configuration
 ├── index.html                   # HTML shell for WASM app
 ├── settings/                    # Same as RESTful
@@ -61,20 +64,34 @@ my_project/
 │   ├── config.rs                # Configuration module
 │   ├── config/
 │   │   ├── settings.rs          # Project settings
-│   │   └── urls.rs              # Root URL configuration
+│   │   ├── urls.rs              # Root URL configuration
+│   │   └── wasm.rs              # WASM-specific config (rc.22)
 │   ├── client.rs                # WASM client module
 │   ├── client/
-│   │   ├── router.rs            # Client-side routing
+│   │   ├── bootstrap.rs         # ClientLauncher entry point (rc.18)
+│   │   ├── router.rs            # Uses reinhardt::pages::router::Router (rc.18)
 │   │   └── state.rs             # Client state management
-│   ├── server/
-│   │   └── server_fn.rs         # Server functions
+│   ├── server_fn.rs             # Server-fn module entry (rc.22 — at crate root, not under server/)
+│   ├── server_fn/               # Per-app server_fn modules
+│   ├── server_only.rs           # Re-export shim for server-only items (rc.22)
 │   ├── shared.rs                # Shared types module
 │   ├── shared/
 │   │   ├── errors.rs            # Shared error types
 │   │   └── types.rs             # Shared data types
 │   └── apps/
-│       └── ...                  # Same as RESTful + client/ modules
+│       └── <app>/
+│           ├── lib.rs           # NO top-level `pub mod ws_urls` (rc.21 fix)
+│           ├── urls.rs          # Mounts the urls/ submodule tree
+│           └── urls/            # rc.19: server/client/ws routing symmetric here
+│               ├── server_urls.rs
+│               ├── client_urls.rs
+│               └── ws_urls.rs   # WebSocketRouter (rc.19 fix to return type)
 ```
+
+> **Breaking change (rc.19):** `ws_url_resolvers` moved from
+> `crate::apps::<app>::ws_urls::*` to `crate::apps::<app>::urls::ws_urls::*`.
+> Existing apps must `git mv` their top-level `ws_urls.rs` under `urls/`.
+> See `${CLAUDE_PLUGIN_ROOT}/skills/migration/SKILL.md` for the recipe.
 
 ## Entry Points
 
@@ -186,10 +203,15 @@ pub fn get_installed_apps() -> Vec<String> {
 
 Follow this procedure to add a new app to an existing project:
 
-1. **Generate the app scaffold**:
+1. **Generate the app scaffold** — exactly one project-type flag is required:
    ```bash
-   reinhardt-admin startapp <name> [-t restful|mtv]
+   # RESTful app
+   reinhardt-admin startapp <name> --with-rest
+
+   # Pages app (WASM + SSR)
+   reinhardt-admin startapp <name> --with-pages
    ```
+   The legacy `-t restful|mtv` / `--template-type` flag was removed in rc.18.
 
 2. **Verify the generated structure** matches the layout above. The generated app includes:
    - `lib.rs` — App entry point with `#[app_config]` macro
@@ -229,7 +251,9 @@ Follow this procedure to add a new app to an existing project:
 
 ### Pages App Modules
 
-Pages (MTV) apps include additional modules for WASM support:
+Pages apps include additional modules for WASM support. **Do not add a
+top-level `pub mod ws_urls;` — that line was a stray scaffolding bug fixed in
+rc.21. ws routing lives under `urls/ws_urls.rs` instead (see rc.19 below).**
 
 ```rust
 // src/apps/my_app.rs — Pages app entry point
@@ -244,10 +268,10 @@ pub mod client;          // WASM client components
 pub mod models;
 #[cfg(native)]
 pub mod serializers;
-pub mod server;          // Server functions (available on both native and WASM)
+pub mod server;          // Server-side helpers (available on both native and WASM)
 pub mod shared;          // Shared types (available on both)
 #[cfg(native)]
-pub mod urls;
+pub mod urls;            // Mounts urls/server_urls.rs, urls/client_urls.rs, urls/ws_urls.rs
 #[cfg(native)]
 pub mod views;
 
@@ -256,6 +280,34 @@ pub mod views;
 pub struct MyAppConfig;
 ```
 
+```rust
+// src/apps/my_app/urls.rs — unified entry that wires the three routing modes
+#[cfg(server)]
+pub mod server_urls;
+#[cfg(server)]
+pub mod ws_urls;          // rc.19: ws_url_resolvers live here, not at app root
+pub mod client_urls;      // available on native + wasm for client-side routing
+```
+
 - `#[cfg(native)]` — Server-only modules (models, views, admin, etc.)
 - `#[cfg(wasm)]` — WASM-only modules (client components)
+- `#[cfg(server)]` — Server-mode-only routing (mode-gated, not platform-gated)
 - No annotation — Available on both platforms (server functions, shared types)
+
+**Migration from pre-rc.19 layout:**
+
+```bash
+mkdir -p src/apps/<app>/urls
+git mv src/apps/<app>/ws_urls.rs src/apps/<app>/urls/ws_urls.rs
+```
+
+Then declare the submodule in `src/apps/<app>/urls.rs` (create the file if it
+does not already exist):
+
+```rust
+#[cfg(server)]
+pub mod ws_urls;
+```
+
+`ws_url_patterns()` must return `WebSocketRouter` (the rc.19 scaffold template
+fix corrected a stray `()` return type that produced an `E0599` error).
