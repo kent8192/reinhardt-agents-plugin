@@ -34,6 +34,7 @@ pub struct Post {
 | Option | Type | Description |
 |--------|------|-------------|
 | `app_label` | `&str` | App this model belongs to (required) |
+| `manager` | `Path` | (rc.23+, #3981) Opt the model into a user-supplied `CustomManager` implementor. Emits a `HasCustomManager` impl that wires the model to the named type. `Model::objects()` is untouched and still returns `Manager<Self>`. See `modeling/references/model-patterns.md` for usage examples and `modeling/references/queryset-api.md` for the trait surface. |
 
 **Auto-derives:** `Model`, `Serialize`, `Deserialize`, `Clone`, `Debug`
 
@@ -529,6 +530,25 @@ implementing `FromRequest`. The CSRF-specific implicit `__csrf_token`
 auto-injection that existed before rc.22 has been generalized into the
 explicit `form!` `strip_arguments` mechanism — see the `form!` reference
 in `proc-macros.md`.
+
+**Cross-target WASM marker module (rc.27+, #4293):**
+
+From rc.27, `#[server_fn]` reliably emits a per-function WASM marker module
+(`get_users::marker` and friends) on `wasm32-*` targets. The marker carries
+the typed `Args` struct and the `#response_type` token so frontend code can
+call `worker.handle_server_fn::<get_users::marker>(...)` against MSW-style
+mock workers in WASM tests. Two bugs that previously prevented the marker
+from being emitted were fixed in #4293:
+
+- The `msw_enabled` gate no longer consults `CARGO_FEATURE_MSW` (proc-macro
+  expansion never has that env var set; the macro now relies on Cargo's
+  transitive feature unification through `cfg!(feature = "msw")`).
+- The WASM marker module body now includes `use super::*;` so user types
+  like `VoteRequest` or `(QuestionInfo, Vec<ChoiceInfo>)` resolve inside
+  the generated `Args` struct and `#response_type` slot.
+
+No source-level changes are required to pick up the marker — rebuilding
+on rc.27+ with the `msw` feature enabled is sufficient.
 
 ---
 
