@@ -39,6 +39,7 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] Nullable fields use `Option<T>`
 - [ ] Primary keys defined with `#[field(primary_key = true)]`
 - [ ] UUID primary keys use v7 (auto-handled by `#[model]` — flag any manual `Uuid::new_v4()` calls)
+- [ ] Custom managers wired via `#[model(manager = ...)]` (rc.23+); veto hooks (`before_save` / `before_delete` / `before_bulk_update`) return early on policy violations rather than mutating state
 
 ### Dependency Injection
 - [ ] Appropriate scoping (request-scoped vs singleton)
@@ -56,6 +57,8 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] Error responses are consistent
 - [ ] Route names are unique across the application (duplicates cause startup failure)
 - [ ] Consider `url-resolver` feature for type-safe URL resolution
+- [ ] OIDC providers other than the bundled four (Google, GitHub, Apple, Microsoft) are wired via `GenericOidcProvider` (rc.23+) — flag any from-scratch `impl OAuthProvider` for OIDC-compliant IdPs
+- [ ] REST versioning configured via the `[rest_versioning]` settings fragment (rc.29+); flag any remaining `REINHARDT_VERSIONING_*` env-var reads or calls to `VersioningConfig::from_env`
 
 ### Testing
 - [ ] All tests use `#[rstest]` (not `#[test]`)
@@ -63,6 +66,7 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] Assertions are strict (`assert_eq!` preferred)
 - [ ] Fixtures used for shared setup
 - [ ] `#[serial]` used for global state tests
+- [ ] DI override tests (`with_di_overrides!`, `register_override`) carry `#[serial(di_registry)]` and depend on the `testing` feature (rc.29+) — flag missing serialization which causes flaky `OnceLock` registry collisions
 
 ### Documentation & Style
 - [ ] All comments in English
