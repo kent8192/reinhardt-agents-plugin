@@ -285,6 +285,42 @@ let count = User::objects().count_with_conn(&conn).await?;
 
 ---
 
+## CustomManager / HasCustomManager (rc.23+)
+
+For Django-style custom object managers — typically used to enforce row-level access control, default tenant filters, or `bulk_update` permission checks — Reinhardt introduces the opt-in `CustomManager` and `HasCustomManager` traits in `reinhardt-db` (#3981).
+
+### Design Overview
+
+- `CustomManager<M>` is a trait with **53 default-implemented operations** covering the full `Manager<M>` surface (CRUD, filtering, bulk ops, SQL helpers). Implementors override **only** the methods they care about.
+- `HasCustomManager` is the opt-in marker trait wired by `#[model(manager = <Path>)]` — see `model-patterns.md` for the macro usage.
+- **Three veto hooks** are provided to intercept mutating operations:
+  - `before_save(&self, model: &M) -> Result<()>` — runs before `create` / `update`.
+  - `before_delete(&self, pk: &M::Pk) -> Result<()>` — runs before `delete`.
+  - `before_bulk_update(&self, models: &[M]) -> Result<()>` — runs before `bulk_update`.
+  Returning `Err(_)` aborts the operation.
+- **Backward compatible**: the `Model` trait is untouched. `Model::objects()` still returns the inherent `Manager<Self>` for every existing model. Opting into a custom manager is purely additive.
+- The blanket impl guarantees SQL parity: `bulk_create_sql` / `get_or_create_sql` produce identical output through the trait path and the inherent path.
+
+### Example
+
+```rust
+use reinhardt::db::prelude::*;
+
+pub struct TenantScopedManager;
+
+impl<M: Model> CustomManager<M> for TenantScopedManager {
+    async fn before_save(&self, model: &M) -> Result<(), DbError> {
+        // Enforce tenant isolation before persisting.
+        ensure_current_tenant_owns(model)?;
+        Ok(())
+    }
+    // The other 52 methods use the trait defaults.
+}
+```
+
+A future v0.2.0 may unify `Manager` and `CustomManager` through an associated type on `Model`; for now the two access paths coexist (#3981).
+
+
 ## Low-Level Query Builder (reinhardt-query)
 
 For schema operations (DDL), migrations, and cases where the ORM abstraction is insufficient, use `reinhardt-query` directly. This is a SeaQuery-based type-safe SQL builder.

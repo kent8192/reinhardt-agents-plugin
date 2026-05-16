@@ -200,6 +200,76 @@ pub fn main() -> Result<(), JsValue> {
 }
 ```
 
+## ClientLauncher Lifecycle Hooks (rc.23+)
+
+`ClientLauncher` is a declarative builder that replaces the hand-rolled WASM entry-point pattern (panic hook, router init, history listener, link interception, render Effect). Downstream apps reduce to a single chain:
+
+```rust
+use reinhardt::pages::app::ClientLauncher;
+
+#[wasm_bindgen(start)]
+pub fn main() -> Result<(), JsValue> {
+    ClientLauncher::new(init_router)
+        .mount("#app")
+        .intercept_links(true)
+        .before_launch(|| {
+            state::init_app_state();
+        })
+        .after_launch(|| {
+            log!("SPA ready");
+        })
+        .on_path("/dashboard", |ctx| {
+            // ctx: PathCtx — fires whenever current_path matches exactly
+            connect_dashboard_websocket();
+        })
+        .on_path_pattern("/users/{id}/", |ctx| {
+            // fires when the pattern matches and bound params change
+            let id = ctx.params.get("id").cloned().unwrap_or_default();
+            log!("entered user {id}");
+        })
+        .launch();
+    Ok(())
+}
+```
+
+Builder surface:
+
+| Method | Purpose |
+|--------|---------|
+| `mount(selector)` | CSS selector of the DOM root |
+| `intercept_links(bool)` | Install document-level click handler for `<a href="/...">` (default `true`) |
+| `before_launch(FnOnce)` | Run after panic hook / scheduler, before Router init |
+| `after_launch(FnOnce)` | Run after first mount; navigations triggered here re-render |
+| `on_path(path, Fn)` | Subscribe to exact-path matches |
+| `on_path_pattern(pattern, Fn)` | Subscribe to pattern matches with param-diff detection |
+| `launch()` | Runs Phase A (setup) → Phase B (initial mount) → Phase C (persistent `Router::on_navigate` subscriptions) |
+
+Source: PR (#3997). Internal architecture migrated from reactive `Effect` auto-tracking to explicit `Router::on_navigate` callbacks in (#4114).
+
+### SPA Link Interception (rc.23 → rc.29 fix)
+
+`.intercept_links(true)` installs a document-level click listener that walks the DOM from `event.target` up to the enclosing `<a>` and routes internal `href="/..."` links through `Router::push` instead of triggering a full page reload.
+
+- Modifier keys (Cmd/Ctrl/Shift/Alt), `target="_blank"`, `download`, `rel=external`, and protocol-relative URLs are excluded automatically.
+- Apps that already wire their own SPA handler can opt out with `.intercept_links(false)`.
+- rc.29 fix: earlier rc.23–rc.28 versions cast `event.target` directly to `Element`, so clicks on the inner `Text` node of `<a>label</a>` or `<a><span>label</span></a>` slipped through and triggered full-page navigation. The DOM walk now handles non-`Element` targets (`Text`, nested children) by traversing parent nodes until an `<a>` is found. `Router::push` errors are also no longer silently swallowed — they emit a `console.warn` (`nav_diag!` in debug builds).
+
+Source: (#3997, #4344).
+
+## SPA Navigation Improvements (rc.26+)
+
+rc.26 restored end-to-end SPA navigation in `ClientLauncher::launch()`: `Router::push` now reliably re-fires the launcher's render pipeline so each route mounts its own view instead of the boot-time view. The fix hoists `current_path` / `current_params` `Signal` clones out of the `with_router(|r| ...)` borrow before subscription, ensuring the launcher tracks both Signals as direct subscribers (#4078).
+
+rc.26 also migrated `ClientLauncher::launch`, `on_path`, and `on_path_pattern` from reactive `Effect` / `Signal` auto-tracking to explicit `Router::on_navigate` callbacks. Public API surface (`ClientLauncher::launch`, `on_path`, `on_path_pattern`, `Router::current_path`, `Router::current_params`) is unchanged, but the render pipeline now runs in three explicit phases:
+
+- **Phase A — Setup**: panic hook, scheduler, `before_launch` hooks, `Router` init, popstate registration, DOM root resolution, link interceptor install.
+- **Phase B — Initial mount (inline, no Effect)**: `Router::render_current` → clear `innerHTML` → `view.mount`.
+- **Phase C — Persistent subscriptions**: register render listener via `Router::on_navigate` *before* draining `after_launch` (so navigations from `after_launch` re-render), then register one `on_navigate` listener per `on_path` / `on_path_pattern` entry.
+
+After this migration `ClientLauncher::launch` contains zero `Effect::new` calls, eliminating the auto-tracking fragility class that produced repeated SPA navigation regressions.
+
+Source: (#4078, #4114).
+
 ## Server-Side Rendering (SSR)
 
 ### SsrRenderer
@@ -285,6 +355,24 @@ if is_initialized() {
 ```
 
 Compatible with reinhardt's collectstatic system for cache-busted asset URLs.
+
+## --with-pages URL Submodule Layout (rc.29 fix)
+
+`reinhardt-admin startapp --with-pages <app>` (and the workspace variant) now scaffolds the canonical `urls/` submodule layout established in rc.19 instead of a flat `urls.rs` that returned only `ServerRouter::new()`. The generated app gains both a server endpoint surface and a client-side SPA router scaffold out of the box:
+
+```
+<app>/
+└── urls.rs                  # aggregator declaring submodules
+└── urls/
+    ├── server_urls.rs       # #[url_patterns(InstalledApp::<App>, mode = server)]
+    └── client_router.rs     # #[url_patterns(InstalledApp::<App>, mode = client)]
+```
+
+The aggregator uses `#[cfg(server)]` / `#[cfg(client)]` (matching the cfg aliases declared by the scaffold-generated `build.rs`, not `wasm` / `native`). `ws_urls.rs` is intentionally not scaffolded — WebSocket routing remains opt-in.
+
+This fixes rc.19-era drift where the template emitted only the flat `urls.rs` and forced consumers to rewrite the module by hand before they could add a client-side route.
+
+Source: (#4357).
 
 ## cfg_aliases Setup
 

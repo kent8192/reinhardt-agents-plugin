@@ -19,12 +19,19 @@ Claude Code plugin for [reinhardt-web](https://github.com/kent8192/reinhardt-web
 | Skill | Trigger | Description |
 |-------|---------|-------------|
 | `scaffolding` | "create a new reinhardt project", "start a new app" | Project and app scaffolding with `reinhardt-admin`, feature flag presets, and post-scaffolding configuration |
-| `modeling` | "create a model", "add a field", "define relations" | Model definition with `#[model]`, field types, relations (ForeignKey, ManyToMany, OneToOne), and migration generation |
-| `api-development` | "create an API", "add a view", "configure routes" | Serializers, views, URL routing, authentication, and pagination following reinhardt REST conventions |
-| `testing` | "write tests", "add test coverage", "test this endpoint" | rstest-based test generation with AAA pattern, reinhardt-test fixtures, and TestContainers integration |
+| `modeling` | "create a model", "add a field", "define relations" | Model definition with `#[model]`, field types, relations (ForeignKey, ManyToMany, OneToOne), `CustomManager`, and migration generation |
+| `api-development` | "create an API", "add a view", "configure routes" | Serializers, views, URL routing, authentication, and pagination following reinhardt REST conventions; `ModelViewSet`, `VersionedRouter` |
+| `authentication` | "JWT", "session auth", "OAuth", "OIDC", "GenericOidcProvider", "social login" | Auth backends, JWT/session setup, social providers (Google/GitHub/Apple/Microsoft) and `GenericOidcProvider` for arbitrary OIDC IdPs |
+| `authorization` | "permissions", "guards", "extractors", "access control" | Permission system, guard middleware, and extractor patterns |
+| `pages` | "page", "head", "form", "server_fn", "Signal", "useState", "SSR", "hydration", "WASM", "frontend", "ClientLauncher" | WASM frontend with `page!` / `head!` / `form!` macros, reactive hooks, `ClientLauncher` lifecycle, SPA routing, and SSR |
+| `macros` | "#[model]", "#[api]", "#[inject]", "#[admin]", "#[settings]" | Attribute, derive, and function-like procedural macros — semantics, options, and recommended patterns |
+| `testing` | "write tests", "add test coverage", "test this endpoint", "DI override" | rstest-based test generation with AAA pattern, reinhardt-test fixtures, TestContainers, and `with_di_overrides!` DI testing kit |
 | `dependency-injection` | "configure DI", "inject a service", "add a provider" | DI container configuration, provider scoping, `#[inject]` handler patterns, and database/auth integration |
-| `configuration` | "settings", "configuration", "config", "TOML", "environment", "profile", "ProjectSettings", "fragment" | Composable settings system using fragments, TOML sources, environment profiles, and the `#[settings]` macro |
+| `signals` | "signal", "signal handler", "lifecycle event", "background task" | Async side-effects via `pre_save` / `post_save` / etc., transaction signals, and task queue integration |
+| `configuration` | "settings", "configuration", "config", "TOML", "environment", "profile", "ProjectSettings", "fragment" | Composable settings system using fragments, TOML sources with interpolation, `MergeStrategy::Deep`, environment profiles, and the `#[settings]` macro |
 | `admin` | "admin", "admin panel", "ModelAdmin", "AdminSite", "admin interface" | Admin panel setup with `AdminSite` configuration, `#[admin]` macro, ModelAdmin registration, and route mounting |
+| `architecture` | "feature design", "cross-layer", "where does this go" | Cross-layer feature development workflow tying scaffolding, modeling, API, and pages together |
+| `lint` | "lint", "fix warnings", "clippy", "static analysis" | Static analysis workflow with the fix-iterate pattern |
 | `migration` | "upgrade reinhardt", "migrate", "deprecated", "breaking change", "rc.XX" | Version upgrade analysis via CHANGELOG, deprecated API detection, and guided code migration |
 
 ### Command
@@ -65,8 +72,8 @@ The PostToolUse hook automatically scans code changes for these reinhardt-specif
 ## Requirements
 
 - **Rust** >= 1.94.0 (2024 Edition)
-- **reinhardt-web** == `0.1.0-rc.22` (current target version of this plugin)
-- **reinhardt-admin-cli** -- `cargo install reinhardt-admin-cli --version "0.1.0-rc.22"` (the `--version` flag is required during the RC phase because Cargo does not select pre-release versions by default)
+- **reinhardt-web** == `0.1.0-rc.29` (current target version of this plugin)
+- **reinhardt-admin-cli** -- `cargo install reinhardt-admin-cli --version "0.1.0-rc.29"` (the `--version` flag is required during the RC phase because Cargo does not select pre-release versions by default)
 - **Docker Desktop** -- required for TestContainers-based database tests
 - **semgrep** (optional) -- enables automatic anti-pattern detection via PostToolUse hook
 

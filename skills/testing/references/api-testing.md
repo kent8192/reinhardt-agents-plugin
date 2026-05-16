@@ -395,6 +395,46 @@ impl_test_model!(
 );
 ```
 
+## MSW (Mock Service Worker) for wasm32 (rc.29+)
+
+`reinhardt-test/msw` provides Mock Service Worker integration for intercepting HTTP
+requests in `wasm32-unknown-unknown` tests (typically `wasm-pack test`). rc.29 repairs
+the integration for current `web-sys` 0.3.98 / `js-sys` and exposes a top-level `msw`
+feature on the `reinhardt-web` facade so consumers can enable MSW without reaching
+past the facade. (#4288)
+
+### Enabling MSW via the Facade
+
+```toml
+[dev-dependencies]
+reinhardt = { version = "0.1.0-rc.29", features = ["test", "msw"] }
+```
+
+The facade flag expands to `["test", "pages", "reinhardt-test/msw", "reinhardt-pages/msw"]`.
+This replaces the previous (DM-1 violating) pattern of adding a direct
+`reinhardt-test = { features = ["msw"] }` dev-dependency in example crates. (#4288)
+
+### Build Notes
+
+- The `msw` feature is `wasm32`-only. Native test runs (`cargo nextest run`) are not
+  affected by enabling it.
+- Verify the wasm build with:
+  `cargo check -p reinhardt-test --features msw --target wasm32-unknown-unknown`. (#4288)
+- Run wasm tests via `wasm-pack test --headless --chrome --features msw`. (#4288)
+
+### Compatibility Fixes Shipped in rc.29
+
+The integration was repaired against `web-sys` 0.3.98 / current `js-sys`. Two
+breakages were addressed inside `crates/reinhardt-test/src/msw/interceptor.rs`:
+
+1. `Headers::new_with_str_mapping` was removed upstream; the interceptor now
+   downcasts via `JsCast::dyn_ref::<js_sys::Object>()` and falls back to
+   `Headers::new_with_record_from_str_to_str(&Object)`.
+2. `js_sys::global()` now returns `Object` (not `JsValue`); the call site is wrapped
+   through `JsValue::from(...)` to satisfy the inferred `Option<JsValue>` constraint.
+
+These are upstream-only fixes — no consumer code change is required. (#4288)
+
 ## Test Placement Rules
 
 | Test Type | Location | When to Use |

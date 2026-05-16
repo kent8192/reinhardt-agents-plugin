@@ -21,7 +21,7 @@ JWT is the verified production pattern, confirmed in use by the reinhardt-cloud 
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0-alpha", features = ["auth-jwt", "argon2-hasher"] }
+reinhardt = { version = "0.1.0-rc.29", features = ["auth-jwt", "argon2-hasher"] }
 ```
 
 ### Configuration
@@ -122,7 +122,7 @@ pub async fn login(username: String, password: String) -> Result<AuthResponse, S
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0-alpha", features = ["auth-session", "sessions", "argon2-hasher"] }
+reinhardt = { version = "0.1.0-rc.29", features = ["auth-session", "sessions", "argon2-hasher"] }
 ```
 
 ### Configuration

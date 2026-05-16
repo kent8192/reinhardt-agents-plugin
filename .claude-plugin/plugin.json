@@ -1,6 +1,6 @@
 {
   "name": "reinhardt-cc",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Claude Code plugin for reinhardt-web application development and deployment via reinhardt-cloud",
   "author": {
     "name": "kent8192",

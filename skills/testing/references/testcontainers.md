@@ -342,7 +342,7 @@ Pool configuration can be tuned via environment variables:
 
 ```toml
 [dev-dependencies]
-reinhardt = { version = "0.1.0-alpha", features = ["test", "testcontainers"] }
+reinhardt = { version = "0.1.0-rc.29", features = ["test", "testcontainers"] }
 rstest = "0.23"
 serial_test = "3"
 tokio = { version = "1", features = ["full"] }
