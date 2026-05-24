@@ -206,3 +206,68 @@ pub struct Choice {
     // ... fields
 }
 ```
+
+## Custom Manager Attribute (rc.23+)
+
+Opt a model into a user-supplied custom manager by passing `manager = <Path>` to the `#[model]` attribute (#3981). The macro emits a `HasCustomManager` impl that wires the model to the named `CustomManager` implementor; see `queryset-api.md` for the trait surface and veto hooks.
+
+### Row-Level Access Control
+
+```rust
+use reinhardt::db::prelude::*;
+
+pub struct DocumentAccessManager;
+
+impl CustomManager<Document> for DocumentAccessManager {
+    async fn before_save(&self, doc: &Document) -> Result<(), DbError> {
+        ensure_current_user_can_edit(doc)?;
+        Ok(())
+    }
+
+    async fn before_delete(&self, pk: &Uuid) -> Result<(), DbError> {
+        ensure_current_user_can_delete(*pk).await?;
+        Ok(())
+    }
+}
+
+#[model(table_name = "documents", app_label = "docs", manager = DocumentAccessManager)]
+#[derive(Debug, Clone)]
+pub struct Document {
+    #[field(primary_key = true)]
+    pub id: Option<Uuid>,
+
+    #[field(max_length = 200)]
+    pub title: String,
+
+    pub body: String,
+}
+```
+
+### Default Tenant Filter
+
+```rust
+pub struct TenantScopedManager;
+
+impl CustomManager<Project> for TenantScopedManager {
+    async fn before_bulk_update(&self, models: &[Project]) -> Result<(), DbError> {
+        // Reject cross-tenant bulk updates atomically.
+        let tenant = current_tenant_id()?;
+        if models.iter().any(|p| p.tenant_id != tenant) {
+            return Err(DbError::PermissionDenied);
+        }
+        Ok(())
+    }
+}
+
+#[model(table_name = "projects", app_label = "core", manager = TenantScopedManager)]
+#[derive(Debug, Clone)]
+pub struct Project {
+    #[field(primary_key = true)]
+    pub id: Option<Uuid>,
+    pub tenant_id: Uuid,
+    #[field(max_length = 200)]
+    pub name: String,
+}
+```
+
+`Project::objects()` continues to return the inherent `Manager<Project>` — the custom manager is the secondary, opt-in access path (#3981).

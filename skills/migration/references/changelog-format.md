@@ -18,7 +18,7 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-## [0.1.0-rc.22] - 2026-04-25
+## [0.1.0-rc.29] - 2026-05-13
 
 ### Added
 - New feature description (#123)
@@ -35,7 +35,7 @@ All notable changes to this project will be documented in this file.
 ### Removed
 - Removed API description (#127)
 
-## [0.1.0-rc.21] - 2026-04-23
+## [0.1.0-rc.28] - 2026-05-10
 ...
 ```
 
@@ -123,7 +123,7 @@ reinhardt/crates/reinhardt-dentdelion/CHANGELOG.md
 
 Focus on crates that the user's application depends on. Check `Cargo.toml` features:
 ```toml
-reinhardt = { version = "0.1.0-rc.22", features = ["auth", "database", "dentdelion"] }
+reinhardt = { version = "0.1.0-rc.29", features = ["auth", "database", "dentdelion"] }
 ```
 
 This means read CHANGELOGs for:
@@ -144,7 +144,7 @@ release-plz creates per-crate tags in the format:
 ```
 
 Examples:
-- `reinhardt@v0.1.0-rc.22`
+- `reinhardt@v0.1.0-rc.29`
 - `reinhardt-core@v0.2.0`
 - `reinhardt-orm@v0.1.5`
 

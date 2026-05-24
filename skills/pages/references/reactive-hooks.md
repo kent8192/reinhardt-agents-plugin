@@ -21,6 +21,19 @@ count.set(5);
 count.update(|n| *n += 1);
 ```
 
+#### `Signal<T>: Send + Sync` on native (rc.25+)
+
+Since v0.1.0-rc.25, `Signal<T>` uses `Arc<RwLock<T>>` on native targets so it
+implements `Send + Sync`. On `wasm32` it stays `Rc<RefCell<T>>` to keep the
+zero-cost reactive hot path on the SPA side.
+
+This unblocks holding signals in DI-resolved types: `ClientRouter` (and
+`UnifiedRouter` with the `client-router` feature) is now `Send + Sync`, so
+`InjectionContext::resolve` accepts router newtypes that contain reactive
+state. Cross-thread mutation is sound but does not notify subscribers
+registered on another thread (the runtime remains `thread_local!`); SSR
+reverse URL resolution only reads static metadata, so this is safe. (#4068)
+
 ### Effect
 
 A side effect that reruns when dependencies change.

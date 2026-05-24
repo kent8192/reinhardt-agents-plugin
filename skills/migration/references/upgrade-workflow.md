@@ -43,7 +43,7 @@ reinhardt = { version = "0.1.0-rc.19", features = [...] }
 
 ### Step 1.2 — Resolve target version
 
-- If the user specifies an exact version (e.g., `0.1.0-rc.22`), use it directly.
+- If the user specifies an exact version (e.g., `0.1.0-rc.29`), use it directly.
 - If the user says `latest`, resolve via:
   ```bash
   gh release list -R kent8192/reinhardt-web --limit 1
@@ -104,7 +104,7 @@ Goal: Apply changes incrementally with verification at each step.
 
 Change the reinhardt version to the target:
 ```toml
-reinhardt = { version = "0.1.0-rc.22", features = [...] }
+reinhardt = { version = "0.1.0-rc.29", features = [...] }
 ```
 
 Run `cargo check` immediately after to identify compilation errors. This surfaces

@@ -194,3 +194,97 @@ REINHARDT_ENV=local cargo run       # loads settings/local.toml
 REINHARDT_ENV=production cargo run  # loads settings/production.toml
 REINHARDT_ENV=ci cargo test         # loads settings/ci.toml
 ```
+
+## TOML Interpolation (rc.26+)
+
+`TomlFileSource` can opt in to `${VAR}` interpolation, letting a single TOML file resolve differently across environments without duplicating profile files. (#4092)
+
+### Enabling Interpolation
+
+```rust
+use reinhardt::conf::settings::sources::TomlFileSource;
+
+SettingsBuilder::new()
+    .add_source(TomlFileSource::new(path).with_interpolation(true))
+    .build_composed()
+```
+
+### Syntax
+
+| Form | Behavior |
+|------|----------|
+| `${VAR}` | Substitute env var `VAR`; error if unset or empty |
+| `${VAR:-default}` | Use `default` when `VAR` is unset or empty |
+| `${VAR:-}` | Use empty string when `VAR` is unset or empty |
+| `${VAR:?message}` | Error with `message` when `VAR` is unset or empty |
+| `$$` | Literal `$` |
+
+### Scope
+
+- Strings only. Numeric, boolean, datetime, and array (of non-string) values pass through untouched.
+- Strict-empty semantics: an env var that is set but empty is treated identically to unset.
+
+### Example
+
+```toml
+# local.toml — same file works on host and inside a devcontainer
+[core.databases.default]
+host = "${DB_HOST:-localhost}"
+port = 5432
+user = "${DB_USER:-dev}"
+password = "${DB_PASSWORD:?DB_PASSWORD must be set}"
+```
+
+### Composition with Env Sources
+
+`HighPriorityEnvSource` (priority 60) still wins over interpolated TOML (priority 50), so flat-key env overrides continue to work alongside interpolation.
+
+## MergeStrategy::Deep (rc.28+)
+
+`SettingsBuilder` now exposes `MergeStrategy { Shallow, Deep }` to control how multiple sources combine. (#4264)
+
+### Defaults
+
+| Method | Default Strategy |
+|--------|------------------|
+| `SettingsBuilder::build()` | `Shallow` (unchanged; preserves env-source / flat-key composition) |
+| `SettingsBuilder::build_composed::<T>()` | `Deep` (changed in rc.28) |
+
+### Shallow vs. Deep
+
+With `Shallow`, defining `[core]` in `local.toml` **replaces** the entire `[core]` block from `base.toml`, discarding sibling sub-sections such as `[core.security]` and `[core.databases.default]`.
+
+With `Deep`, nested objects merge recursively. Top-level scalars (e.g., `redis_url`) still replace; only objects-on-both-sides recurse.
+
+### Use Case
+
+Without `Deep`, every environment-specific TOML had to redeclare entire sections just to flip a single value. With `Deep` as the `build_composed()` default, profiles can override only what changes:
+
+```toml
+# base.toml
+[core]
+debug = false
+[core.security]
+csrf_enabled = true
+[core.databases.default]
+engine = "postgresql"
+host = "localhost"
+
+# local.toml — with Deep, [core.security] and [core.databases.default] are preserved
+[core]
+debug = true
+```
+
+### Opting Out
+
+To restore the previous `build_composed()` behavior:
+
+```rust
+use reinhardt::conf::settings::{MergeStrategy, SettingsBuilder};
+
+SettingsBuilder::new()
+    .with_merge_strategy(MergeStrategy::Shallow)
+    .build_composed()
+```
+
+`MergeStrategy` is re-exported from `settings::` and the prelude.

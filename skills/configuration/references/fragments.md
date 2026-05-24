@@ -176,3 +176,77 @@ pub struct ProjectSettings;
 - Implement `SettingsValidation` for any fragment with constraints
 - Use nested structs for sub-sections (e.g., `SecuritySettings` under `CoreSettings`)
 - Prefer typed enums over string fields for fixed choices (e.g., database engine)
+
+## VersioningSettings Fragment (rc.29+)
+
+The `reinhardt-rest` crate provides a `VersioningSettings` fragment for REST API versioning configuration. Configure it under `[rest_versioning]` in your TOML files. (#4285)
+
+### Section Naming
+
+The section uses an underscore (`rest_versioning`) rather than a dotted path (`rest.versioning`) because the `#[settings]` macro generates a method identifier from the section string, and Rust identifiers cannot contain dots.
+
+### Registering in ProjectSettings
+
+```rust
+use reinhardt::settings;
+use reinhardt_rest::settings::VersioningSettings;
+
+#[settings(core: CoreSettings | rest_versioning: VersioningSettings)]
+pub struct ProjectSettings;
+```
+
+### TOML Configuration
+
+```toml
+[rest_versioning]
+default_version = "v1"
+allowed_versions = ["v1", "v2"]
+strategy = "accept_header"
+strict_mode = false
+```
+
+### Converting to VersioningConfig
+
+A `From<VersioningSettings> for VersioningConfig` conversion is provided for ergonomic use with REST framework internals:
+
+```rust
+let config = VersioningConfig::from(settings.rest_versioning.clone());
+```
+
+### Breaking Change: Env Vars Retired
+
+The following environment variables are **no longer recognized**:
+
+- `REINHARDT_VERSIONING_DEFAULT_VERSION`
+- `REINHARDT_VERSIONING_ALLOWED_VERSIONS`
+- `REINHARDT_VERSIONING_STRATEGY`
+- `REINHARDT_VERSIONING_STRICT_MODE`
+
+`VersioningConfig::from_env()` has also been removed. Configure versioning through the project settings system instead.
+
+## Settings Injection Pattern (rc.29+)
+
+Middleware and other components that historically read configuration from `std::env::var("REINHARDT_SETTINGS")` per request should now accept settings at construction time via a `from_settings(&Settings)` constructor, mirroring the `SessionMiddleware` pattern. (#4284)
+
+### Example: BrokenLinkEmailsMiddleware
+
+```rust
+use reinhardt_middleware::broken_link::{BrokenLinkConfig, BrokenLinkEmailsMiddleware};
+
+// Construct the middleware once from settings
+let middleware = BrokenLinkEmailsMiddleware::from_settings(&settings);
+
+// Or build the config directly
+let config = BrokenLinkConfig::from_settings(&settings);
+```
+
+The `[core.managers]` section is now read once at middleware construction; behavior is unchanged but per-request env-var deserialization overhead is eliminated.
+
+### Guideline for Custom Middleware
+
+When writing middleware that depends on settings:
+
+- Provide `pub fn from_settings(settings: &Settings) -> Self` (or `-> Result<Self, _>`)
+- Capture only the fields you need, not the whole `Settings` struct
+- Avoid `env::var` / `serde_json::from_str` calls in hot paths
+- Construct middleware once during app wiring; do not rebuild per request

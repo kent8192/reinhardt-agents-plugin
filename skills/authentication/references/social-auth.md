@@ -14,6 +14,7 @@
 | `GitHubProvider` | OAuth2 | OAuth 2.0 | `social` |
 | `AppleProvider` | OIDC | OpenID Connect (JWT client_secret) | `social` |
 | `MicrosoftProvider` | OIDC | OpenID Connect / Azure AD | `social` |
+| `GenericOidcProvider` | OIDC | OpenID Connect (any IdP) | `social` |
 
 ---
 
@@ -271,3 +272,118 @@ For the latest social auth API:
 3. Read `reinhardt/crates/reinhardt-auth/src/social/providers/` for provider implementations
 4. Read `reinhardt/crates/reinhardt-auth/src/social/flow.rs` for OAuth2 flows
 5. Read `reinhardt/crates/reinhardt-auth/src/social/oidc.rs` for OIDC validation
+
+---
+
+## GenericOidcProvider (rc.23+)
+
+`GenericOidcProvider` lets you plug in any OIDC-compliant IdP (Keycloak, Authentik,
+self-hosted GitLab, AWS Cognito, Auth0, …) using only a discovery URL plus client
+credentials — no need to implement `OAuthProvider` from scratch. (#3999)
+
+**Module:** `reinhardt_auth::social::providers::generic_oidc`
+**Feature:** `social`
+
+### Configuration
+
+```rust
+use reinhardt::auth::social::providers::generic_oidc::{
+    GenericOidcConfig, GenericOidcProvider,
+};
+use std::time::Duration;
+
+// Keycloak example
+let keycloak = GenericOidcProvider::new(GenericOidcConfig {
+    client_id: "myapp".into(),
+    client_secret: "…".into(),
+    redirect_uri: "https://app.example.com/auth/keycloak/callback".into(),
+    discovery_url:
+        "https://kc.example.com/realms/myrealm/.well-known/openid-configuration".into(),
+    scopes: vec!["openid".into(), "email".into(), "profile".into()],
+    extra_token_params: vec![],            // e.g. ("audience", "api.example.com") for Auth0
+    discovery_ttl: Some(Duration::from_secs(3600)), // default 1h
+    jwks_ttl:      Some(Duration::from_secs(3600)), // default 1h
+})?;
+
+// Authentik example
+let authentik = GenericOidcProvider::new(GenericOidcConfig {
+    client_id: "myapp".into(),
+    client_secret: "…".into(),
+    redirect_uri: "https://app.example.com/auth/authentik/callback".into(),
+    discovery_url:
+        "https://auth.example.com/application/o/myapp/.well-known/openid-configuration".into(),
+    scopes: vec!["openid".into(), "email".into(), "profile".into()],
+    ..Default::default()
+})?;
+
+// Self-hosted GitLab example
+let gitlab = GenericOidcProvider::new(GenericOidcConfig {
+    client_id: "myapp".into(),
+    client_secret: "…".into(),
+    redirect_uri: "https://app.example.com/auth/gitlab/callback".into(),
+    discovery_url: "https://gitlab.example.com/.well-known/openid-configuration".into(),
+    scopes: vec!["openid".into(), "email".into(), "profile".into()],
+    ..Default::default()
+})?;
+```
+
+### Custom claim mapping (`with_userinfo_mapper`)
+
+For IdPs that return non-standard claim names (GitLab's `groups`, Keycloak's
+`realm_access`, …), wrap the provider with a custom mapper:
+
+```rust
+let provider = GenericOidcProvider::new(config)?
+    .with_userinfo_mapper(|raw: serde_json::Value| {
+        // Build StandardClaims from a non-standard payload.
+        // Return `Err(_)` to propagate provider errors.
+        Ok(StandardClaims { /* … */ })
+    });
+```
+
+The default mapper handles standard OIDC claims and rejects payloads missing
+`sub`. (#3999)
+
+### Caching
+
+Discovery documents and JWKS are cached in-memory through the existing
+`DiscoveryClient` / `JwksCache` (default TTL: 1h). Override per-provider via
+`discovery_ttl` and `jwks_ttl` on `GenericOidcConfig`.
+
+### Security guarantees
+
+- ID token JWS verification is **mandatory** (signature, `iss`, `aud`, `exp`, `iat` skew).
+- `alg: none` and any symmetric `HS*` algorithm are **unconditionally rejected**.
+- Allowed asymmetric algorithms are intersected with the IdP's advertised
+  `id_token_signing_alg_values_supported`.
+- `client_secret` is redacted from `Debug` output to avoid log leaks.
+- PKCE verifier never leaks into the authorization URL (verified by integration test
+  `pkce_state_and_challenge_round_trip_through_authorization_url`).
+
+### GitHub Provider Claims (rc.23 fix)
+
+Prior to rc.23, `GitHubProvider::get_user_info` delegated to the generic
+`UserInfoClient`, which attempted to deserialize GitHub's `/user` response directly
+into `StandardClaims`. Because GitHub returns numeric `id` (not OIDC `sub`),
+deserialization always failed and `claims = None` was silently returned via `.ok()`
+in `SocialAuthBackend::handle_callback`. rc.23 introduces an explicit
+`GitHubUserResponse` → `StandardClaims` mapping (`map_github_user_to_claims`) so
+real GitHub callbacks now populate `sub` (stringified `id`), `picture`
+(`avatar_url`), and a `name`-falls-back-to-`login` mapping. (#4004)
+
+### EC Key Support for OIDC (rc.23+)
+
+`Jwk::to_decoding_key()` now supports EC (Elliptic Curve) keys on P-256, P-384,
+and P-521 curves, unblocking ID-token verification against IdPs that publish
+EC-only JWKs (Keycloak realm keys configured with ES256, AWS Cognito user pools
+on ES256, Apple Sign in with Apple end-to-end ES256, Authentik with ES256
+signing keys). This removes the EC-exclusion limitation explicitly noted in the
+original `GenericOidcProvider` PR. (#4005)
+
+**Algorithm availability in rc.23:**
+
+| JWK `crv` | jsonwebtoken `Algorithm` | Reachable from `GenericOidcProvider`? |
+|-----------|--------------------------|---------------------------------------|
+| `P-256`   | `ES256`                  | yes (in `SUPPORTED_ASYMMETRIC_ALGORITHMS`) |
+| `P-384`   | `ES384`                  | yes (in `SUPPORTED_ASYMMETRIC_ALGORITHMS`) |
+| `P-521`   | (no `ES512` variant in `jsonwebtoken 10.3.0`) | JWK decodes, but ID-token verification not reachable until upstream adds `ES512` |

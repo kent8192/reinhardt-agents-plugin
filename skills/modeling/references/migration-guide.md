@@ -445,6 +445,22 @@ async fn test_app() -> (
 
 7. **Use `--check` in CI** — Run `cargo run --bin manage makemigrations --check` in CI to detect missing migrations.
 
+## Migration Auto-Detection Improvements (rc.23-29)
+
+Several autodetector and macro-side bugs that caused silent schema drift have been fixed in the rc.23-29 cycle.
+
+### AddConstraint / DropConstraint emission (rc.23, #3998)
+
+Prior to rc.23, `MigrationAutodetector::generate_operations()` tracked added/removed non-PK constraints (e.g., `unique_together`, `Check`, non-FK declarations) on existing tables in `DetectedChanges.added_constraints` / `removed_constraints` but never iterated over those vectors. As a result, those constraints were silently dropped from the emitted migration and the model / DB schema would diverge with no warning — most visibly, `unique_together` declarations on already-migrated models never reached the database, leaving downstream `409 Conflict` mappings on duplicate inserts as dead code.
+
+From rc.23, `makemigrations` correctly emits `Operation::AddConstraint` / `Operation::DropConstraint` for every detected change. Composite primary keys (`constraint_type == "primary_key"` with `fields.len() >= 2`) are explicitly skipped because they are still emitted via the dedicated `CreateCompositePrimaryKey` path. **Action required:** if you added `unique_together` (or any non-PK constraint) on an existing table between rc.0 and rc.22, regenerate the migration with `makemigrations` on rc.23+ and review the resulting diff.
+
+### Non-integer PK `auto_increment` regression (rc.29, #4380)
+
+Between the rc.23 macro refactor and rc.28, the `#[model]` field-registration loop stamped `auto_increment = true` on every primary key regardless of its Rust type. Combined with the SQLite emitter, this produced `"id" UUID PRIMARY KEY AUTOINCREMENT`, which SQLite rejects with `AUTOINCREMENT is only allowed on an INTEGER PRIMARY KEY`. The most visible symptom was `cargo run --bin manage migrate` failing on a fresh SQLite database for any project using `reinhardt-auth` (whose `AuthPermission { id: Uuid }` and `Group { id: Uuid }` both have `#[field(primary_key = true)]`).
+
+rc.29 fixes this in two layers: (1) the macro only emits `auto_increment = "true"` from the integer-PK branch, so `Uuid` / `String` / custom-type PKs no longer carry the flag through `FieldState.params` → `ProjectState::to_database_schema` → `ColumnDefinition`; (2) defense-in-depth in the SQLite emitter's `column_to_sql` only pushes `PRIMARY KEY AUTOINCREMENT` when the column type has been widened to `INTEGER` — non-integer PKs now emit plain `PRIMARY KEY`. Integer PKs (`BigInteger` / `Integer` / `SmallInteger`) are unaffected. **Action required on rc.29 upgrade:** if you generated migrations for a `Uuid`-PK model on rc.23-28 and never applied them, regenerate them; applied migrations need no change.
+
 ## Dynamic References
 
 For the latest migration API:
