@@ -66,7 +66,7 @@ Guide developers through model definition, database operations, and migration ma
 
 ## Cross-Domain References
 
-For testing models with TestContainers, read `references/migration-guide.md` (Test with TestContainers section) and `${CLAUDE_PLUGIN_ROOT}/skills/testing/references/testcontainers.md`.
+For testing models with TestContainers, read `references/migration-guide.md` (Test with TestContainers section) and `../testing/references/testcontainers.md`.
 
 ## Dynamic References
 

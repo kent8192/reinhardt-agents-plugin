@@ -30,8 +30,9 @@ if [ "$BASENAME" = "mod.rs" ]; then
   echo "  See: https://doc.rust-lang.org/edition-guide/rust-2024/mod-rs.html" >&2
 fi
 
-# Determine semgrep rules path
-PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
+# Determine semgrep rules path.
+# Claude Code exposes CLAUDE_PLUGIN_ROOT; Codex native plugin hooks expose PLUGIN_ROOT.
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-${PLUGIN_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}}"
 RULES="${PLUGIN_ROOT}/hooks/semgrep/reinhardt-antipatterns.yml"
 
 # Run semgrep with fallback chain

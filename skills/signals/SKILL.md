@@ -54,10 +54,10 @@ For standalone background jobs (not signal-triggered):
 
 ## Cross-Domain References
 
-- Model definitions: `${CLAUDE_PLUGIN_ROOT}/skills/modeling/references/model-patterns.md`
-- DI for task services: `${CLAUDE_PLUGIN_ROOT}/skills/dependency-injection/references/di-patterns.md`
-- Testing patterns: `${CLAUDE_PLUGIN_ROOT}/skills/testing/references/rstest-patterns.md`
-- Architecture integration: `${CLAUDE_PLUGIN_ROOT}/skills/architecture/references/layer-sequence.md`
+- Model definitions: `../modeling/references/model-patterns.md`
+- DI for task services: `../dependency-injection/references/di-patterns.md`
+- Testing patterns: `../testing/references/rstest-patterns.md`
+- Architecture integration: `../architecture/references/layer-sequence.md`
 
 ## Dynamic References
 

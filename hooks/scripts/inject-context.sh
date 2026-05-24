@@ -1,7 +1,7 @@
 #!/bin/bash
 # inject-context.sh
 # SessionStart hook: detects reinhardt projects and injects context.
-# Output goes to stdout (additionalContext for Claude).
+# Output goes to stdout as additional context for Claude Code or Codex.
 
 set -euo pipefail
 
@@ -88,5 +88,5 @@ cat << EOF
   :db-backend "$DB_BACKEND"
   :auth-method "$AUTH_METHOD"
   :apps "$APPS"
-  :note "Use reinhardt-cc skills for domain-specific guidance. Available skills: scaffolding, modeling, api-development, testing, dependency-injection.")
+  :note "Use reinhardt-agent-plugin skills for domain-specific guidance. Available skills: scaffolding, modeling, api-development, testing, dependency-injection.")
 EOF

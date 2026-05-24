@@ -1,13 +1,13 @@
 {
-  "name": "reinhardt-cc-dev",
-  "description": "Development marketplace for reinhardt-cc plugin",
+  "name": "reinhardt-agent-plugin-dev",
+  "description": "Development marketplace for reinhardt-agent-plugin plugin",
   "owner": {
     "name": "kent8192"
   },
   "plugins": [
     {
-      "name": "reinhardt-cc",
-      "description": "Claude Code plugin for reinhardt-web development",
+      "name": "reinhardt-agent-plugin",
+      "description": "Claude Code and Codex plugin for reinhardt-web development",
       "version": "1.0.0",
       "source": "./",
       "author": {

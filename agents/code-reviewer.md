@@ -84,7 +84,7 @@ Include specific file paths, line references, and fix suggestions for each findi
 ## Reference Materials
 
 Read these for authoritative patterns:
-- `${CLAUDE_PLUGIN_ROOT}/skills/modeling/references/model-patterns.md`
-- `${CLAUDE_PLUGIN_ROOT}/skills/api-development/references/serializer-patterns.md`
-- `${CLAUDE_PLUGIN_ROOT}/skills/testing/references/rstest-patterns.md`
-- `${CLAUDE_PLUGIN_ROOT}/skills/dependency-injection/references/di-patterns.md`
+- `../skills/modeling/references/model-patterns.md`
+- `../skills/api-development/references/serializer-patterns.md`
+- `../skills/testing/references/rstest-patterns.md`
+- `../skills/dependency-injection/references/di-patterns.md`

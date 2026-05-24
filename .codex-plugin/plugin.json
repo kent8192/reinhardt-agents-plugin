@@ -1,0 +1,43 @@
+{
+  "name": "reinhardt-agent-plugin",
+  "version": "1.0.0",
+  "description": "Codex and Claude Code plugin for reinhardt-web application development and deployment via reinhardt-cloud",
+  "author": {
+    "name": "kent8192",
+    "url": "https://github.com/kent8192"
+  },
+  "homepage": "https://github.com/kent8192/reinhardt-agent-plugin",
+  "repository": "https://github.com/kent8192/reinhardt-agent-plugin",
+  "license": "MIT",
+  "keywords": [
+    "reinhardt",
+    "rust",
+    "web-framework",
+    "kubernetes",
+    "deployment"
+  ],
+  "skills": "./skills/",
+  "hooks": "./hooks/hooks.json",
+  "interface": {
+    "displayName": "Reinhardt",
+    "shortDescription": "Reinhardt web development guidance for Codex and Claude Code",
+    "longDescription": "Use Reinhardt to guide reinhardt-web project scaffolding, modeling, REST API development, testing, dependency injection, authentication, authorization, admin setup, migrations, pages, macros, signals, configuration, and linting.",
+    "developerName": "kent8192",
+    "category": "Coding",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/kent8192/reinhardt-agent-plugin",
+    "privacyPolicyURL": "https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement",
+    "termsOfServiceURL": "https://docs.github.com/en/site-policy/github-terms/github-terms-of-service",
+    "defaultPrompt": [
+      "Create a new reinhardt-web project.",
+      "Add a model, API, admin, and tests to this Reinhardt app.",
+      "Upgrade this app to the latest reinhardt-web release."
+    ],
+    "brandColor": "#2563EB",
+    "screenshots": []
+  }
+}

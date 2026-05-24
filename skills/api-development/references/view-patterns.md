@@ -324,7 +324,7 @@ auxiliary value) **explicitly** via the `form!` macro's `strip_arguments`
 block instead of relying on the legacy implicit auto-injection. The
 auto-injection path remains for backward compatibility but is deprecated;
 new code should follow the explicit pattern documented in the `form!`
-reference (`${CLAUDE_PLUGIN_ROOT}/skills/macros/references/proc-macros.md`).
+reference (`../../macros/references/proc-macros.md`).
 
 ## Response Building
 

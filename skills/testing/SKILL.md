@@ -51,8 +51,8 @@ Guide developers through writing high-quality tests using rstest, AAA pattern, r
 
 ## Cross-Domain References
 
-- Model patterns: `${CLAUDE_PLUGIN_ROOT}/skills/modeling/references/model-patterns.md`
-- API patterns: `${CLAUDE_PLUGIN_ROOT}/skills/api-development/references/view-patterns.md`
+- Model patterns: `../modeling/references/model-patterns.md`
+- API patterns: `../api-development/references/view-patterns.md`
 
 ## Dynamic References
 

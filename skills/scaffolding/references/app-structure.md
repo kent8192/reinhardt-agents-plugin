@@ -91,7 +91,7 @@ my_project/
 > **Breaking change (rc.19):** `ws_url_resolvers` moved from
 > `crate::apps::<app>::ws_urls::*` to `crate::apps::<app>::urls::ws_urls::*`.
 > Existing apps must `git mv` their top-level `ws_urls.rs` under `urls/`.
-> See `${CLAUDE_PLUGIN_ROOT}/skills/migration/SKILL.md` for the recipe.
+> See `../../migration/SKILL.md` for the recipe.
 
 ## Entry Points
 
