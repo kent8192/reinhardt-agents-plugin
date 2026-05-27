@@ -1,8 +1,12 @@
 # reinhardt-cc
 
-Claude Code plugin for [reinhardt-web](https://github.com/kent8192/reinhardt-web) development. Provides skills, hooks, agents, and commands that enforce reinhardt conventions and accelerate application development.
+AI coding assistant plugin for [reinhardt-web](https://github.com/kent8192/reinhardt-web) development. Provides skills, hooks, agents, and commands that enforce reinhardt conventions and accelerate application development.
+
+Supports **Claude Code** and **Codex** (via `AGENTS.md` mirror).
 
 ## Installation
+
+### Claude Code
 
 ```bash
 # From the Claude Code plugin marketplace
@@ -11,6 +15,26 @@ Claude Code plugin for [reinhardt-web](https://github.com/kent8192/reinhardt-web
 # Or install directly
 /plugin install reinhardt-cc@kent8192
 ```
+
+### Codex
+
+The repository includes `AGENTS.md` (a mirror of `CLAUDE.md`) for Codex compatibility. Clone the repo and point Codex to it:
+
+```bash
+git clone https://github.com/kent8192/reinhardt-cc.git
+# AGENTS.md is automatically picked up by Codex
+```
+
+## Supported Versions
+
+This plugin documents both active reinhardt-web version families:
+
+| Version | Status | Branch |
+|---------|--------|--------|
+| **0.1.2** | Stable | `main` |
+| **0.2.0-rc.2** | Development | `develop/0.2.0` |
+
+Skills use inline version markers — `**(0.1.x)**` / `**(0.2.x)**` — where APIs diverge between versions. Check your project's `Cargo.toml` to determine which version family applies.
 
 ## Features
 
@@ -34,7 +58,7 @@ Claude Code plugin for [reinhardt-web](https://github.com/kent8192/reinhardt-web
 | `lint` | "lint", "fix warnings", "clippy", "static analysis" | Static analysis workflow with the fix-iterate pattern |
 | `migration` | "upgrade reinhardt", "migrate", "deprecated", "breaking change", "rc.XX" | Version upgrade analysis via CHANGELOG, deprecated API detection, and guided code migration |
 
-### Command
+### Commands
 
 | Command | Description |
 |---------|-------------|
@@ -76,6 +100,15 @@ The PostToolUse hook automatically scans code changes for these reinhardt-specif
 - **reinhardt-admin-cli** -- `cargo install reinhardt-admin-cli --version "0.1.2"` (for 0.2.x: `--version "0.2.0-rc.2"`)
 - **Docker Desktop** -- required for TestContainers-based database tests
 - **semgrep** (optional) -- enables automatic anti-pattern detection via PostToolUse hook
+
+## Platform Compatibility
+
+| Platform | Config File | Status |
+|----------|-------------|--------|
+| **Claude Code** | `CLAUDE.md` + `.claude-plugin/` | Full support (skills, hooks, agents, commands) |
+| **Codex** | `AGENTS.md` | Instructions mirror (same content as `CLAUDE.md` with name substitutions) |
+
+`CLAUDE.md` and `AGENTS.md` are kept in sync — edits to one must be mirrored to the other in the same commit. Only documented substitutions (title, attribution footer references) differ between the two files.
 
 ## License
 
