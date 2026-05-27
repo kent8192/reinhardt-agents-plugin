@@ -1,14 +1,26 @@
-# reinhardt-agent-plugin
+# reinhardt-agents-plugin
 
 Codex and Claude Code plugin for [reinhardt-web](https://github.com/kent8192/reinhardt-web) development. Provides skills, hooks, agents, and commands that enforce reinhardt conventions and accelerate application development.
 
 ## Installation
 
-### Codex
+### Codex CLI
+
+```bash
+# Add this repo as a plugin marketplace source
+codex plugin marketplace add kent8192/reinhardt-agents-plugin
+```
+
+Then browse and install from the CLI:
+
+```bash
+codex          # launch Codex
+/plugins       # open the plugin list, find reinhardt-agents-plugin, select Install
+```
 
 This repository ships a Codex plugin manifest at `.codex-plugin/plugin.json`.
 For local development, the repository also includes `.agents/plugins/marketplace.json`
-with a local `reinhardt-agent-plugin` entry pointing at the repository root.
+with a local `reinhardt-agents-plugin` entry pointing at the repository root.
 
 Enable Codex plugin hooks in `~/.codex/config.toml` before relying on the hook
 integration:
@@ -22,11 +34,7 @@ plugin_hooks = true
 ### Claude Code
 
 ```bash
-# From the Claude Code plugin marketplace
-/plugin marketplace add kent8192/reinhardt-agent-plugin
-
-# Or install directly
-/plugin install reinhardt-agent-plugin@kent8192
+claude mcp add-from-claude-plugin kent8192/reinhardt-agents-plugin
 ```
 
 ## Supported Versions

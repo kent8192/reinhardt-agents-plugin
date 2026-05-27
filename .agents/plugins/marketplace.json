@@ -1,11 +1,11 @@
 {
-  "name": "reinhardt-agent-plugin",
+  "name": "reinhardt-agents-plugin",
   "interface": {
     "displayName": "Reinhardt"
   },
   "plugins": [
     {
-      "name": "reinhardt-agent-plugin",
+      "name": "reinhardt-agents-plugin",
       "source": {
         "source": "local",
         "path": "./"

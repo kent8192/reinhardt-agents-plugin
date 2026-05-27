@@ -1,13 +1,13 @@
 {
-  "name": "reinhardt-agent-plugin",
+  "name": "reinhardt-agents-plugin",
   "version": "1.1.0",
   "description": "Codex and Claude Code plugin for reinhardt-web application development and deployment via reinhardt-cloud",
   "author": {
     "name": "kent8192",
     "url": "https://github.com/kent8192"
   },
-  "homepage": "https://github.com/kent8192/reinhardt-agent-plugin",
-  "repository": "https://github.com/kent8192/reinhardt-agent-plugin",
+  "homepage": "https://github.com/kent8192/reinhardt-agents-plugin",
+  "repository": "https://github.com/kent8192/reinhardt-agents-plugin",
   "license": "MIT",
   "keywords": [
     "reinhardt",
@@ -29,7 +29,7 @@
       "Read",
       "Write"
     ],
-    "websiteURL": "https://github.com/kent8192/reinhardt-agent-plugin",
+    "websiteURL": "https://github.com/kent8192/reinhardt-agents-plugin",
     "privacyPolicyURL": "https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement",
     "termsOfServiceURL": "https://docs.github.com/en/site-policy/github-terms/github-terms-of-service",
     "defaultPrompt": [
