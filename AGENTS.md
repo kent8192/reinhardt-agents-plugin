@@ -2,9 +2,9 @@
 
 ## Purpose
 
-This file contains project-specific instructions for the reinhardt-agent-plugin repository.
-reinhardt-agent-plugin is the official Claude Code and Codex plugin for the Reinhardt family of repositories
-(reinhardt-web, reinhardt-cloud, awesome-delions, reinhardt-agent-plugin). It provides skills,
+This file contains project-specific instructions for the reinhardt-agents-plugin repository.
+reinhardt-agents-plugin is the official Claude Code and Codex plugin for the Reinhardt family of repositories
+(reinhardt-web, reinhardt-cloud, awesome-delions, reinhardt-agents-plugin). It provides skills,
 agents, hooks, and commands used by Claude Code and Codex when working in those repositories.
 
 For the Claude Code plugin structure, see `.claude-plugin/`. For the Codex plugin
@@ -14,9 +14,9 @@ structure, see `.codex-plugin/`.
 
 ## Project Overview
 
-**Repository URL**: https://github.com/kent8192/reinhardt-agent-plugin
+**Repository URL**: https://github.com/kent8192/reinhardt-agents-plugin
 
-reinhardt-agent-plugin is a plugin workspace — it does not contain Rust code or tests. The
+reinhardt-agents-plugin is a plugin workspace — it does not contain Rust code or tests. The
 "code" in this repo is skill definitions (`.md` files), agent manifests, hooks
 (`.sh`/TypeScript), and commands. The primary Reinhardt coding standards live in the
 `reinhardt-web` and `reinhardt-cloud` repositories; this file covers contributor
@@ -47,7 +47,7 @@ guidelines specific to this plugin repo.
   - When user approves a plan via Exit Plan Mode, implementation and commits are both authorized
   - Upon successful implementation, all planned commits are created automatically without additional confirmation
   - If implementation fails or tests fail, NO commits are created (report to user instead)
-- **EXCEPTION (Reinhardt family)**: When operating inside `reinhardt-web` / `reinhardt-cloud` / `awesome-delions` / `reinhardt-agent-plugin`, the **Autonomous Operation Policy** below authorizes commit and push on any non-protected branch (plus Draft PR / Issue creation) without further confirmation — see the next subsection
+- **EXCEPTION (Reinhardt family)**: When operating inside `reinhardt-web` / `reinhardt-cloud` / `awesome-delions` / `reinhardt-agents-plugin`, the **Autonomous Operation Policy** below authorizes commit and push on any non-protected branch (plus Draft PR / Issue creation) without further confirmation — see the next subsection
 - Split commits by specific intent (NOT feature-level goals)
 - Each commit MUST be small enough to explain in one line
 
@@ -60,7 +60,7 @@ Scope (applies only when the working directory is inside one of these four repos
 - `kent8192/reinhardt-web`
 - `kent8192/reinhardt-cloud`
 - `kent8192/awesome-delions`
-- `kent8192/reinhardt-agent-plugin`
+- `kent8192/reinhardt-agents-plugin`
 
 Autonomously Allowed (no per-action confirmation required):
 
@@ -151,4 +151,4 @@ gh pr list --state open
 
 ---
 
-**Note**: This AGENTS.md covers contributor guidelines specific to the reinhardt-agent-plugin plugin repository. For Reinhardt coding standards (Rust, testing, architecture), see the `reinhardt-web` or `reinhardt-cloud` AGENTS.md.
+**Note**: This AGENTS.md covers contributor guidelines specific to the reinhardt-agents-plugin plugin repository. For Reinhardt coding standards (Rust, testing, architecture), see the `reinhardt-web` or `reinhardt-cloud` AGENTS.md.

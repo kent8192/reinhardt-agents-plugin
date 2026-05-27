@@ -1,12 +1,12 @@
 {
-  "name": "reinhardt-agent-plugin",
+  "name": "reinhardt-agents-plugin",
   "version": "1.1.0",
   "description": "Claude Code and Codex plugin for reinhardt-web application development and deployment via reinhardt-cloud",
   "author": {
     "name": "kent8192",
     "url": "https://github.com/kent8192"
   },
-  "repository": "https://github.com/kent8192/reinhardt-agent-plugin",
+  "repository": "https://github.com/kent8192/reinhardt-agents-plugin",
   "license": "MIT",
   "keywords": ["reinhardt", "rust", "web-framework", "kubernetes", "deployment"]
 }

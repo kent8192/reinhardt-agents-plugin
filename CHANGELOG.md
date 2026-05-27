@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the **reinhardt-agent-plugin** Claude Code and Codex plugin are documented in this file.
+All notable changes to the **reinhardt-agents-plugin** Claude Code and Codex plugin are documented in this file.
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.0] - 2026-05-16
 
 Synchronizes documentation, skills, agents, and commands with **reinhardt-web v0.1.0-rc.23 → v0.1.0-rc.29**
-(2026-04-29 → 2026-05-13, 153 PRs upstream). Tracking issue: [#9](https://github.com/kent8192/reinhardt-agent-plugin/issues/9).
+(2026-04-29 → 2026-05-13, 153 PRs upstream). Tracking issue: [#9](https://github.com/kent8192/reinhardt-agents-plugin/issues/9).
 
 ### Added
 
@@ -82,7 +82,7 @@ Synchronizes documentation, skills, agents, and commands with **reinhardt-web v0
 
 ## [1.0.0] - prior
 
-- Initial public release of the reinhardt-agent-plugin plugin (skills for scaffolding, modeling,
+- Initial public release of the reinhardt-agents-plugin plugin (skills for scaffolding, modeling,
   api-development, testing, dependency-injection, configuration, admin, migration, plus the
   `pages`, `authentication`, `authorization`, `macros`, `signals`, `architecture`, and `lint`
   skills that were added incrementally before this CHANGELOG was introduced).
