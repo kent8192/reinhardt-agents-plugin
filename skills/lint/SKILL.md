@@ -1,6 +1,7 @@
 ---
 name: lint
 description: Use when running static analysis, fixing lint errors, or preparing code for commit - covers the full cargo/clippy/rustdoc/semgrep suite with fix-iterate workflow
+versions: ["0.1.2", "0.2.x"]
 ---
 
 # Reinhardt Static Analysis & Linting

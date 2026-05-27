@@ -131,7 +131,7 @@ Compile-time behavior is pinned by trybuild UI tests in
 
 ```toml
 [dev-dependencies]
-reinhardt = { version = "0.1.0-rc.29", features = ["test"] }
+reinhardt = { version = "0.1.2", features = ["test"] }  # For 0.2.x: "0.2.0-rc.2"
 rstest = "0.23"
 serial_test = "3"
 tokio = { version = "1", features = ["full"] }
@@ -142,8 +142,30 @@ via `reinhardt-testkit`; you do NOT need to add it as a direct dev-dependency. (
 
 ## Checklist
 
-- [ ] Test is annotated with `#[serial(di_registry)]`
+- [ ] Test is annotated with `#[serial(di_registry)]` **(0.1.x only — not required in 0.2.x)**
 - [ ] `DiOverrides`/`OverrideGuard` is bound to a `let` binding that outlives the
       assertions (use `_di`, never `_`)
 - [ ] Override kind in the macro is one of `singleton` / `transient`
 - [ ] The `testing` feature is enabled only in dev/test builds
+
+## Version Differences (0.2.x)
+
+### #[serial(di_registry)] No Longer Required
+
+In 0.2.x, `injection_context_with_di_overrides` creates an isolated per-context `DependencyRegistry` for each test. This eliminates the need for `#[serial(di_registry)]` — DI override tests can run in parallel without interfering with each other's state.
+
+```rust
+// 0.1.x — serial annotation required
+#[rstest]
+#[serial(di_registry)]
+async fn test_with_mock_service() {
+    // ...
+}
+
+// 0.2.x — parallel execution safe
+#[rstest]
+async fn test_with_mock_service() {
+    // injection_context_with_di_overrides creates isolated registry
+    // ...
+}
+```

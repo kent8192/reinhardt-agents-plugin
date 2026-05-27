@@ -123,6 +123,8 @@ let router = UnifiedRouter::new()
     .route(path!("/users/{user_id}/"), user_detail);
 ```
 
+> **0.2.x note:** `path!` continues to work in 0.2.x with `#[routes]`. The `#[url_patterns]` attribute that previously also consumed `path!` expressions is removed in 0.2.x — use `#[routes]` for all URL registration.
+
 ---
 
 ## `page!`

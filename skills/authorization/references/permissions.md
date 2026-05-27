@@ -280,6 +280,22 @@ impl Permission for IsProjectOwner {
 }
 ```
 
+## Version Differences (0.2.x)
+
+### User-ID-Based Permission Lookups
+
+In 0.2.x, permission lookups use user ID instead of username for resolution. This affects `PermissionContext` and any code that resolves permissions by username string:
+
+```rust
+// 0.1.x — username-based
+context.has_perm("app.change_article", &username).await
+
+// 0.2.x — user-ID-based
+context.has_perm("app.change_article", user_id).await
+```
+
+---
+
 ## Dynamic References
 
 For the latest permission API:

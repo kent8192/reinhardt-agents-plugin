@@ -4,6 +4,8 @@
 
 Reinhardt supports multiple authentication backends, each enabled via feature flags.
 
+> **0.2.x note**: In 0.2.x, all auth backends implement a unified `AuthBackend` trait. The individual backend types listed below remain, but their return types and configuration are normalized through this common trait. Code that pattern-matched on backend-specific result types should migrate to the `AuthBackend` trait interface.
+
 | Backend | Type | Feature Flag | Transport | Stateful | Use Case |
 |---------|------|-------------|-----------|----------|----------|
 | JWT | `JwtAuth` | `auth-jwt` | `Authorization: Bearer <token>` | No | APIs, mobile clients, SPAs |
@@ -21,7 +23,7 @@ JWT is the verified production pattern, confirmed in use by the reinhardt-cloud 
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0-rc.29", features = ["auth-jwt", "argon2-hasher"] }
+reinhardt = { version = "0.1.2",  # For 0.2.x: "0.2.0-rc.2" features = ["auth-jwt", "argon2-hasher"] }
 ```
 
 ### Configuration
@@ -122,7 +124,7 @@ pub async fn login(username: String, password: String) -> Result<AuthResponse, S
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0-rc.29", features = ["auth-session", "sessions", "argon2-hasher"] }
+reinhardt = { version = "0.1.2",  # For 0.2.x: "0.2.0-rc.2" features = ["auth-session", "sessions", "argon2-hasher"] }
 ```
 
 ### Configuration

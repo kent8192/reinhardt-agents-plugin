@@ -17,9 +17,10 @@ If no reinhardt dependency is found, inform the user this command is for reinhar
 ## Step 2: Ask Target Version
 
 Ask the user which version they want to upgrade to:
-- Accept specific versions (e.g., `0.1.0-rc.29`)
+- Accept specific versions (e.g., `0.1.2`, `0.2.0-rc.2`)
 - Accept `latest` — resolve via `gh release list -R kent8192/reinhardt-web --limit 1` or by reading `reinhardt/Cargo.toml` if the repo is available locally
 - If the target is the same as current, inform the user and exit
+- If upgrading from 0.1.x to 0.2.x, warn the user this is a **major version upgrade** with extensive breaking changes, and recommend reviewing the migration skill's "Major Version Upgrade" section before proceeding
 
 ## Step 3: Confirm
 

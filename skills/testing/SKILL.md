@@ -1,6 +1,7 @@
 ---
 name: testing
 description: Use when writing tests for reinhardt-web applications - provides rstest/AAA patterns, TestContainers setup, and API testing utilities
+versions: ["0.1.2", "0.2.x"]
 ---
 
 # Reinhardt Testing

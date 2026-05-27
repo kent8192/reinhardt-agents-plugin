@@ -1,6 +1,7 @@
 ---
 name: authorization
 description: Use when configuring authorization and permissions in reinhardt-web applications - covers Permission trait, Guard types, guard! macro, model/object permissions, and auth extractors
+versions: ["0.1.2", "0.2.x"]
 ---
 
 # Reinhardt Authorization

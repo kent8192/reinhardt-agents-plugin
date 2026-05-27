@@ -313,3 +313,38 @@ grep -rn 'SymbolName' src/ --include='*.rs'
 
 If `#[allow(deprecated)]` is found in production code during migration, it
 should be flagged and the underlying deprecated usage should be migrated.
+
+---
+
+## Pattern: Major Version Removal (0.2.x)
+
+Items deprecated during the 0.1.x RC series are **fully removed** in 0.2.x. These
+items have no `#[deprecated]` annotation in 0.2.x — they simply don't exist. Any
+application code that references them will fail with a compilation error (unresolved
+import, unknown type, missing method), not a deprecation warning.
+
+### Removed items (non-exhaustive)
+
+| Removed Symbol | Was Deprecated In | 0.2.x Replacement |
+|----------------|-------------------|--------------------|
+| `HasCustomManager` | 0.1.x RC series | `type Objects` associated type on Model |
+| `DefaultUser` / `DefaultUserManager` | 0.1.x RC series | Unified `AuthBackend` trait |
+| `#[url_patterns]` | 0.1.x RC series | `#[routes]` attribute |
+| `SecurityConfig` | 0.1.x RC series | `SecurityMiddleware` builder methods |
+| `get_database_url_from_env_or_settings()` | 0.1.x RC series | `database_url_from(settings, env_override)` |
+
+### How to detect
+
+Because these symbols are absent in 0.2.x, `grep` for `#[deprecated]` will not
+find them. Instead, detect usage in application code directly:
+
+```bash
+grep -rn 'HasCustomManager\|DefaultUser\|DefaultUserManager\|url_patterns\|SecurityConfig\|get_database_url_from_env_or_settings' src/ --include='*.rs'
+```
+
+Any matches indicate code that **must** be migrated before upgrading to 0.2.x.
+
+### Migration approach
+
+Refer to the "Major Version Upgrade: 0.1.x → 0.2.x" section in
+`upgrade-workflow.md` for the recommended migration order and per-layer guidance.

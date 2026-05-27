@@ -2,6 +2,8 @@
 
 ## App-Level URL Configuration
 
+> **Note: The `url_patterns()` convention below is removed in 0.2.x.** All URL registration uses `#[routes]` instead. The content below applies to 0.1.x only. See the [Root-Level URL Configuration](#root-level-url-configuration) section for the `#[routes]` pattern that works in both versions.
+
 Each app defines its routes using a `ServerRouter`. Handlers decorated with `#[get]`, `#[post]`, etc. are registered via `.endpoint()`.
 
 ```rust
@@ -89,6 +91,26 @@ pub fn routes() -> UnifiedRouter {
         .with_middleware(SecurityMiddleware::new())
         .with_middleware(JwtAuthMiddleware::from_secret(jwt_secret.as_bytes()))
 }
+```
+
+#### Version Differences for `#[routes]`
+
+- **0.1.x**: Supports flags: `standalone`, `server_only`, `no_client_resolvers`, `no_ws_resolvers`, `client_inventory`
+- **0.2.x**: Simplified to inventory registration only. All above flags removed. The macro is ~370 lines (down from ~1460)
+
+#### ClientRouter Version Differences
+
+- **0.1.x**: `ClientRouter` has `named_route()`, `named_route_params()`, `named_route_result()`, `named_route_path()`, `named_page()` methods
+- **0.2.x**: All `named_*` methods removed. Every `ClientRouter::route*` method requires `name` as mandatory first argument
+
+```rust
+// 0.1.x
+let router = ClientRouter::new()
+    .named_route("/users/:id", "user_detail", handler);
+
+// 0.2.x — name is first positional arg
+let router = ClientRouter::new()
+    .route("user_detail", "/users/:id", handler);
 ```
 
 ### UnifiedRouter Methods
@@ -262,6 +284,8 @@ pub fn router() -> ServerRouter {
 ## Type-Safe URL Resolution
 
 > Requires feature flag: `url-resolver`
+>
+> **(0.1.x only -- removed in 0.2.x)** In 0.2.x, the type-safe URL reversal layer (`typed.rs`), `UrlReverser`, `ClientUrlReverser`, and `Route::with_name()` are removed.
 
 The `UrlResolver` trait and generated extension traits provide compile-time verified URL resolution, eliminating string-based `reverse()` calls.
 
@@ -351,6 +375,8 @@ caught at WASM compile time. (#4263)
 ---
 
 ## Duplicate Route Name Detection
+
+> **Note**: `UrlReverser` is removed in 0.2.x. The duplicate detection below applies to 0.1.x only.
 
 `UrlReverser::register()` returns `Result<(), DuplicateRouteError>` instead of `()`. `ServerRouter::register_all_routes()` collects all errors and reports them at startup. If two routes share the same `name`, the server will fail to start with a clear error message listing the conflicts.
 

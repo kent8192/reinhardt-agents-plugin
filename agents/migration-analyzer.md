@@ -14,6 +14,13 @@ Called by the migration skill with:
 - `target_version`: Target version specified by user
 - `app_code_path`: Path to user's application source code
 
+## Version Family Detection
+
+Before analysis, determine the version families involved:
+- **0.1.x family**: `0.1.0-rc.*`, `0.1.0`, `0.1.1`, `0.1.2` — stable series
+- **0.2.x family**: `0.2.0-rc.*` — development series with breaking changes from 0.1.x
+- **Cross-family upgrade** (0.1.x → 0.2.x): Flag as a **major version migration** with extensive breaking changes. Use the migration skill's "Major Version Upgrade: 0.1.x → 0.2.x" section for the comprehensive migration path.
+
 ## Analysis Steps
 
 Execute these steps in order:
@@ -111,3 +118,5 @@ Return a structured report in this format:
 - ONLY report application code usage that actually exists (verified by grep)
 - If reinhardt source is not available locally, note it and skip Steps 3-4
 - If `gh` CLI fails, note the error and continue with CHANGELOG-only analysis
+- For 0.1.x → 0.2.x upgrades, include ALL breaking changes from the "Major Version Upgrade" reference in the report, even if the user's code doesn't directly use the affected APIs (they may use them transitively)
+- For 0.1.x → 0.2.x upgrades, also check `reinhardt/announcements/v0.2.0-rc.N.md` for 0.2.x-series release notes

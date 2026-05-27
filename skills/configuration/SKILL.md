@@ -1,6 +1,7 @@
 ---
 name: configuration
 description: Use when setting up or modifying reinhardt-web project configuration - covers settings fragments, TOML sources, profiles, and the composable settings system
+versions: ["0.1.2", "0.2.x"]
 ---
 
 # Reinhardt Configuration

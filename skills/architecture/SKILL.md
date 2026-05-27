@@ -1,6 +1,7 @@
 ---
 name: architecture
 description: Use when implementing a complete feature across all reinhardt layers - guides the full workflow from model to API to tests with completion checklist
+versions: ["0.1.2", "0.2.x"]
 ---
 
 # Reinhardt Feature Development Architecture

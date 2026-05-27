@@ -16,6 +16,13 @@ PermissionsMixin      (groups, permissions)
 
 **Module:** `reinhardt_auth::core` (re-exported via `reinhardt::auth`)
 
+### Version Differences (0.2.x)
+
+- **`DefaultUser` removed**: The `DefaultUser` struct is removed in 0.2.x. Use `SimpleUser` or define a custom user model instead.
+- **`DefaultUserManager` removed**: The `DefaultUserManager` is removed in 0.2.x. Implement the `UserManager` trait directly for your user type.
+- **`SimpleUser.email` is now optional**: `SimpleUser.email` changed from `String` to `Option<String>` in 0.2.x.
+- **Permission lookups use user ID**: Permission lookups changed from username-based to user-ID-based resolution in 0.2.x.
+
 ---
 
 ## AuthIdentity Trait
@@ -89,7 +96,7 @@ pub struct SimpleUser {
 }
 ```
 
-### DefaultUser
+### DefaultUser **(0.1.x only — removed in 0.2.x)**
 
 Full-featured user with Argon2 password hashing. Requires `argon2-hasher` feature.
 
@@ -206,6 +213,10 @@ assert!(!user.check_password("wrong_password")?);
 ---
 
 ## User Management
+
+### DefaultUserManager **(0.1.x only — removed in 0.2.x)**
+
+In 0.1.x, `DefaultUserManager` provided a ready-made `UserManager` implementation for `DefaultUser`. In 0.2.x, both `DefaultUser` and `DefaultUserManager` are removed — implement the `UserManager` trait directly for your custom user type.
 
 ### UserManager Trait
 

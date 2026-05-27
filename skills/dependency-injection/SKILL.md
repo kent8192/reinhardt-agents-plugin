@@ -1,6 +1,7 @@
 ---
 name: dependency-injection
 description: Use when configuring dependency injection in reinhardt-web applications - covers injectable services, scoping, and integration with database and auth
+versions: ["0.1.2", "0.2.x"]
 ---
 
 # Reinhardt Dependency Injection

@@ -195,3 +195,15 @@ After running `reinhardt-admin startproject <name>`, complete these steps:
    git add .
    git commit -m "chore: initialize reinhardt project"
    ```
+
+---
+
+## Version Differences (0.2.x)
+
+### Workspace Template Consolidation
+
+In 0.2.x, separate workspace app templates (`app_pages_workspace_template/`, `app_restful_workspace_template/`) are removed. A single non-workspace template per app type is used, with an `is_workspace` Tera conditional for import-path divergence. `startapp --workspace` now generates the full module structure (client/, server_fn.rs, cfg gates) within a single template.
+
+### .example.toml Removed
+
+In 0.2.x, the dual output of `.example.toml` files during scaffolding is removed. Use environment variables for configuration instead.

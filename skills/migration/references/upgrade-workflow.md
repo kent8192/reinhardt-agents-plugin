@@ -43,7 +43,7 @@ reinhardt = { version = "0.1.0-rc.19", features = [...] }
 
 ### Step 1.2 — Resolve target version
 
-- If the user specifies an exact version (e.g., `0.1.0-rc.29`), use it directly.
+- If the user specifies an exact version (e.g., `0.1.2` or `0.2.0-rc.2`), use it directly.
 - If the user says `latest`, resolve via:
   ```bash
   gh release list -R kent8192/reinhardt-web --limit 1
@@ -104,7 +104,7 @@ Goal: Apply changes incrementally with verification at each step.
 
 Change the reinhardt version to the target:
 ```toml
-reinhardt = { version = "0.1.0-rc.29", features = [...] }
+reinhardt = { version = "0.1.2", features = [...] }  # or "0.2.0-rc.2"
 ```
 
 Run `cargo check` immediately after to identify compilation errors. This surfaces
@@ -253,3 +253,56 @@ Migration order:
 6. If any `cargo install reinhardt-admin-cli` invocation appears in
    project scripts/docs, pin it: `--version "0.1.0-rc.22"` (rc.22 quick-start fix)
 7. Run `cargo check` and `cargo test`
+
+---
+
+## Major Version Upgrade: 0.1.x → 0.2.x
+
+This section covers the full migration path from the 0.1.x series to 0.2.x.
+Unlike RC-to-RC hops within 0.1.x, this is a **major version migration** with
+extensive breaking changes across multiple subsystems.
+
+### Pre-flight
+
+- This is a major version migration with many breaking changes
+- Ensure git working tree is clean (`git status --porcelain` returns empty)
+- Run `cargo check` and `cargo test` on current 0.1.x to establish baseline
+- Commit or stash any pending work before proceeding
+
+### Migration Order (recommended)
+
+Apply changes in this order to minimize intermediate compilation failures:
+
+1. **Cargo.toml**: `version = "0.1.2"` → `version = "0.2.0-rc.2"`
+
+2. **Modeling layer**: `HasCustomManager` → `type Objects` associated type; add
+   `type Objects = Manager<Self>;` to manual Model impls; adopt `{Model}Info` or
+   opt-out with `#[model(info = false)]`
+
+3. **Authentication**: Remove `DefaultUser`/`DefaultUserManager` usage; update to
+   unified `AuthBackend` trait returning `Box<dyn AuthIdentity>`; update permission
+   lookups from username-based to user-ID-based
+
+4. **Routing**: Remove all `#[url_patterns]` usage; update `#[routes]` (remove
+   unsupported flags: `standalone`, `server_only`, etc.); update `ClientRouter` to
+   use mandatory `name` first arg; remove `named_route*` calls; remove type-safe URL
+   reversal (`UrlReverser`, `ClientUrlReverser`)
+
+5. **Pages/WASM**: Update `use_effect`/`use_memo`/`use_callback` to explicit
+   dependency arrays; remove explicit `Page::reactive` wrapping (now automatic)
+
+6. **DI**: Adopt per-context `DependencyRegistry` if needed; remove
+   `#[serial(di_registry)]` from tests
+
+7. **Configuration**: Replace `SecurityConfig` with `SecurityMiddleware` builder
+   methods (`with_hsts()`, etc.)
+
+8. **Database**: Replace `get_database_url_from_env_or_settings()` with
+   `database_url_from(settings, env_override)`
+
+### Verification
+
+- Run `cargo check` after each layer to catch errors early
+- Run `cargo test` after all layers complete
+- Check for `#[deprecated]` warnings — APIs deprecated in late 0.1.x RCs are fully
+  removed in 0.2.x (they will produce hard compilation errors, not warnings)
