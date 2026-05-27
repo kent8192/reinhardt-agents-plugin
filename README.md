@@ -34,7 +34,7 @@ plugin_hooks = true
 ### Claude Code
 
 ```bash
-claude mcp add-from-claude-plugin kent8192/reinhardt-agents-plugin
+claude install kent8192/reinhardt-agents-plugin
 ```
 
 ## Supported Versions
