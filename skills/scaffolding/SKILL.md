@@ -70,7 +70,7 @@ Guide developers through creating new reinhardt-web projects and adding apps wit
 ## Cross-Domain References
 
 If the user wants to immediately set up models after scaffolding, read
-`${CLAUDE_PLUGIN_ROOT}/skills/modeling/references/model-patterns.md`.
+`../modeling/references/model-patterns.md`.
 
 ## Dynamic References
 

@@ -33,8 +33,8 @@ Guide developers through building REST API endpoints using reinhardt-rest, reinh
 
 ## Cross-Domain References
 
-- Model definitions: `${CLAUDE_PLUGIN_ROOT}/skills/modeling/references/model-patterns.md`
-- DI for services: `${CLAUDE_PLUGIN_ROOT}/skills/dependency-injection/references/di-patterns.md`
+- Model definitions: `../modeling/references/model-patterns.md`
+- DI for services: `../dependency-injection/references/di-patterns.md`
 
 ## Dynamic References
 

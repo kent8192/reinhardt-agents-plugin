@@ -248,7 +248,7 @@ Migration order:
    if your scaffold predates rc.21
 4. (Optional) Migrate each `form!` block to use explicit `strip_arguments`
    for CSRF (rc.22) — see
-   `${CLAUDE_PLUGIN_ROOT}/skills/macros/references/proc-macros.md`
+   `../../macros/references/proc-macros.md`
 5. Update `Cargo.toml` to `0.1.0-rc.22`
 6. If any `cargo install reinhardt-admin-cli` invocation appears in
    project scripts/docs, pin it: `--version "0.1.0-rc.22"` (rc.22 quick-start fix)

@@ -18,7 +18,7 @@ Present the options:
 
 ## Step 3: Feature Preset
 
-Present the feature presets from `${CLAUDE_PLUGIN_ROOT}/skills/scaffolding/references/feature-flags.md`:
+Present the feature presets from `../skills/scaffolding/references/feature-flags.md`:
 - **minimal** — Core routing, DI, HTTP server only
 - **standard** (default) — Balanced for most projects
 - **api-only** — REST APIs without templates/forms

@@ -46,6 +46,6 @@ Return test code ready to be inserted into the appropriate file. Include:
 ## Reference Materials
 
 Read these for patterns when generating tests:
-- `${CLAUDE_PLUGIN_ROOT}/skills/testing/references/rstest-patterns.md`
-- `${CLAUDE_PLUGIN_ROOT}/skills/testing/references/testcontainers.md`
-- `${CLAUDE_PLUGIN_ROOT}/skills/testing/references/api-testing.md`
+- `../skills/testing/references/rstest-patterns.md`
+- `../skills/testing/references/testcontainers.md`
+- `../skills/testing/references/api-testing.md`
