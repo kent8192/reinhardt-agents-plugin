@@ -1,6 +1,7 @@
 ---
 name: authorization
 description: Use when configuring authorization and permissions in reinhardt-web applications - covers Permission trait, Guard types, guard! macro, model/object permissions, and auth extractors
+versions: ["0.1.2", "0.2.x"]
 ---
 
 # Reinhardt Authorization
@@ -65,6 +66,7 @@ Guide developers through authorization setup using reinhardt-auth, including per
 ## Dynamic References
 
 For the latest authorization API:
+
 1. Read `reinhardt/crates/reinhardt-auth/src/core/permission.rs` for Permission trait
 2. Read `reinhardt/crates/reinhardt-auth/src/guard.rs` for Guard, Public, All, Any, Not
 3. Read `reinhardt/crates/reinhardt-auth/macros/src/lib.rs` for guard! macro

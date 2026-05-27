@@ -4,7 +4,7 @@
 
 Reinhardt's DI system is FastAPI-inspired with compile-time type safety and async-first design.
 
-```
+```text
 reinhardt-di
   ├── Injectable trait          (core injection interface)
   ├── Injected<T>               (Arc-wrapped dependency with metadata)
@@ -111,6 +111,7 @@ cargo run --bin check-di -- --validate
 Users **CANNOT** register `#[injectable_factory]` or `#[injectable]` for types in framework namespaces. This prevents accidental override of framework-managed services. Violations cause a startup panic.
 
 **Framework prefixes** (registration panics if the type name starts with any of these):
+
 - `reinhardt::`, `reinhardt_admin::`, `reinhardt_di::`, `reinhardt_core::`
 - `reinhardt_auth::`, `reinhardt_db::`, `reinhardt_rest::`
 - All other `reinhardt_*` crate namespaces
@@ -733,3 +734,38 @@ async fn create_allowed_origins() -> AllowedOrigins {
 ### Related
 
 - kent8192/reinhardt-web#3457 — duplicate registration detection (runtime enforcement)
+
+---
+
+## Version Differences (0.2.x)
+
+### InjectionContext Per-Context Registry
+
+In 0.2.x, `InjectionContext` gains an `Option<Arc<DependencyRegistry>>` field with a `with_registry()` builder method. Resolution strategy: per-context registry is checked first, falling back to the global `global_registry()`.
+
+```rust
+// 0.2.x — isolated registry per context
+let ctx = InjectionContext::new()
+    .with_registry(custom_registry);
+```
+
+This enables per-test registry isolation — `injection_context_with_di_overrides` creates an isolated per-context registry for each test, eliminating the need for `#[serial(di_registry)]`.
+
+### Injectable Trait for Extractors
+
+In 0.2.x, the `Injectable` trait provides implementations for `Path<T>`, `Query<T>`, and `Json<T>` extractors. These can be injected directly as dependencies:
+
+```rust
+// 0.2.x — extractors as injectable dependencies
+#[get("/items/:id")]
+pub async fn get_item(
+    #[inject] Path(id): Path<i64>,   // Injectable in 0.2.x
+    #[inject] service: Depends<ItemService>,
+) -> ViewResult<Response> {
+    // ...
+}
+```
+
+### Testing: #[serial(di_registry)] No Longer Required
+
+In 0.2.x, DI override tests no longer need `#[serial(di_registry)]` because `injection_context_with_di_overrides` creates an isolated per-context registry automatically. Tests can run in parallel without interfering with each other's DI state.

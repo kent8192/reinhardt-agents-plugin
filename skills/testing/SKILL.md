@@ -1,6 +1,7 @@
 ---
 name: testing
 description: Use when writing tests for reinhardt-web applications - provides rstest/AAA patterns, TestContainers setup, and API testing utilities
+versions: ["0.1.2", "0.2.x"]
 ---
 
 # Reinhardt Testing
@@ -57,6 +58,7 @@ Guide developers through writing high-quality tests using rstest, AAA pattern, r
 ## Dynamic References
 
 For the latest test utilities:
+
 1. Read `reinhardt/crates/reinhardt-test/src/lib.rs` for re-exports and public API
 2. Read `reinhardt/crates/reinhardt-test/src/fixtures/` for auth, admin, and E2E fixtures
 3. Read `reinhardt/crates/reinhardt-testkit/src/` for APIClient, APIRequestFactory, TestContainers, and migration fixtures

@@ -32,6 +32,7 @@ pub struct ProjectSettings;
 ```
 
 This creates a `ProjectSettings` struct with four fragment fields:
+
 - `core` (`CoreSettings`) — maps to `[core]` in TOML
 - i18n (`I18nSettings`) — maps to `[i18n]` (from fragment's `section()`)
 - `static_files` (`StaticSettings`) — maps to `[static_files]` in TOML
@@ -78,7 +79,7 @@ fn build_settings() -> ProjectSettings {
 
 ## TOML File Structure
 
-```
+```text
 settings/
 ├── base.toml         # Common settings (all environments)
 ├── local.toml        # Local development
@@ -288,3 +289,33 @@ SettingsBuilder::new()
 ```
 
 `MergeStrategy` is re-exported from `settings::` and the prelude.
+
+---
+
+## Version Differences (0.2.x)
+
+### SecurityConfig Removed
+
+In 0.2.x, the `SecurityConfig` struct is removed. Its configuration fields are moved directly into `SecurityMiddleware` with builder methods:
+
+```rust
+// 0.1.x
+let config = SecurityConfig {
+    hsts_seconds: 31536000,
+    ssl_redirect: true,
+    // ...
+};
+SecurityMiddleware::new(config)
+
+// 0.2.x — builder methods on SecurityMiddleware directly
+SecurityMiddleware::new()
+    .with_hsts_seconds(31536000)
+    .with_ssl_redirect(true)
+    .with_hsts(true)
+```
+
+`SecurityMiddleware::from_security_settings()` remains available in both versions.
+
+### ModelMetadata Constraints
+
+In 0.2.x, `ModelMetadata` has a private `constraints` field. Access via public accessor methods instead of direct field access.

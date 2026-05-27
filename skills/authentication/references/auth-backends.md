@@ -13,6 +13,32 @@
 
 **Module:** `reinhardt_auth` (re-exported via `reinhardt::auth`)
 
+### Version Differences (0.2.x)
+
+- **Unified `AuthBackend` trait**: In 0.2.x, `AuthenticationBackend` and `AuthBackend` are unified into a single `AuthBackend` trait. The separate `AuthenticationBackend` trait is removed.
+- **`authenticate()` return type changed**: `authenticate()` now returns `Result<Option<Box<dyn AuthIdentity>>, AuthenticationError>` instead of `Result<Option<Box<dyn User>>, AuthenticationError>`.
+- **All built-in backends migrated**: All built-in backends (JWT, Session, Token, Basic, RemoteUser, Social) implement the unified `AuthBackend` trait in 0.2.x.
+
+**Before/after example:**
+
+```rust
+// 0.1.x
+#[async_trait]
+impl AuthenticationBackend for JwtBackend {
+    async fn authenticate(&self, request: &Request) -> Result<Option<Box<dyn User>>, AuthError> {
+        // ...
+    }
+}
+
+// 0.2.x — unified AuthBackend
+#[async_trait]
+impl AuthBackend for JwtBackend {
+    async fn authenticate(&self, request: &Request) -> Result<Option<Box<dyn AuthIdentity>>, AuthError> {
+        // ...
+    }
+}
+```
+
 ---
 
 ## AuthenticationBackend Trait
@@ -372,6 +398,7 @@ pub enum AuthenticationError {
 ## Dynamic References
 
 For the latest auth backend API:
+
 1. Read `reinhardt/crates/reinhardt-auth/src/jwt.rs` for JwtAuth
 2. Read `reinhardt/crates/reinhardt-auth/src/rest_authentication.rs` for Session/Token/Basic/Composite
 3. Read `reinhardt/crates/reinhardt-auth/src/remote_user.rs` for RemoteUser

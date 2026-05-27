@@ -179,9 +179,16 @@ pub async fn get_user_profile() -> Result<UserProfile, ServerFnError> {
 }
 ```
 
+## Version Differences (0.2.x)
+
+In 0.2.x, auth extractors return types based on the unified `AuthIdentity` trait instead of concrete user types. `AuthUser<T>` still resolves the full user model, but the underlying authentication layer uses `Box<dyn AuthIdentity>` instead of `Box<dyn User>`.
+
+---
+
 ## Dynamic References
 
 For the latest extractor API:
+
 1. Read `reinhardt/crates/reinhardt-auth/src/auth_info.rs` for AuthInfo
 2. Read `reinhardt/crates/reinhardt-auth/src/auth_user.rs` for AuthUser
 3. Read `reinhardt/crates/reinhardt-auth/src/current_user.rs` for deprecated CurrentUser

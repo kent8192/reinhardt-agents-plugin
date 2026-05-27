@@ -35,6 +35,7 @@ pub struct Post {
 |--------|------|-------------|
 | `app_label` | `&str` | App this model belongs to (required) |
 | `manager` | `Path` | (rc.23+, #3981) Opt the model into a user-supplied `CustomManager` implementor. Emits a `HasCustomManager` impl that wires the model to the named type. `Model::objects()` is untouched and still returns `Manager<Self>`. See `modeling/references/model-patterns.md` for usage examples and `modeling/references/queryset-api.md` for the trait surface. |
+| `info` | `bool` | **(0.2.x)** Opt-out of auto-generated `{Model}Info` companion struct. Set `info = false` to disable. Defaults to `true` in 0.2.x. |
 
 **Auto-derives:** `Model`, `Serialize`, `Deserialize`, `Clone`, `Debug`
 
@@ -54,6 +55,7 @@ pub struct Post {
 | `rename = "..."` | `&str` | Custom database column name |
 | `min` | number | Minimum value (numeric) |
 | `max` | number | Maximum value (numeric) |
+| `skip_info` | `bool` | **(0.2.x)** Exclude this field from the auto-generated `{Model}Info` struct. Set `skip_info = true` to omit. |
 
 ### Relationship Attributes (`#[rel(...)]`)
 
@@ -212,6 +214,14 @@ impl UserViewSet {
 | methods | `[&str]` | Allowed HTTP methods |
 | `detail` | `bool` | `true` for instance-level, `false` for collection-level |
 
+### `#[url_patterns]`
+
+**Removed in 0.2.x.** This macro is entirely removed in 0.2.x. Use `#[routes]` for URL pattern registration instead.
+
+In 0.1.2, `#[url_patterns]` was a legacy attribute for registering URL patterns. All new code should use `#[routes]`.
+
+---
+
 ### `#[routes]`
 
 **Crate:** `reinhardt-core/macros`
@@ -241,6 +251,13 @@ fn routes() -> AppRouter {
 }
 // No `private_interfaces` warning — suppressed by the macro
 ```
+
+#### 0.2.x Changes
+
+- Simplified to inventory registration only (~370 lines, down from ~1460)
+- Removed flags: `standalone`, `server_only`, `no_client_resolvers`, `no_ws_resolvers`, `client_inventory`
+- Per-app struct generation, `ResolvedUrls`, `url_prelude`, callback macros all removed
+- Three function forms preserved: sync, async, async with `#[inject]`
 
 ---
 
@@ -447,6 +464,7 @@ impl RunserverHook for MigrationCheck {
 | `on` | identifier | Hook lifecycle point. Currently only `runserver` is supported. |
 
 **Requirements:**
+
 - Must be applied to a **unit struct** (no fields, no generics)
 - Struct must implement `RunserverHook` trait
 - Registered automatically via `inventory::collect!`
@@ -589,6 +607,7 @@ pub async fn get_user(
 ## Dynamic References
 
 For the latest macro definitions:
+
 1. Read `reinhardt/crates/reinhardt-core/macros/src/lib.rs` for core attribute macros
 2. Read `reinhardt/crates/reinhardt-di/macros/src/lib.rs` for DI attribute macros
 3. Read `reinhardt/crates/reinhardt-db-macros/src/lib.rs` for #[document]

@@ -14,7 +14,7 @@ structure, see `.codex-plugin/`.
 
 ## Project Overview
 
-**Repository URL**: https://github.com/kent8192/reinhardt-agents-plugin
+**Repository URL**: <https://github.com/kent8192/reinhardt-agents-plugin>
 
 reinhardt-agents-plugin is a plugin workspace — it does not contain Rust code or tests. The
 "code" in this repo is skill definitions (`.md` files), agent manifests, hooks
@@ -29,6 +29,7 @@ guidelines specific to this plugin repo.
 ### Documentation
 
 **AGENTS.md ↔ CLAUDE.md Sync Policy:**
+
 - `AGENTS.md` (Codex) and `CLAUDE.md` (Claude Code) are deliberate mirror copies kept in sync
 - The two files MUST differ only on a small set of mechanical substitutions:
   - `AGENTS.md` ↔ `CLAUDE.md` (title, references)
@@ -41,6 +42,7 @@ guidelines specific to this plugin repo.
 ### Git Workflow
 
 **Commit Policy:**
+
 - **NEVER** commit without explicit user instruction
 - **NEVER** push without explicit user instruction
 - **EXCEPTION**: Plan Mode approval is considered explicit commit authorization
@@ -73,6 +75,7 @@ Autonomously Allowed (no per-action confirmation required):
 | Create an Issue | `gh issue create` / MCP `issue_write`; MUST follow the appropriate issue template and apply at least one type label |
 
 **Protected Branches** (commit/push always require explicit user authorization):
+
 - `main`, `master`
 - `develop/*` (any branch starting with `develop/`)
 - `release/*` (any branch starting with `release/`)
@@ -94,15 +97,18 @@ Unchanged Quality Guardrails (apply equally to autonomous operations):
 - Branch naming, commit message format, Codex attribution footer, English-only policy, and all other rules in this document remain in force
 
 **Branch Operations:**
+
 - When merging branches and resolving conflicts, execute immediately without entering Plan Mode
 - Before creating branches, verify names don't conflict with existing ones using `git worktree list` and `git branch -a`
 
 **GitHub Integration:**
+
 - **MUST** use GitHub CLI (`gh`) for all GitHub operations
 - For usage questions, prefer GitHub Discussions over Issues
 - When GitHub MCP tools return errors (e.g., 404), immediately fall back to `gh` CLI instead of retrying
 
 **GitHub Comments & Interactions:**
+
 - **NEVER** post comments on PRs or Issues without authorization
 - Authorization = explicit user instruction OR Plan Mode approval
 - Self-initiated comments MUST be previewed and approved by user before posting
@@ -119,6 +125,7 @@ Unchanged Quality Guardrails (apply equally to autonomous operations):
 ## Common Commands
 
 **GitHub Operations:**
+
 ```bash
 gh pr create --draft --title "feat(skill): ..." --label enhancement
 gh issue create --title "Bug: ..." --body "..."
@@ -130,6 +137,7 @@ gh pr list --state open
 ## Quick Reference
 
 ### ✅ MUST DO
+
 - Write ALL commit messages, PR descriptions, and documentation in English
 - Wait for explicit user instruction before commits (except where the Autonomous Operation Policy applies)
 - Treat the Autonomous Operation Policy (Reinhardt family) as a standing exception that allows commit and push on any non-protected branch (anything other than `main`/`master`/`develop/*`/`release/*`), Draft PR creation, Draft→Ready conversion (implementation-complete only — no CI requirement), and Issue creation without further confirmation
@@ -140,6 +148,7 @@ gh pr list --state open
 - Apply at least one type label to every Issue and PR
 
 ### ❌ NEVER DO
+
 - Commit without user instruction (except Plan Mode approval or the Autonomous Operation Policy for Reinhardt-family repos)
 - Push directly to any protected branch (`main`, `master`, `develop/*`, `release/*`) — even under the Autonomous Operation Policy these require explicit user authorization
 - Force-push, rebase-and-push, or otherwise rewrite history without explicit user authorization

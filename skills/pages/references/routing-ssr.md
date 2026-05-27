@@ -360,7 +360,7 @@ Compatible with reinhardt's collectstatic system for cache-busted asset URLs.
 
 `reinhardt-admin startapp --with-pages <app>` (and the workspace variant) now scaffolds the canonical `urls/` submodule layout established in rc.19 instead of a flat `urls.rs` that returned only `ServerRouter::new()`. The generated app gains both a server endpoint surface and a client-side SPA router scaffold out of the box:
 
-```
+```text
 <app>/
 └── urls.rs                  # aggregator declaring submodules
 └── urls/
@@ -400,3 +400,60 @@ cfg_aliases = "0.2"
 ```
 
 Then use `#[cfg(wasm)]` and `#[cfg(native)]` instead of `#[cfg(target_arch = "wasm32")]`.
+
+## Version Differences (0.2.x)
+
+### Removed Named Route Helpers
+
+In 0.2.x, the following standalone functions are **removed**:
+
+- `named_route()`
+- `named_route_params()`
+- `named_route_result()`
+- `named_route_path()`
+- `named_page()`
+
+All named-route registration now goes through `ClientRouter::route*` methods, which require `name` as a **mandatory first argument**:
+
+```rust
+// 0.1.x
+Router::new()
+    .route("/users/{id}/", || user_detail_page())
+    .named_route("user_detail", "/users/{id}/", || user_detail_page())
+
+// 0.2.x — name is the mandatory first argument on all route* methods
+Router::new()
+    .route("user_detail", "/users/{id}/", || user_detail_page())
+```
+
+### SPA Navigation via `reinhardt::pages::navigate`
+
+In 0.2.x, prefer `reinhardt::pages::navigate` for SPA navigation instead of manually calling `window.location.set_href` or constructing `History` API calls:
+
+```rust
+use reinhardt::pages::navigate;
+
+// Preferred — uses the registered router internally
+navigate("/users/42/");
+```
+
+This function integrates with the router's subscription system and ensures all `on_path` / `on_path_pattern` listeners fire correctly.
+
+### `register_globally` for SPA Client Initialization
+
+In 0.2.x, `register_globally` replaces the manual `wasm_bindgen(start)` dispatch pattern for SPA client initialization. Instead of manually wiring up the router, history listener, and link interception, call `register_globally` once:
+
+```rust
+// 0.1.x — manual setup in #[wasm_bindgen(start)]
+router::init_global_router();
+router::with_router(|r| r.setup_history_listener());
+setup_link_interception(&document);
+
+// 0.2.x — single call replaces manual dispatch
+ClientLauncher::new(init_router)
+    .mount("#app")
+    .register_globally()
+    .launch();
+```
+
+`register_globally` registers the router, history listener, and link interceptor in one step, making the SPA entry point more concise and less error-prone.

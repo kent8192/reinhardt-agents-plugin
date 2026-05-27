@@ -337,3 +337,65 @@ page!(|show: Signal<bool>| {
 - **Memory management**: All reactive nodes auto-cleanup when dropped
 - **`std::mem::forget`**: Use for Effects that should live for the entire page lifetime (e.g., routing)
 - **watch compiles to `Page::reactive()`**: The reactive closure is tracked by the runtime and re-evaluated on Signal changes
+
+## Version Differences (0.2.x)
+
+### Effect Hooks
+
+In 0.2.x, `use_effect` and `use_layout_effect` now take an **explicit dependencies array** as the first argument instead of relying on implicit dependency tracking via `.get()` calls:
+
+```rust
+// 0.1.x — implicit dependency tracking
+use_effect(move || {
+    log!("count changed: {}", count.get());
+});
+
+// 0.2.x — explicit dependency arrays
+use_effect([count], move || {
+    log!("count changed: {}", count.get());
+});
+```
+
+```rust
+// 0.1.x
+use_layout_effect(move || {
+    measure_element(&node_ref);
+});
+
+// 0.2.x
+use_layout_effect([node_ref], move || {
+    measure_element(&node_ref);
+});
+```
+
+### Derived Value Hooks
+
+In 0.2.x, `use_memo` and `use_callback`/`use_callback_with` are rewritten with explicit dependencies:
+
+```rust
+// 0.1.x — implicit dependency tracking
+use_memo(move || count.get() * 2);
+
+// 0.2.x — explicit dependency arrays
+use_memo([count], move || count.get() * 2);
+```
+
+```rust
+// 0.1.x
+use_callback(move |_| {
+    set_count(count.get() + 1);
+});
+
+// 0.2.x
+use_callback([count], move |_| {
+    set_count(count.get() + 1);
+});
+```
+
+### Auto-wrapping in page! Macro
+
+In 0.2.x, `{expr}`, `if`, and `for` inside `page!` are unconditionally wrapped in `Page::reactive` — no explicit wrapping is needed. Code that previously used `watch { ... }` or manual `Page::reactive(...)` continues to work, but the wrapping is now redundant.
+
+### Reactive and ReactiveIf Clone
+
+`Reactive` and `ReactiveIf` now implement `Clone` via `Arc<dyn Fn()>` in 0.2.x (previously they were not cloneable). This enables passing reactive nodes through more component composition patterns.

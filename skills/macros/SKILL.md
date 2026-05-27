@@ -1,6 +1,7 @@
 ---
 name: macros
 description: Use when working with reinhardt procedural macros - covers attribute macros (#[model], #[user], #[inject], HTTP decorators), derive macros, and function-like macros (guard!, installed_apps!, path!)
+versions: ["0.1.2", "0.2.x"]
 ---
 
 # Reinhardt Macros
@@ -28,12 +29,16 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 3. Use `#[rel(...)]` attributes for relationships
 4. Optionally use `#[user(...)]` for user model with auth traits
 
+> **0.2.x note:** In 0.2.x, `#[model]` auto-generates a `{Model}Info` companion struct; opt-out with `#[model(info = false)]`.
+
 ### View/Handler Definition
 
 1. Use HTTP decorators: `#[get]`, `#[post]`, `#[put]`, `#[patch]`, `#[delete]`
 2. Use `#[api_view]` for function-based API views
 3. Use `#[action]` for custom ViewSet actions
 4. Use `#[routes]` for URL pattern registration
+
+> **0.2.x note:** `#[url_patterns]` is removed in 0.2.x — use `#[routes]` for all URL registration.
 
 ### DI Integration
 
@@ -75,6 +80,7 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 ## Dynamic References
 
 For the latest macro definitions:
+
 1. Read `reinhardt/crates/reinhardt-core/macros/src/lib.rs` for core macros (#[model], #[user], #[get], etc.)
 2. Read `reinhardt/crates/reinhardt-di/macros/src/lib.rs` for DI macros (#[injectable], #[injectable_factory])
 3. Read `reinhardt/crates/reinhardt-auth/macros/src/lib.rs` for guard! macro

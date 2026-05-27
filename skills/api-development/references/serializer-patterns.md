@@ -7,7 +7,7 @@ Reinhardt's serializer system follows Django REST Framework's design philosophy 
 - **Core Layer (`reinhardt-core`)**: ORM-agnostic traits, field types, validation, arena allocation
 - **REST Layer (`reinhardt-rest`)**: ORM-integrated serializers (`ModelSerializer`, `NestedSerializer`, etc.)
 
-```
+```text
 reinhardt-rest::serializers
   ├── ModelSerializer<M>              (ORM model serialization)
   ├── HyperlinkedModelSerializer<M>   (HATEOAS URL generation)
@@ -197,6 +197,7 @@ let json = serializer.serialize(&post)?;
 ```
 
 **Important:** The ORM layer is responsible for loading related data:
+
 ```rust,ignore
 // 1. Load data with relationships using ORM
 let posts = Post::objects()

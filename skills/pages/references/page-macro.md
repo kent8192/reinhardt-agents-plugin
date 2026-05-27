@@ -316,6 +316,44 @@ watch {
 
 **Best practices**: Pass Signals directly (don't extract values before `page!`). Clone freely. Single expression per `watch` block.
 
+### 0.2.x: Automatic Reactive Wrapping
+
+In 0.2.x, reactive expressions (`{expr}`, `if`, `for`) inside `page!` are **automatically wrapped** in `Page::reactive` — no explicit `watch { ... }` or manual `Page::reactive(...)` call is needed. Existing `watch` blocks still compile, but the wrapping is now redundant.
+
+```rust
+// 0.1.x — explicit watch needed for reactive re-rendering
+page!(|count: Signal<i32>| {
+    div {
+        watch {
+            if count.get() > 0 {
+                span { "Positive" }
+            }
+        }
+    }
+})(count)
+
+// 0.2.x — if/for/{expr} are auto-wrapped, watch is optional
+page!(|count: Signal<i32>| {
+    div {
+        if count.get() > 0 {
+            span { "Positive" }
+        }
+    }
+})(count)
+```
+
+### 0.2.x: Bind Listener Typed Value Conversion
+
+In 0.2.x, `bind listener_value` is added for typed value conversion in event listener bindings. This enables direct extraction of typed values from DOM events without manual parsing:
+
+```rust
+// 0.2.x — bind listener_value for typed extraction
+input {
+    type: "number",
+    bind listener_value: count_signal,
+}
+```
+
 ## Component Calls
 
 ```rust
