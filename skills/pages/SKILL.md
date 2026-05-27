@@ -52,11 +52,11 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 
 ## Cross-Domain References
 
-- Model definitions: `${CLAUDE_PLUGIN_ROOT}/skills/modeling/references/model-patterns.md`
-- DI patterns: `${CLAUDE_PLUGIN_ROOT}/skills/dependency-injection/references/di-patterns.md`
-- Auth backends: `${CLAUDE_PLUGIN_ROOT}/skills/authentication/references/auth-backends.md`
-- Macro overview: `${CLAUDE_PLUGIN_ROOT}/skills/macros/references/attribute-macros.md`
-- View patterns: `${CLAUDE_PLUGIN_ROOT}/skills/api-development/references/view-patterns.md`
+- Model definitions: `../modeling/references/model-patterns.md`
+- DI patterns: `../dependency-injection/references/di-patterns.md`
+- Auth backends: `../authentication/references/auth-backends.md`
+- Macro overview: `../macros/references/attribute-macros.md`
+- View patterns: `../api-development/references/view-patterns.md`
 
 ## Dynamic References
 

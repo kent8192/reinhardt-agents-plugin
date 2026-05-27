@@ -33,7 +33,7 @@ Execute these steps in order:
 4. Focus on: **Changed**, **Deprecated**, **Removed** sections (these require action)
 5. Also note **Added** (informational)
 
-Reference: `${CLAUDE_PLUGIN_ROOT}/skills/migration/references/changelog-format.md`
+Reference: `../skills/migration/references/changelog-format.md`
 
 ### Step 2: GitHub Context Enrichment
 

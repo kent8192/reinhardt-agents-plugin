@@ -63,7 +63,7 @@ semgrep scan --config .semgrep/ --baseline-commit origin/main --error --metrics 
 
 - Code style rules: see project CLAUDE.md § Rustdoc Formatting Rules
 - CI commands: see project CLAUDE.md § CI Commands
-- Testing after fixes: `${CLAUDE_PLUGIN_ROOT}/skills/testing/references/rstest-patterns.md`
+- Testing after fixes: `../testing/references/rstest-patterns.md`
 
 ## Dynamic References
 

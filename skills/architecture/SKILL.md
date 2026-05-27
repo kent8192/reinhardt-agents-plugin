@@ -22,19 +22,19 @@ Guide developers through implementing a complete feature across all reinhardt la
 Follow the 7-layer sequence. Each step references the appropriate skill for detailed guidance.
 
 1. **Define Model** — read `references/layer-sequence.md` § Model Layer
-   - Use the modeling skill: `${CLAUDE_PLUGIN_ROOT}/skills/modeling/references/model-patterns.md`
+   - Use the modeling skill: `../modeling/references/model-patterns.md`
 2. **Define Serializer** — read `references/layer-sequence.md` § Serializer Layer
-   - Use the API skill: `${CLAUDE_PLUGIN_ROOT}/skills/api-development/references/serializer-patterns.md`
+   - Use the API skill: `../api-development/references/serializer-patterns.md`
 3. **Implement Service** — read `references/layer-sequence.md` § Service Layer
-   - Use the DI skill: `${CLAUDE_PLUGIN_ROOT}/skills/dependency-injection/references/di-patterns.md`
+   - Use the DI skill: `../dependency-injection/references/di-patterns.md`
 4. **Create API Routes** — read `references/layer-sequence.md` § API Layer
-   - Use the API skill: `${CLAUDE_PLUGIN_ROOT}/skills/api-development/references/view-patterns.md`
+   - Use the API skill: `../api-development/references/view-patterns.md`
 5. **Register Admin** — read `references/layer-sequence.md` § Admin Layer
-   - Use the admin skill: `${CLAUDE_PLUGIN_ROOT}/skills/admin/references/model-admin.md`
+   - Use the admin skill: `../admin/references/model-admin.md`
 6. **Write Tests** — read `references/layer-sequence.md` § Test Layer
-   - Use the testing skill: `${CLAUDE_PLUGIN_ROOT}/skills/testing/references/rstest-patterns.md`
+   - Use the testing skill: `../testing/references/rstest-patterns.md`
 7. **Add Signals** (optional) — read `references/layer-sequence.md` § Signal Layer
-   - Use the signals skill: `${CLAUDE_PLUGIN_ROOT}/skills/signals/references/reliable-pattern.md`
+   - Use the signals skill: `../signals/references/reliable-pattern.md`
 
 ### Verifying Completeness
 
@@ -55,15 +55,15 @@ Read `references/error-mapping.md` for the standard mapping from service-layer e
 
 ## Cross-Domain References
 
-- Model definitions: `${CLAUDE_PLUGIN_ROOT}/skills/modeling/references/model-patterns.md`
-- Serializer patterns: `${CLAUDE_PLUGIN_ROOT}/skills/api-development/references/serializer-patterns.md`
-- DI registration: `${CLAUDE_PLUGIN_ROOT}/skills/dependency-injection/references/di-patterns.md`
-- View patterns: `${CLAUDE_PLUGIN_ROOT}/skills/api-development/references/view-patterns.md`
-- Admin setup: `${CLAUDE_PLUGIN_ROOT}/skills/admin/references/model-admin.md`
-- Test patterns: `${CLAUDE_PLUGIN_ROOT}/skills/testing/references/rstest-patterns.md`
-- Signal patterns: `${CLAUDE_PLUGIN_ROOT}/skills/signals/references/reliable-pattern.md`
-- Auth config: `${CLAUDE_PLUGIN_ROOT}/skills/authentication/references/auth-backends.md`
-- Permissions: `${CLAUDE_PLUGIN_ROOT}/skills/authorization/references/permissions.md`
+- Model definitions: `../modeling/references/model-patterns.md`
+- Serializer patterns: `../api-development/references/serializer-patterns.md`
+- DI registration: `../dependency-injection/references/di-patterns.md`
+- View patterns: `../api-development/references/view-patterns.md`
+- Admin setup: `../admin/references/model-admin.md`
+- Test patterns: `../testing/references/rstest-patterns.md`
+- Signal patterns: `../signals/references/reliable-pattern.md`
+- Auth config: `../authentication/references/auth-backends.md`
+- Permissions: `../authorization/references/permissions.md`
 
 ## Dynamic References
 

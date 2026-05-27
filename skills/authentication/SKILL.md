@@ -36,7 +36,7 @@ Guide developers through authentication setup using reinhardt-auth, including ba
 
 ### Setting Up Auth Extractors
 
-1. Read `${CLAUDE_PLUGIN_ROOT}/skills/authorization/references/extractors.md` for `AuthInfo` and `AuthUser<T>`
+1. Read `../authorization/references/extractors.md` for `AuthInfo` and `AuthUser<T>`
 2. Use `AuthInfo` for lightweight access (no DB query)
 3. Use `AuthUser<T>` when the full user model is needed
 4. Both require `#[inject]` in handler parameters
@@ -68,10 +68,10 @@ Guide developers through authentication setup using reinhardt-auth, including ba
 
 ## Cross-Domain References
 
-- For DI configuration of auth backends: `${CLAUDE_PLUGIN_ROOT}/skills/dependency-injection/references/di-patterns.md`
-- For permission and authorization setup: `${CLAUDE_PLUGIN_ROOT}/skills/authorization/SKILL.md`
-- For auth in API endpoints: `${CLAUDE_PLUGIN_ROOT}/skills/api-development/references/auth-config.md`
-- For user model definition with `#[model]`: `${CLAUDE_PLUGIN_ROOT}/skills/macros/references/attribute-macros.md`
+- For DI configuration of auth backends: `../dependency-injection/references/di-patterns.md`
+- For permission and authorization setup: `../authorization/SKILL.md`
+- For auth in API endpoints: `../api-development/references/auth-config.md`
+- For user model definition with `#[model]`: `../macros/references/attribute-macros.md`
 
 ## Dynamic References
 

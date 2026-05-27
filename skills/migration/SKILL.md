@@ -70,9 +70,9 @@ If migration fails or user wants to revert:
 
 ## Cross-Domain References
 
-- Model changes: `${CLAUDE_PLUGIN_ROOT}/skills/modeling/references/model-patterns.md`
-- API changes: `${CLAUDE_PLUGIN_ROOT}/skills/api-development/references/view-patterns.md`
-- DI changes: `${CLAUDE_PLUGIN_ROOT}/skills/dependency-injection/references/di-patterns.md`
+- Model changes: `../modeling/references/model-patterns.md`
+- API changes: `../api-development/references/view-patterns.md`
+- DI changes: `../dependency-injection/references/di-patterns.md`
 
 ## Dynamic References
 

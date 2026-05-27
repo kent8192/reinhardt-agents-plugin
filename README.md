@@ -1,28 +1,32 @@
-# reinhardt-cc
+# reinhardt-agent-plugin
 
-AI coding assistant plugin for [reinhardt-web](https://github.com/kent8192/reinhardt-web) development. Provides skills, hooks, agents, and commands that enforce reinhardt conventions and accelerate application development.
-
-Supports **Claude Code** and **Codex** (via `AGENTS.md` mirror).
+Codex and Claude Code plugin for [reinhardt-web](https://github.com/kent8192/reinhardt-web) development. Provides skills, hooks, agents, and commands that enforce reinhardt conventions and accelerate application development.
 
 ## Installation
+
+### Codex
+
+This repository ships a Codex plugin manifest at `.codex-plugin/plugin.json`.
+For local development, the repository also includes `.agents/plugins/marketplace.json`
+with a local `reinhardt-agent-plugin` entry pointing at the repository root.
+
+Enable Codex plugin hooks in `~/.codex/config.toml` before relying on the hook
+integration:
+
+```toml
+[features]
+hooks = true
+plugin_hooks = true
+```
 
 ### Claude Code
 
 ```bash
 # From the Claude Code plugin marketplace
-/plugin marketplace add kent8192/reinhardt-cc
+/plugin marketplace add kent8192/reinhardt-agent-plugin
 
 # Or install directly
-/plugin install reinhardt-cc@kent8192
-```
-
-### Codex
-
-The repository includes `AGENTS.md` (a mirror of `CLAUDE.md`) for Codex compatibility. Clone the repo and point Codex to it:
-
-```bash
-git clone https://github.com/kent8192/reinhardt-cc.git
-# AGENTS.md is automatically picked up by Codex
+/plugin install reinhardt-agent-plugin@kent8192
 ```
 
 ## Supported Versions
@@ -73,12 +77,22 @@ Skills use inline version markers — `**(0.1.x)**` / `**(0.2.x)**` — where AP
 | `code-reviewer` | Reviews Rust code for reinhardt-specific anti-patterns, convention violations, and best practice adherence across module system, DI, ORM, API design, testing, and documentation. |
 | `migration-analyzer` | Analyzes reinhardt version upgrade impact by cross-referencing CHANGELOG entries, GitHub PR/Issue descriptions, deprecated API annotations, and application code usage. |
 
+Codex primarily consumes the `skills/` and hook manifest from this plugin.
+The `agents/` and `commands/` directories remain Claude Code components, but
+their referenced plugin files use relative paths so the instructions are still
+usable when read from Codex.
+
 ### Hooks
 
 | Event | Matcher | Description |
 |-------|---------|-------------|
 | `PostToolUse` | `Write\|Edit` | Runs semgrep anti-pattern detection on modified Rust files and `Cargo.toml` |
 | `SessionStart` | (all) | Injects reinhardt project context (crate structure, feature flags, conventions) into the session |
+
+Hook commands support both plugin-root variables:
+
+- Claude Code: `CLAUDE_PLUGIN_ROOT`
+- Codex native plugin hooks: `PLUGIN_ROOT`
 
 ## Anti-Pattern Detection
 
@@ -106,9 +120,11 @@ The PostToolUse hook automatically scans code changes for these reinhardt-specif
 | Platform | Config File | Status |
 |----------|-------------|--------|
 | **Claude Code** | `CLAUDE.md` + `.claude-plugin/` | Full support (skills, hooks, agents, commands) |
-| **Codex** | `AGENTS.md` | Instructions mirror (same content as `CLAUDE.md` with name substitutions) |
+| **Codex** | `AGENTS.md` + `.codex-plugin/` | Full support (skills, hooks via `PLUGIN_ROOT`) |
 
 `CLAUDE.md` and `AGENTS.md` are kept in sync — edits to one must be mirrored to the other in the same commit. Only documented substitutions (title, attribution footer references) differ between the two files.
+
+Hook commands support both plugin-root variables: `CLAUDE_PLUGIN_ROOT` (Claude Code) and `PLUGIN_ROOT` (Codex native plugin hooks).
 
 ## License
 

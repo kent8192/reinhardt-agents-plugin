@@ -59,9 +59,9 @@ Guide developers through authorization setup using reinhardt-auth, including per
 
 ## Cross-Domain References
 
-- For auth backend setup: `${CLAUDE_PLUGIN_ROOT}/skills/authentication/SKILL.md`
-- For DI patterns with guards: `${CLAUDE_PLUGIN_ROOT}/skills/dependency-injection/references/di-patterns.md`
-- For auth config in API endpoints: `${CLAUDE_PLUGIN_ROOT}/skills/api-development/references/auth-config.md`
+- For auth backend setup: `../authentication/SKILL.md`
+- For DI patterns with guards: `../dependency-injection/references/di-patterns.md`
+- For auth config in API endpoints: `../api-development/references/auth-config.md`
 
 ## Dynamic References
 

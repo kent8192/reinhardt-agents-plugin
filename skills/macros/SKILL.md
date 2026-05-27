@@ -70,12 +70,12 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 
 ## Cross-Domain References
 
-- For model field types: `${CLAUDE_PLUGIN_ROOT}/skills/modeling/references/model-patterns.md`
-- For DI patterns: `${CLAUDE_PLUGIN_ROOT}/skills/dependency-injection/references/di-patterns.md`
-- For permission guards: `${CLAUDE_PLUGIN_ROOT}/skills/authorization/references/guards.md`
-- For auth user model: `${CLAUDE_PLUGIN_ROOT}/skills/authentication/references/user-models.md`
-- For view patterns: `${CLAUDE_PLUGIN_ROOT}/skills/api-development/references/view-patterns.md`
-- For pages frontend: `${CLAUDE_PLUGIN_ROOT}/skills/pages/references/page-macro.md`
+- For model field types: `../modeling/references/model-patterns.md`
+- For DI patterns: `../dependency-injection/references/di-patterns.md`
+- For permission guards: `../authorization/references/guards.md`
+- For auth user model: `../authentication/references/user-models.md`
+- For view patterns: `../api-development/references/view-patterns.md`
+- For pages frontend: `../pages/references/page-macro.md`
 
 ## Dynamic References
 
