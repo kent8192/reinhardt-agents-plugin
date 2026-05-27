@@ -76,6 +76,7 @@ Guide developers through authentication setup using reinhardt-auth, including ba
 ## Dynamic References
 
 For the latest auth API:
+
 1. Read `reinhardt/crates/reinhardt-auth/src/lib.rs` for module structure and re-exports
 2. Read `reinhardt/crates/reinhardt-auth/src/core/base_user.rs` for BaseUser trait
 3. Read `reinhardt/crates/reinhardt-auth/src/jwt.rs` for JWT types

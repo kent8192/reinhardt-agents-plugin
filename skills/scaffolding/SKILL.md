@@ -30,6 +30,7 @@ Guide developers through creating new reinhardt-web projects and adding apps wit
 4. **Ask DB backend** — postgres (recommended), mysql, sqlite, cockroachdb, or none
 5. **Ask auth method** — jwt, session, oauth, token, or none
 6. **Execute scaffolding** — exactly one of the project-type flags is required (the CLI rejects ambiguity):
+
    ```bash
    # RESTful API project
    reinhardt-admin startproject <name> --with-rest
@@ -41,6 +42,7 @@ Guide developers through creating new reinhardt-web projects and adding apps wit
    reinhardt-admin startproject <name> --template rest
    reinhardt-admin startproject <name> --template pages
    ```
+
    Note: the legacy `-t restful|mtv` / `--template-type` flag was removed in rc.18 — use `--with-pages`/`--with-rest` (or `--template rest|pages`) instead.
 7. **Adjust Cargo.toml** — set feature flags based on selections
 8. **Verify** — run `cargo check` to confirm configuration compiles
@@ -50,6 +52,7 @@ Guide developers through creating new reinhardt-web projects and adding apps wit
 1. **Ask app name** — lowercase, singular (e.g., "user", "post", "order"). Names starting with `reinhardt_` or `reinhardt-` are **rejected** (conflicts with DI pseudo orphan rule)
 2. **Ask app type** — RESTful or Pages (must match the parent project type)
 3. **Execute**:
+
    ```bash
    # RESTful app
    reinhardt-admin startapp <name> --with-rest
@@ -57,6 +60,7 @@ Guide developers through creating new reinhardt-web projects and adding apps wit
    # Pages app (WASM + SSR)
    reinhardt-admin startapp <name> --with-pages
    ```
+
 4. **Verify structure** — read `references/app-structure.md` for expected layout
 5. **Register app** — add module to `src/apps.rs` and entry to `installed_apps!` macro in `src/config/apps.rs`
 
@@ -76,6 +80,7 @@ If the user wants to immediately set up models after scaffolding, read
 ## Dynamic References
 
 When you need the latest CLI options or template details:
+
 1. Run `reinhardt-admin startproject --help` and `reinhardt-admin startapp --help`
 2. Read `reinhardt/crates/reinhardt-admin-cli/src/main.rs` for CLI argument definitions
 3. Read `reinhardt/crates/reinhardt-commands/src/start_commands.rs` for command implementation

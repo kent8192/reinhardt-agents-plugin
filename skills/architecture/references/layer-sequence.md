@@ -9,6 +9,7 @@ Step-by-step guide for implementing a complete feature in reinhardt. Each layer 
 Define the data model using the `#[model]` macro.
 
 **Steps:**
+
 1. Create model file: `src/<app>/models/<entity>.rs`
 2. Define struct with `#[model]` attribute
 3. Add fields with appropriate types and attributes
@@ -17,6 +18,7 @@ Define the data model using the `#[model]` macro.
 6. Apply migration: `cargo run --bin manage -- migrate`
 
 **Example:**
+
 ```rust
 use reinhardt::prelude::*;
 
@@ -37,6 +39,7 @@ pub struct Product {
 ```
 
 **Checklist:**
+
 - [ ] `#[model]` macro applied
 - [ ] Primary key defined (`Option<Uuid>` for auto-generated)
 - [ ] `Option<T>` used for nullable fields
@@ -51,12 +54,14 @@ pub struct Product {
 Define serializers for API input/output using `ModelSerializer` or custom serializers.
 
 **Steps:**
+
 1. Create serializer file or add to existing serializer module
 2. Define serializer struct with `#[derive(Serialize, Deserialize, Schema)]`
 3. For CRUD: use `ModelSerializer` pattern
 4. For custom: define explicit fields
 
 **Example:**
+
 ```rust
 use reinhardt::rest::prelude::*;
 
@@ -77,6 +82,7 @@ pub struct ProductCreateInput {
 ```
 
 **Checklist:**
+
 - [ ] Read serializer defined (for API responses)
 - [ ] Write serializer/input defined (for API requests)
 - [ ] Validation rules applied where needed
@@ -89,12 +95,14 @@ pub struct ProductCreateInput {
 Implement business logic as an injectable service.
 
 **Steps:**
+
 1. Create service file: `src/<app>/services/<entity>.rs`
 2. Define service struct with dependencies as fields
 3. Implement business methods
 4. Register with DI using `#[injectable_factory]`
 
 **Example:**
+
 ```rust
 use reinhardt::prelude::*;
 
@@ -130,6 +138,7 @@ impl ProductService {
 ```
 
 **Checklist:**
+
 - [ ] Service struct defined with injected dependencies
 - [ ] `#[injectable_factory]` applied
 - [ ] Returns domain types / serializers, not raw models
@@ -143,11 +152,13 @@ impl ProductService {
 Create views and URL routing for the feature.
 
 **Steps:**
+
 1. Define view functions or ViewSet
 2. Configure URL routes
 3. Apply authentication and permission guards
 
 **Example:**
+
 ```rust
 use reinhardt::prelude::*;
 use reinhardt::rest::prelude::*;
@@ -180,6 +191,7 @@ pub fn product_routes(cfg: &mut ServiceConfig) {
 ```
 
 **Checklist:**
+
 - [ ] View functions defined with correct HTTP method decorators
 - [ ] URL routes configured and mounted
 - [ ] Authentication applied (if required)
@@ -193,10 +205,12 @@ pub fn product_routes(cfg: &mut ServiceConfig) {
 Register the model in the admin panel.
 
 **Steps:**
+
 1. Define admin configuration with `#[admin]` macro
 2. Register in the admin site
 
 **Example:**
+
 ```rust
 use reinhardt::admin::prelude::*;
 
@@ -211,6 +225,7 @@ pub struct ProductAdmin {
 ```
 
 **Checklist:**
+
 - [ ] `#[admin]` macro applied with model reference
 - [ ] `list_display` configured (id first, max 6 fields)
 - [ ] `search_fields` includes id
@@ -225,11 +240,13 @@ pub struct ProductAdmin {
 Write tests at three levels: unit, integration, and API.
 
 **Steps:**
+
 1. **Unit tests** — test service logic with mocked dependencies
 2. **Integration tests** — test with real database via TestContainers
 3. **API tests** — test HTTP endpoints end-to-end
 
 **Unit test example (service):**
+
 ```rust
 #[rstest]
 async fn test_create_product_success(
@@ -253,6 +270,7 @@ async fn test_create_product_success(
 ```
 
 **Integration test example (DB):**
+
 ```rust
 #[rstest]
 #[tokio::test]
@@ -280,6 +298,7 @@ async fn test_product_round_trip(
 ```
 
 **API test example:**
+
 ```rust
 #[rstest]
 #[tokio::test]
@@ -304,6 +323,7 @@ async fn test_create_product_api(
 ```
 
 **Checklist:**
+
 - [ ] Unit tests for service business logic
 - [ ] Integration tests with TestContainers for DB operations
 - [ ] API tests for HTTP endpoint behavior
@@ -318,11 +338,13 @@ async fn test_create_product_api(
 Add async side-effects for post-commit operations.
 
 **Steps:**
+
 1. Connect signal receiver for model events
 2. Implement receiver as idempotent async function
 3. Optionally enqueue background tasks
 
 **Example:**
+
 ```rust
 use reinhardt::signals::{post_save, connect_receiver};
 
@@ -340,6 +362,7 @@ connect_receiver!(
 ```
 
 **Checklist:**
+
 - [ ] Signal receiver connected with `connect_receiver!`
 - [ ] `dispatch_uid` set for deduplication
 - [ ] Receiver is idempotent (safe to call multiple times)

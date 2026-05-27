@@ -244,6 +244,7 @@ session.commit().await?;
 ### Identity Map
 
 The Session maintains an identity map that:
+
 - **Caches loaded objects** by type + primary key
 - **Tracks dirty objects** for automatic flush
 - **Prevents duplicate loads** — `get()` checks the map before querying the DB
@@ -280,26 +281,30 @@ The Session maintains an identity map that:
 
 ## Choosing Between APIs
 
-### Use `Model::objects()` (Django-style) when:
+### Use `Model::objects()` (Django-style) when
+
 - Standard CRUD operations
 - Simple filtering and ordering
 - Relationship loading (`select_related`, `prefetch_related`)
 - PostgreSQL-specific features (JSONB, arrays, full-text search)
 - Most day-to-day application code
 
-### Use `SelectQuery` (SQLAlchemy-style) when:
+### Use `SelectQuery` (SQLAlchemy-style) when
+
 - Complex multi-table JOINs with type safety
 - Need compile-time validation of join fields
 - Building queries programmatically with unknown structure
 - Porting SQLAlchemy code to Reinhardt
 
-### Use `Session` (SQLAlchemy-style) when:
+### Use `Session` (SQLAlchemy-style) when
+
 - Transaction-heavy workflows (multiple related operations)
 - Need identity map for object caching within a request
 - Batch operations that should be flushed together
 - Porting SQLAlchemy unit-of-work patterns
 
-### Use `reinhardt-query` (low-level) when:
+### Use `reinhardt-query` (low-level) when
+
 - Writing migrations (DDL operations)
 - Schema management
 - Need database-specific SQL generation
@@ -308,6 +313,7 @@ The Session maintains an identity map that:
 ## Dynamic References
 
 For the latest API:
+
 1. Read `reinhardt/crates/reinhardt-db/src/orm/sqlalchemy_query.rs` for `SelectQuery` implementation
 2. Read `reinhardt/crates/reinhardt-db/src/orm/session.rs` for `Session` implementation
 3. Read `reinhardt/crates/reinhardt-db/src/orm/typed_join.rs` for type-safe JOIN builder

@@ -41,6 +41,7 @@ Guide developers through building REST API endpoints using reinhardt-rest, reinh
 ## Dynamic References
 
 For the latest API:
+
 1. Read `reinhardt/crates/reinhardt-rest/src/lib.rs` for serializer and REST types
 2. Read `reinhardt/crates/reinhardt-views/src/lib.rs` for view patterns
 3. Read `reinhardt/crates/reinhardt-urls/src/lib.rs` for URL routing

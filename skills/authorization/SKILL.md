@@ -66,6 +66,7 @@ Guide developers through authorization setup using reinhardt-auth, including per
 ## Dynamic References
 
 For the latest authorization API:
+
 1. Read `reinhardt/crates/reinhardt-auth/src/core/permission.rs` for Permission trait
 2. Read `reinhardt/crates/reinhardt-auth/src/guard.rs` for Guard, Public, All, Any, Not
 3. Read `reinhardt/crates/reinhardt-auth/macros/src/lib.rs` for guard! macro

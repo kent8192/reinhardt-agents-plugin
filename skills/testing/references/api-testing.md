@@ -379,6 +379,7 @@ impl_test_model!(TestUser, Uuid, "test_users", "auth", non_option_pk);
 ```
 
 This generates:
+
 - `Model` trait implementation with `table_name()`, `app_label()`, `pk()` methods
 - `TestUserFields` struct implementing `FieldSelector`
 - Relationship metadata (if specified)
@@ -445,6 +446,7 @@ These are upstream-only fixes — no consumer code change is required. (#4288)
 | E2E / API tests | `tests/` crate at workspace root | Testing full request-response cycles through the HTTP layer |
 
 **Key rules:**
+
 - Unit tests go in the same file as the code they test
 - Cross-crate integration tests go in the workspace `tests/` crate
 - Every test MUST use at least one reinhardt component

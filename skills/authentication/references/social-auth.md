@@ -20,7 +20,7 @@
 
 ## Architecture
 
-```
+```text
 User → Authorization URL → Provider → Callback URL → Token Exchange → User Mapping
          (with PKCE)                     (state validation)   (ID token verification)
 ```
@@ -267,6 +267,7 @@ pub enum SocialAuthError {
 ## Dynamic References
 
 For the latest social auth API:
+
 1. Read `reinhardt/crates/reinhardt-auth/src/social.rs` for module structure
 2. Read `reinhardt/crates/reinhardt-auth/src/social/backend.rs` for SocialAuthBackend
 3. Read `reinhardt/crates/reinhardt-auth/src/social/providers/` for provider implementations

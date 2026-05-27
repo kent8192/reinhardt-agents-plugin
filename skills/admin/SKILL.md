@@ -42,6 +42,7 @@ Guide developers through setting up and customizing the reinhardt admin panel fo
 ## Dynamic References
 
 For the latest admin API:
+
 1. Read `reinhardt/crates/reinhardt-admin/src/core/site.rs` for AdminSite
 2. Read `reinhardt/crates/reinhardt-admin/src/core/model_admin.rs` for ModelAdmin trait
 3. Read `reinhardt-cloud/dashboard/src/config/admin.rs` for production example

@@ -398,6 +398,7 @@ pub enum AuthenticationError {
 ## Dynamic References
 
 For the latest auth backend API:
+
 1. Read `reinhardt/crates/reinhardt-auth/src/jwt.rs` for JwtAuth
 2. Read `reinhardt/crates/reinhardt-auth/src/rest_authentication.rs` for Session/Token/Basic/Composite
 3. Read `reinhardt/crates/reinhardt-auth/src/remote_user.rs` for RemoteUser

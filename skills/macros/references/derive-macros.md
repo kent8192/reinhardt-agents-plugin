@@ -250,6 +250,7 @@ ApplyUpdate trait generation (internal — used by `#[apply_update]` attribute).
 ## Dynamic References
 
 For the latest derive macro definitions:
+
 1. Read `reinhardt/crates/reinhardt-core/macros/src/lib.rs` for Model, QueryFields, Validate, Schema, OrmReflectable
 2. Read `reinhardt/crates/reinhardt-query/macros/src/lib.rs` for Iden
 3. Read `reinhardt/crates/reinhardt-rest/openapi-macros/src/lib.rs` for Schema (REST variant)

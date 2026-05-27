@@ -80,6 +80,7 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 ## Dynamic References
 
 For the latest macro definitions:
+
 1. Read `reinhardt/crates/reinhardt-core/macros/src/lib.rs` for core macros (#[model], #[user], #[get], etc.)
 2. Read `reinhardt/crates/reinhardt-di/macros/src/lib.rs` for DI macros (#[injectable], #[injectable_factory])
 3. Read `reinhardt/crates/reinhardt-auth/macros/src/lib.rs` for guard! macro

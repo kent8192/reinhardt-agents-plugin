@@ -32,6 +32,7 @@ pub struct ProjectSettings;
 ```
 
 This creates a `ProjectSettings` struct with four fragment fields:
+
 - `core` (`CoreSettings`) — maps to `[core]` in TOML
 - i18n (`I18nSettings`) — maps to `[i18n]` (from fragment's `section()`)
 - `static_files` (`StaticSettings`) — maps to `[static_files]` in TOML
@@ -78,7 +79,7 @@ fn build_settings() -> ProjectSettings {
 
 ## TOML File Structure
 
-```
+```text
 settings/
 ├── base.toml         # Common settings (all environments)
 ├── local.toml        # Local development

@@ -464,6 +464,7 @@ impl RunserverHook for MigrationCheck {
 | `on` | identifier | Hook lifecycle point. Currently only `runserver` is supported. |
 
 **Requirements:**
+
 - Must be applied to a **unit struct** (no fields, no generics)
 - Struct must implement `RunserverHook` trait
 - Registered automatically via `inventory::collect!`
@@ -606,6 +607,7 @@ pub async fn get_user(
 ## Dynamic References
 
 For the latest macro definitions:
+
 1. Read `reinhardt/crates/reinhardt-core/macros/src/lib.rs` for core attribute macros
 2. Read `reinhardt/crates/reinhardt-di/macros/src/lib.rs` for DI attribute macros
 3. Read `reinhardt/crates/reinhardt-db-macros/src/lib.rs` for #[document]

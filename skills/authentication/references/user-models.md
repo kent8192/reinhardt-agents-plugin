@@ -4,7 +4,7 @@
 
 Reinhardt provides a layered trait system for user models:
 
-```
+```text
 AuthIdentity          (minimal: id, is_authenticated, is_admin)
     |
 BaseUser              (core: username, password, is_active, last_login)
@@ -164,6 +164,7 @@ pub struct User {
 | `username_field` | `&str` | `"username"` | Field used as the unique identifier |
 
 The `#[user]` macro auto-generates:
+
 - `BaseUser` trait implementation
 - `AuthIdentity` trait implementation
 - Password hash/verify methods using the specified hasher
@@ -282,6 +283,7 @@ pub trait PermissionsMixin {
 ## Dynamic References
 
 For the latest user model API:
+
 1. Read `reinhardt/crates/reinhardt-auth/src/core/base_user.rs` for BaseUser trait
 2. Read `reinhardt/crates/reinhardt-auth/src/core/auth_identity.rs` for AuthIdentity trait
 3. Read `reinhardt/crates/reinhardt-auth/src/core/full_user.rs` for FullUser trait

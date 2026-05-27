@@ -11,7 +11,7 @@ Reinhardt provides two query APIs at different abstraction levels:
 
 The `Model` trait provides an `objects()` method that returns a `Manager<M>`, which is the entry point for all database operations. Manager methods return a `QuerySet<M>` for fluent query building.
 
-```
+```text
 Model::objects() -> Manager<M>
     .all()             -> QuerySet<M>   -> .all().await -> Vec<M>
     .filter(...)       -> QuerySet<M>   -> .all().await -> Vec<M>
@@ -339,7 +339,6 @@ impl Model for Article {
     // ...
 }
 ```
-
 
 ## Low-Level Query Builder (reinhardt-query)
 

@@ -61,6 +61,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 ## Dynamic References
 
 For the latest API definitions:
+
 1. Read `reinhardt/crates/reinhardt-pages/macros/src/lib.rs` for macro definitions (page!, head!, form!, #[server_fn])
 2. Read `reinhardt/crates/reinhardt-pages/src/prelude.rs` for exported types
 3. Read `reinhardt/crates/reinhardt-pages/src/reactive.rs` for reactive system

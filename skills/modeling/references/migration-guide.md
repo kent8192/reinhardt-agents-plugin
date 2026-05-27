@@ -4,7 +4,7 @@
 
 The standard workflow for applying model changes to the database:
 
-```
+```text
 Define/Modify Models -> Generate Migration -> Review -> Apply -> Verify
 ```
 
@@ -35,7 +35,8 @@ This compares the current model definitions against the last migration state and
 | `--migration-dir <PATH>` | Migration directory (default: `./migrations`) |
 
 Migration files are named with a sequential number and description:
-```
+
+```text
 migrations/
 +-- polls/
     +-- 0001_initial.rs
@@ -111,6 +112,7 @@ cargo run --bin manage migrate <app_label> zero
 ```
 
 **Rules for rollback:**
+
 - Only roll back migrations that have not been deployed to production
 - Ensure the `down` method is implemented in the migration
 - After rollback, update or remove the corresponding model changes
@@ -382,6 +384,7 @@ async fn test_user_creation(
 ### Under the Hood
 
 `postgres_with_migrations_from_dir()` performs these steps:
+
 1. Starts a PostgreSQL container via TestContainers
 2. Connects via `DatabaseConnection::connect_postgres()`
 3. Loads migrations using `FilesystemSource`
@@ -485,6 +488,7 @@ let url = DatabaseConnection::database_url_from(&settings, Some("DATABASE_URL"))
 ## Dynamic References
 
 For the latest migration API:
+
 1. Read `reinhardt/crates/reinhardt-commands/src/cli.rs` for CLI command definitions
 2. Read `reinhardt/crates/reinhardt-db/src/migrations/` for migration executor internals
 3. Read `reinhardt/crates/reinhardt-testkit/src/fixtures/testcontainers.rs` for test fixture API

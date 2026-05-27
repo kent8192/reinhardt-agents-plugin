@@ -60,7 +60,7 @@ Source: PR #4297 description, verbatim. (#4297)
 | Kind | Form | Semantics |
 |------|------|-----------|
 | `singleton` | `singleton T { ... }` | Inserts a ready-made value into the singleton scope |
-| `transient` | `transient T => |_ctx| async { ... }` | Registers a factory closure that resolves a fresh instance per `ctx.resolve` call |
+| `transient` | `transient T => \|_ctx\| async { ... }` | Registers a factory closure that resolves a fresh instance per `ctx.resolve` call |
 
 Using any other kind triggers a compile-time error — covered by the trybuild UI test
 `fail_unknown_kind`. (#4297)

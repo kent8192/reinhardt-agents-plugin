@@ -14,6 +14,7 @@ pub type OldType = NewType;
 ```
 
 Fields:
+
 - **`since`** — the version where deprecation was introduced. Use this to filter
   deprecations relevant to your upgrade range.
 - **`note`** — human-readable migration guidance. Always contains the replacement
@@ -22,6 +23,7 @@ Fields:
 ### Reading the `note` field
 
 The `note` typically follows one of these patterns:
+
 - `"use X instead"` — direct 1:1 replacement
 - `"use X with Y instead"` — replacement requires additional configuration
 - `"removed in favor of X"` — different approach, may require restructuring
@@ -66,6 +68,7 @@ fn setup() -> ProjectConfig {
 ```
 
 **How to find in app code:**
+
 ```bash
 grep -rn 'AppConfig' src/ --include='*.rs'
 ```
@@ -123,6 +126,7 @@ impl ModelMeta for User {
 ```
 
 **How to find in app code:**
+
 ```bash
 grep -rn 'impl ModelInfo' src/ --include='*.rs'
 grep -rn 'use reinhardt::ModelInfo' src/ --include='*.rs'
@@ -209,6 +213,7 @@ impl CoreSettings for MyCoreSettings {
 ```
 
 **How to find in app code:**
+
 ```bash
 grep -rn 'impl Settings for' src/ --include='*.rs'
 grep -rn 'use reinhardt::Settings' src/ --include='*.rs'
@@ -248,6 +253,7 @@ let query = QueryBuilder::new("users")
 ```
 
 **How to find in app code:**
+
 ```bash
 grep -rn '\.where_clause(' src/ --include='*.rs'
 ```
@@ -265,6 +271,7 @@ grep -rn '#\[deprecated' reinhardt/crates/ --include='*.rs'
 ### Filter by version range
 
 To find deprecations introduced between rc.18 and rc.22:
+
 ```bash
 grep -rn '#\[deprecated' reinhardt/crates/ --include='*.rs' | grep -E 'since\s*=\s*"0\.1\.0-rc\.(1[89]|2[0-2])"'
 ```
@@ -273,6 +280,7 @@ grep -rn '#\[deprecated' reinhardt/crates/ --include='*.rs' | grep -E 'since\s*=
 
 For each `#[deprecated]` match, look at the following line to identify the
 deprecated symbol:
+
 - `pub type Name` — type alias
 - `pub trait Name` — trait
 - `pub fn name` — function

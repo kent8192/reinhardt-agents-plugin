@@ -63,6 +63,7 @@ For standalone background jobs (not signal-triggered):
 ## Dynamic References
 
 For the latest API:
+
 1. Read `reinhardt/crates/reinhardt-core/src/signals.rs` for signal types and `connect_receiver!` macro
 2. Read `reinhardt/crates/reinhardt-core/src/signals/model_signals.rs` for pre/post save/delete
 3. Read `reinhardt/crates/reinhardt-core/src/signals/transaction.rs` for transaction-aware signals

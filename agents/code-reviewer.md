@@ -20,20 +20,24 @@ Specialized agent for reviewing reinhardt-web application code against project c
 ## Review Checklist
 
 ### Module System
+
 - [ ] No `mod.rs` files (use `module.rs` + `module/` directory)
 - [ ] Maximum 4 levels of nesting
 - [ ] Explicit `pub use` re-exports (no `pub use module::*`)
 - [ ] Visibility control: private submodules with public API via `pub use`
 
 ### Scaffolding & Naming
+
 - [ ] Project and app names do not start with `reinhardt_` or `reinhardt-` (reserved namespace)
 
 ### Dependencies
+
 - [ ] No `reinhardt-test = { workspace = true }` in functional crate `[dev-dependencies]`
 - [ ] Delion plugins depend on `reinhardt` facade, not `reinhardt-dentdelion` directly
 - [ ] No circular dependency chains
 
 ### ORM & Queries
+
 - [ ] `reinhardt-query` used for all SQL construction (no raw SQL)
 - [ ] Proper relation design (ForeignKey, ManyToMany, OneToOne)
 - [ ] Nullable fields use `Option<T>`
@@ -44,6 +48,7 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] **(0.2.x)** `{Model}Info` companion struct considered for cross-layer DTOs; sensitive fields marked with `#[field(skip_info = true)]`
 
 ### Dependency Injection
+
 - [ ] Appropriate scoping (request-scoped vs singleton)
 - [ ] No circular dependency risk
 - [ ] `#[inject]` used correctly in handlers
@@ -53,6 +58,7 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] `cargo run --bin check-di -- --validate` passes
 
 ### API Design
+
 - [ ] Serializer fields match model fields
 - [ ] Views have appropriate authentication
 - [ ] URL patterns follow RESTful conventions
@@ -66,6 +72,7 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] REST versioning configured via the `[rest_versioning]` settings fragment (rc.29+); flag any remaining `REINHARDT_VERSIONING_*` env-var reads or calls to `VersioningConfig::from_env`
 
 ### Testing
+
 - [ ] All tests use `#[rstest]` (not `#[test]`)
 - [ ] AAA labels are standard (`// Arrange`, `// Act`, `// Assert`)
 - [ ] Assertions are strict (`assert_eq!` preferred)
@@ -74,6 +81,7 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] DI override tests (`with_di_overrides!`, `register_override`) carry `#[serial(di_registry)]` **(0.1.x)** and depend on the `testing` feature (rc.29+) — in 0.2.x `#[serial(di_registry)]` is no longer required due to per-context registry isolation
 
 ### Documentation & Style
+
 - [ ] All comments in English
 - [ ] Rustdoc formatting: backticks for generics (`Option<T>`), macros (`#[derive]`)
 - [ ] Minimize `.to_string()` — prefer borrowing
@@ -93,6 +101,7 @@ Include specific file paths, line references, and fix suggestions for each findi
 ## Reference Materials
 
 Read these for authoritative patterns:
+
 - `../skills/modeling/references/model-patterns.md`
 - `../skills/api-development/references/serializer-patterns.md`
 - `../skills/testing/references/rstest-patterns.md`

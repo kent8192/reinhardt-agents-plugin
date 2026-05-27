@@ -48,6 +48,7 @@ Guide developers through DI configuration using reinhardt-di, including service 
 ## Dynamic References
 
 For the latest DI API:
+
 1. Read `reinhardt/crates/reinhardt-di/src/lib.rs` for types and traits
 2. Read `reinhardt/crates/reinhardt-di/macros/src/lib.rs` for macro documentation
 3. Grep for `#[inject]` in `reinhardt/tests/` for real usage examples

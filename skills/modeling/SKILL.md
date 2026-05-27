@@ -72,6 +72,7 @@ For testing models with TestContainers, read `references/migration-guide.md` (Te
 ## Dynamic References
 
 For the latest model API and field types:
+
 1. Read `reinhardt/crates/reinhardt-db/src/orm/model.rs` for Model trait and `objects()`
 2. Read `reinhardt/crates/reinhardt-db/src/orm/manager.rs` for Manager API
 3. Read `reinhardt/crates/reinhardt-db/src/orm/query.rs` for QuerySet implementation

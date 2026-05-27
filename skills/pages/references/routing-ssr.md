@@ -360,7 +360,7 @@ Compatible with reinhardt's collectstatic system for cache-busted asset URLs.
 
 `reinhardt-admin startapp --with-pages <app>` (and the workspace variant) now scaffolds the canonical `urls/` submodule layout established in rc.19 instead of a flat `urls.rs` that returned only `ServerRouter::new()`. The generated app gains both a server endpoint surface and a client-side SPA router scaffold out of the box:
 
-```
+```text
 <app>/
 └── urls.rs                  # aggregator declaring submodules
 └── urls/

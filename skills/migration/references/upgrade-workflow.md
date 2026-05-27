@@ -37,7 +37,8 @@ Goal: Build a complete picture of what changed between the current and target ve
 ### Step 1.1 — Detect current version
 
 Read the project's `Cargo.toml` and extract the reinhardt dependency version:
-```
+
+```text
 reinhardt = { version = "0.1.0-rc.19", features = [...] }
 ```
 
@@ -45,14 +46,17 @@ reinhardt = { version = "0.1.0-rc.19", features = [...] }
 
 - If the user specifies an exact version (e.g., `0.1.2` or `0.2.0-rc.2`), use it directly.
 - If the user says `latest`, resolve via:
+
   ```bash
   gh release list -R kent8192/reinhardt-web --limit 1
   ```
+
   Or read `reinhardt/Cargo.toml` if the repo is available locally.
 
 ### Step 1.3 — Dispatch migration-analyzer agent
 
 The agent performs:
+
 - CHANGELOG extraction between current and target versions
 - GitHub PR/Issue context enrichment
 - Deprecated API detection in reinhardt source
@@ -85,6 +89,7 @@ Display the full report from the migration-analyzer agent, organized by priority
 ### Step 2.2 — Propose migration task list
 
 Order tasks by dependency:
+
 1. `Cargo.toml` version update
 2. Breaking changes (compilation blockers first)
 3. Deprecated API replacements
@@ -103,6 +108,7 @@ Goal: Apply changes incrementally with verification at each step.
 ### Step 3.1 — Update Cargo.toml
 
 Change the reinhardt version to the target:
+
 ```toml
 reinhardt = { version = "0.1.2", features = [...] }  # or "0.2.0-rc.2"
 ```
@@ -113,6 +119,7 @@ all breaking changes that need resolution.
 ### Step 3.2 — Fix breaking changes
 
 For each breaking change identified by `cargo check`:
+
 1. Show the error context and the relevant CHANGELOG/PR information
 2. Show the before/after code transformation
 3. Apply the fix
@@ -123,6 +130,7 @@ Continue until `cargo check` passes cleanly.
 ### Step 3.3 — Replace deprecated APIs
 
 For each deprecated API usage:
+
 1. Show the deprecation warning and replacement guidance
 2. Show the before/after transformation
 3. Apply the replacement
@@ -139,6 +147,7 @@ Run `cargo check` after all replacements to confirm no regressions.
 ### Step 3.5 — Summary
 
 Report to the user:
+
 - Version upgraded: `X.Y.Z-rc.N` to `X.Y.Z-rc.M`
 - Breaking changes resolved: count
 - Deprecated APIs replaced: count
@@ -163,6 +172,7 @@ This reverts all changes and returns to the pre-upgrade state.
 ### Partial rollback (after some commits)
 
 If migration was committed incrementally:
+
 ```bash
 git log --oneline  # find the commit before migration started
 git reset --soft <pre-migration-commit>
@@ -188,6 +198,7 @@ introduced the change, not the version you are jumping to.
 ### Why intermediate versions matter
 
 Consider this scenario:
+
 - `rc.18` introduces `ClientLauncher` and removes `--template-type` CLI flag
 - `rc.19` moves `ws_url_resolvers` from `<app>/ws_urls.rs` to `<app>/urls/ws_urls.rs` (breaking)
 - `rc.21` removes a stray `pub mod ws_urls` line from the app-root template
@@ -219,7 +230,7 @@ migration recipe is in `rc.19`, not `rc.22`.
 
 ### Example: rc.18 to rc.22
 
-```
+```text
 rc.19 announcement:
   - Breaking: ws_url_resolvers path moved
     - Old: src/apps/<app>/ws_urls.rs
@@ -242,6 +253,7 @@ rc.22 announcement:
 ```
 
 Migration order:
+
 1. Move every `<app>/ws_urls.rs` to `<app>/urls/ws_urls.rs` (rc.19)
 2. Add `#[cfg(server)] pub mod ws_urls;` inside each `<app>/urls.rs`
 3. Remove the stray top-level `pub mod ws_urls;` from each app's `lib.rs`

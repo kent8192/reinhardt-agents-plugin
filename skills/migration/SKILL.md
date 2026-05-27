@@ -19,6 +19,7 @@ Guide developers through reinhardt-web version upgrades and deprecated API repla
 ### Phase 1: Analysis (delegated to migration-analyzer agent)
 
 Dispatch the **migration-analyzer agent** with:
+
 - Current reinhardt version (from Cargo.toml)
 - Target version (from user)
 - Path to user's application code
@@ -28,6 +29,7 @@ The agent returns a structured migration report covering breaking changes, depre
 ### Phase 2: Planning
 
 Based on the agent's report:
+
 1. Present the migration report to the user
 2. Categorize by priority:
    - **Breaking Changes** — must fix for compilation
@@ -39,6 +41,7 @@ Based on the agent's report:
 ### Phase 3: Execution
 
 For each migration task:
+
 1. Update `Cargo.toml` reinhardt version to target
 2. For each breaking change:
    - Show change context (from CHANGELOG + PR/Issue)
@@ -64,6 +67,7 @@ For each migration task:
 ## Rollback
 
 If migration fails or user wants to revert:
+
 1. Revert `Cargo.toml` to original version: `git checkout Cargo.toml Cargo.lock`
 2. Revert code changes: `git checkout -- src/`
 3. Verify rollback: `cargo check`
@@ -77,6 +81,7 @@ If migration fails or user wants to revert:
 ## Dynamic References
 
 On each invocation, read from source:
+
 1. `reinhardt/CHANGELOG.md` and `reinhardt/crates/*/CHANGELOG.md`
 2. `reinhardt/announcements/v0.1.0-rc.N.md` — per-release Highlights, Breaking
    Changes, and Related PRs (the announcement file is the canonical source for

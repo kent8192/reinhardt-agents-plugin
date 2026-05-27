@@ -93,12 +93,12 @@ pub fn routes() -> UnifiedRouter {
 }
 ```
 
-#### Version Differences for `#[routes]`
+### Version Differences for `#[routes]`
 
 - **0.1.x**: Supports flags: `standalone`, `server_only`, `no_client_resolvers`, `no_ws_resolvers`, `client_inventory`
 - **0.2.x**: Simplified to inventory registration only. All above flags removed. The macro is ~370 lines (down from ~1460)
 
-#### ClientRouter Version Differences
+### ClientRouter Version Differences
 
 - **0.1.x**: `ClientRouter` has `named_route()`, `named_route_params()`, `named_route_result()`, `named_route_path()`, `named_page()` methods
 - **0.2.x**: All `named_*` methods removed. Every `ClientRouter::route*` method requires `name` as mandatory first argument
@@ -230,6 +230,7 @@ pub fn root_router() -> UnifiedRouter {
 ```
 
 This produces routes like:
+
 - `GET /api/v1/users/` -> `views::v1::list_users`
 - `GET /api/v2/users/` -> `views::v2::list_users`
 

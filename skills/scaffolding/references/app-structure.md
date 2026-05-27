@@ -4,7 +4,7 @@
 
 A reinhardt project uses `lib.rs` + `bin/manage.rs` as entry points, NOT `main.rs`. The Rust 2024 Edition module system (`module.rs` + `module/` directory, NEVER `mod.rs`) is used throughout.
 
-```
+```text
 my_project/
 ├── Cargo.toml
 ├── settings/                    # TOML-based configuration files
@@ -50,7 +50,7 @@ reflects the rc.18–rc.22 evolution: `ClientLauncher`-based bootstrap (rc.18),
 the `urls/` directory module under each app (rc.19), and the `server_fn`
 placement that aligns with the basis tutorial (rc.22).
 
-```
+```text
 my_project/
 ├── Cargo.toml                   # [[bin]] name = "manage", default-run = "manage"
 ├── build.rs                     # WASM build configuration
@@ -129,6 +129,7 @@ async fn main() {
 ```
 
 **Key points:**
+
 - `use my_project as _` imports the library crate to register `#[routes]` and `#[app_config]` macros
 - `REINHARDT_SETTINGS_MODULE` env var tells the framework where to find settings
 - Router registration happens automatically via the `#[routes]` attribute macro
@@ -195,6 +196,7 @@ pub fn get_installed_apps() -> Vec<String> {
 ```
 
 **Important:**
+
 - `installed_apps!` is for **user applications only** — framework features are enabled via Cargo feature flags
 - The macro generates an `InstalledApp` enum with `all_apps()` and `path()` methods
 - App names in `installed_apps!` must match the `name` in `#[app_config]`
@@ -204,6 +206,7 @@ pub fn get_installed_apps() -> Vec<String> {
 Follow this procedure to add a new app to an existing project:
 
 1. **Generate the app scaffold** — exactly one project-type flag is required:
+
    ```bash
    # RESTful app
    reinhardt-admin startapp <name> --with-rest
@@ -211,6 +214,7 @@ Follow this procedure to add a new app to an existing project:
    # Pages app (WASM + SSR)
    reinhardt-admin startapp <name> --with-pages
    ```
+
    The legacy `-t restful|mtv` / `--template-type` flag was removed in rc.18.
 
 2. **Verify the generated structure** matches the layout above. The generated app includes:
@@ -223,11 +227,13 @@ Follow this procedure to add a new app to an existing project:
    - `tests.rs` — App tests
 
 3. **Register the app module** in `src/apps.rs`:
+
    ```rust
    pub mod <name>;
    ```
 
 4. **Register the app** in `installed_apps!` macro (in `src/config/apps.rs` or equivalent):
+
    ```rust
    installed_apps! {
        // existing apps...
@@ -236,6 +242,7 @@ Follow this procedure to add a new app to an existing project:
    ```
 
 5. **Mount app routes** in the root URL configuration (`src/config/urls.rs`):
+
    ```rust
    #[routes]
    pub fn routes() -> UnifiedRouter {
@@ -245,6 +252,7 @@ Follow this procedure to add a new app to an existing project:
    ```
 
 6. **Verify compilation**:
+
    ```bash
    cargo check
    ```

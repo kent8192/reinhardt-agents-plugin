@@ -249,6 +249,7 @@ receiving handler may discard the value (`_csrf_token`).
 ## Dynamic References
 
 For the latest function-like macro definitions:
+
 1. Read `reinhardt/crates/reinhardt-auth/macros/src/lib.rs` for guard!
 2. Read `reinhardt/crates/reinhardt-core/macros/src/lib.rs` for installed_apps!
 3. Read `reinhardt/crates/reinhardt-urls/routers-macros/src/lib.rs` for path!

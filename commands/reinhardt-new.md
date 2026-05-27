@@ -13,12 +13,14 @@ Ask the user for a project name. It must be a valid Rust crate name (lowercase l
 ## Step 2: Template Type
 
 Present the options:
+
 - **restful** (default) — REST API backend without frontend
 - **with-pages** — Full-stack with reinhardt-pages (WASM + SSR)
 
 ## Step 3: Feature Preset
 
 Present the feature presets from `../skills/scaffolding/references/feature-flags.md`:
+
 - **minimal** — Core routing, DI, HTTP server only
 - **standard** (default) — Balanced for most projects
 - **api-only** — REST APIs without templates/forms
@@ -27,6 +29,7 @@ Present the feature presets from `../skills/scaffolding/references/feature-flags
 ## Step 4: Database Backend
 
 Present the options:
+
 - **postgres** (recommended) — PostgreSQL
 - **mysql** — MySQL
 - **sqlite** — SQLite (good for development)
@@ -36,6 +39,7 @@ Present the options:
 ## Step 5: Authentication
 
 Present the options:
+
 - **jwt** — JWT token auth (recommended for APIs)
 - **session** — Session-based auth (for web apps)
 - **oauth** — OAuth2/OIDC (for third-party login)

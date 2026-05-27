@@ -46,6 +46,7 @@ async fn test_with_postgres(
 ```
 
 The `postgres_container` fixture returns a tuple of:
+
 - `ContainerAsync<GenericImage>` — container handle (keep alive for test duration)
 - `Arc<PgPool>` — connection pool with retry and timeout configuration
 - `u16` — mapped host port

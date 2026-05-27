@@ -22,6 +22,7 @@ Triggered during ORM model lifecycle events. Generic over the model type `T`.
 ### M2MAction Variants
 
 The `M2MChangeEvent` includes an `M2MAction` enum:
+
 - `PreAdd` — before adding relations
 - `PostAdd` — after adding relations
 - `PreRemove` — before removing relations

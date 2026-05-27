@@ -7,6 +7,7 @@ How to combine reinhardt signals with the task system for guaranteed post-commit
 ## The Problem
 
 Using `post_save` directly for side-effects is unreliable:
+
 - The signal fires inside the transaction — if the transaction rolls back, the side-effect already ran
 - Network failures in the receiver can break the main transaction
 - Synchronous processing blocks the request

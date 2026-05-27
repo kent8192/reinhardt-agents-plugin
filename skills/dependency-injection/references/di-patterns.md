@@ -4,7 +4,7 @@
 
 Reinhardt's DI system is FastAPI-inspired with compile-time type safety and async-first design.
 
-```
+```text
 reinhardt-di
   ├── Injectable trait          (core injection interface)
   ├── Injected<T>               (Arc-wrapped dependency with metadata)
@@ -111,6 +111,7 @@ cargo run --bin check-di -- --validate
 Users **CANNOT** register `#[injectable_factory]` or `#[injectable]` for types in framework namespaces. This prevents accidental override of framework-managed services. Violations cause a startup panic.
 
 **Framework prefixes** (registration panics if the type name starts with any of these):
+
 - `reinhardt::`, `reinhardt_admin::`, `reinhardt_di::`, `reinhardt_core::`
 - `reinhardt_auth::`, `reinhardt_db::`, `reinhardt_rest::`
 - All other `reinhardt_*` crate namespaces

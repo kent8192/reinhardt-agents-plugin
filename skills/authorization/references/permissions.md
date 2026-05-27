@@ -299,6 +299,7 @@ context.has_perm("app.change_article", user_id).await
 ## Dynamic References
 
 For the latest permission API:
+
 1. Read `reinhardt/crates/reinhardt-auth/src/core/permission.rs` for Permission trait and built-ins
 2. Read `reinhardt/crates/reinhardt-auth/src/core/permission_operators.rs` for And/Or/Not
 3. Read `reinhardt/crates/reinhardt-auth/src/model_permissions.rs` for Django-style

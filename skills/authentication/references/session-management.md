@@ -166,6 +166,7 @@ Sessions support tenant isolation for multi-tenant applications, ensuring sessio
 ## Dynamic References
 
 For the latest session API:
+
 1. Read `reinhardt/crates/reinhardt-auth/src/sessions/` for all session implementations
 2. Read `reinhardt/crates/reinhardt-auth/src/sessions/backend.rs` for SessionBackend trait
 3. Read `reinhardt/crates/reinhardt-auth/src/sessions/config.rs` for SessionConfig

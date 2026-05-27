@@ -38,6 +38,7 @@ Specialized agent for generating high-quality tests that comply with reinhardt t
 ## Output Format
 
 Return test code ready to be inserted into the appropriate file. Include:
+
 - All necessary `use` statements
 - Fixture definitions (if new fixtures are needed)
 - Test functions with complete implementations
@@ -46,6 +47,7 @@ Return test code ready to be inserted into the appropriate file. Include:
 ## Reference Materials
 
 Read these for patterns when generating tests:
+
 - `../skills/testing/references/rstest-patterns.md`
 - `../skills/testing/references/testcontainers.md`
 - `../skills/testing/references/api-testing.md`

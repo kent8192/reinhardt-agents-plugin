@@ -188,6 +188,7 @@ In 0.2.x, auth extractors return types based on the unified `AuthIdentity` trait
 ## Dynamic References
 
 For the latest extractor API:
+
 1. Read `reinhardt/crates/reinhardt-auth/src/auth_info.rs` for AuthInfo
 2. Read `reinhardt/crates/reinhardt-auth/src/auth_user.rs` for AuthUser
 3. Read `reinhardt/crates/reinhardt-auth/src/current_user.rs` for deprecated CurrentUser
