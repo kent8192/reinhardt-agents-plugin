@@ -4,10 +4,18 @@ Codex and Claude Code plugin for [reinhardt-web](https://github.com/kent8192/rei
 
 ## Installation
 
-### Codex
+### Codex CLI
 
 ```bash
-codex install kent8192/reinhardt-agents-plugin
+# Add this repo as a plugin marketplace source
+codex plugin marketplace add kent8192/reinhardt-agents-plugin
+```
+
+Then browse and install from the CLI:
+
+```bash
+codex          # launch Codex
+/plugins       # open the plugin list, find reinhardt-agents-plugin, select Install
 ```
 
 This repository ships a Codex plugin manifest at `.codex-plugin/plugin.json`.
