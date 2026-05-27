@@ -201,6 +201,7 @@ pub async fn edit_user(
 ## Dynamic References
 
 For the latest guard API:
+
 1. Read `reinhardt/crates/reinhardt-auth/src/guard.rs` for Guard, Public, All, Any, Not
 2. Read `reinhardt/crates/reinhardt-auth/macros/src/lib.rs` for guard! macro implementation
 3. Read `reinhardt/crates/reinhardt-core/macros/src/lib.rs` for permission_required macro

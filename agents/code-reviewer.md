@@ -20,28 +20,35 @@ Specialized agent for reviewing reinhardt-web application code against project c
 ## Review Checklist
 
 ### Module System
+
 - [ ] No `mod.rs` files (use `module.rs` + `module/` directory)
 - [ ] Maximum 4 levels of nesting
 - [ ] Explicit `pub use` re-exports (no `pub use module::*`)
 - [ ] Visibility control: private submodules with public API via `pub use`
 
 ### Scaffolding & Naming
+
 - [ ] Project and app names do not start with `reinhardt_` or `reinhardt-` (reserved namespace)
 
 ### Dependencies
+
 - [ ] No `reinhardt-test = { workspace = true }` in functional crate `[dev-dependencies]`
 - [ ] Delion plugins depend on `reinhardt` facade, not `reinhardt-dentdelion` directly
 - [ ] No circular dependency chains
 
 ### ORM & Queries
+
 - [ ] `reinhardt-query` used for all SQL construction (no raw SQL)
 - [ ] Proper relation design (ForeignKey, ManyToMany, OneToOne)
 - [ ] Nullable fields use `Option<T>`
 - [ ] Primary keys defined with `#[field(primary_key = true)]`
 - [ ] UUID primary keys use v7 (auto-handled by `#[model]` — flag any manual `Uuid::new_v4()` calls)
 - [ ] Custom managers wired via `#[model(manager = ...)]` (rc.23+); veto hooks (`before_save` / `before_delete` / `before_bulk_update`) return early on policy violations rather than mutating state
+- [ ] **(0.2.x)** No usage of removed `HasCustomManager` trait or `custom_manager()` method — use `type Objects` associated type on `Model` instead
+- [ ] **(0.2.x)** `{Model}Info` companion struct considered for cross-layer DTOs; sensitive fields marked with `#[field(skip_info = true)]`
 
 ### Dependency Injection
+
 - [ ] Appropriate scoping (request-scoped vs singleton)
 - [ ] No circular dependency risk
 - [ ] `#[inject]` used correctly in handlers
@@ -51,24 +58,30 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] `cargo run --bin check-di -- --validate` passes
 
 ### API Design
+
 - [ ] Serializer fields match model fields
 - [ ] Views have appropriate authentication
 - [ ] URL patterns follow RESTful conventions
 - [ ] Error responses are consistent
 - [ ] Route names are unique across the application (duplicates cause startup failure)
-- [ ] Consider `url-resolver` feature for type-safe URL resolution
+- [ ] Consider `url-resolver` feature for type-safe URL resolution **(0.1.x only — removed in 0.2.x)**
+- [ ] **(0.2.x)** No usage of removed `#[url_patterns]` macro — use `#[routes]` instead
+- [ ] **(0.2.x)** No usage of removed `named_route*` methods on `ClientRouter` — use `route()` with mandatory `name` first arg
+- [ ] **(0.2.x)** No usage of removed `SecurityConfig` — use `SecurityMiddleware` builder methods
 - [ ] OIDC providers other than the bundled four (Google, GitHub, Apple, Microsoft) are wired via `GenericOidcProvider` (rc.23+) — flag any from-scratch `impl OAuthProvider` for OIDC-compliant IdPs
 - [ ] REST versioning configured via the `[rest_versioning]` settings fragment (rc.29+); flag any remaining `REINHARDT_VERSIONING_*` env-var reads or calls to `VersioningConfig::from_env`
 
 ### Testing
+
 - [ ] All tests use `#[rstest]` (not `#[test]`)
 - [ ] AAA labels are standard (`// Arrange`, `// Act`, `// Assert`)
 - [ ] Assertions are strict (`assert_eq!` preferred)
 - [ ] Fixtures used for shared setup
 - [ ] `#[serial]` used for global state tests
-- [ ] DI override tests (`with_di_overrides!`, `register_override`) carry `#[serial(di_registry)]` and depend on the `testing` feature (rc.29+) — flag missing serialization which causes flaky `OnceLock` registry collisions
+- [ ] DI override tests (`with_di_overrides!`, `register_override`) carry `#[serial(di_registry)]` **(0.1.x)** and depend on the `testing` feature (rc.29+) — in 0.2.x `#[serial(di_registry)]` is no longer required due to per-context registry isolation
 
 ### Documentation & Style
+
 - [ ] All comments in English
 - [ ] Rustdoc formatting: backticks for generics (`Option<T>`), macros (`#[derive]`)
 - [ ] Minimize `.to_string()` — prefer borrowing
@@ -88,6 +101,7 @@ Include specific file paths, line references, and fix suggestions for each findi
 ## Reference Materials
 
 Read these for authoritative patterns:
+
 - `../skills/modeling/references/model-patterns.md`
 - `../skills/api-development/references/serializer-patterns.md`
 - `../skills/testing/references/rstest-patterns.md`

@@ -1,6 +1,7 @@
 ---
 name: configuration
 description: Use when setting up or modifying reinhardt-web project configuration - covers settings fragments, TOML sources, profiles, and the composable settings system
+versions: ["0.1.2", "0.2.x"]
 ---
 
 # Reinhardt Configuration
@@ -40,6 +41,7 @@ Guide developers through reinhardt-web's composable settings system using fragme
 ## Dynamic References
 
 For the latest configuration API:
+
 1. Read `reinhardt/crates/reinhardt-conf/src/settings/` for all settings types
 2. Read `reinhardt/crates/reinhardt-conf/src/settings/builder.rs` for SettingsBuilder
 3. Read `reinhardt-cloud/dashboard/src/config/settings.rs` for a production example

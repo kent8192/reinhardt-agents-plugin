@@ -1,6 +1,7 @@
 ---
 name: pages
 description: Use when building WASM frontend pages with reinhardt-pages - covers page!/head!/form! macros, reactive hooks (Signal/Effect/useState), routing, SSR/hydration, server functions, and API client
+versions: ["0.1.2", "0.2.x"]
 ---
 
 # Reinhardt Pages (WASM Frontend)
@@ -46,6 +47,8 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - URL attributes (`href`, `src`, `action`, `formaction`) block dangerous schemes (`javascript:`, `data:`, `vbscript:`)
 - ALL code comments must be in English
 - Use `reinhardt-query` for any SQL construction, NEVER raw SQL
+- In 0.2.x, reactive expressions in `page!` are auto-wrapped — explicit `Page::reactive(...)` is no longer needed
+- In 0.2.x, `use_effect`/`use_memo`/`use_callback` take explicit dependency arrays
 
 ## Cross-Domain References
 
@@ -58,6 +61,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 ## Dynamic References
 
 For the latest API definitions:
+
 1. Read `reinhardt/crates/reinhardt-pages/macros/src/lib.rs` for macro definitions (page!, head!, form!, #[server_fn])
 2. Read `reinhardt/crates/reinhardt-pages/src/prelude.rs` for exported types
 3. Read `reinhardt/crates/reinhardt-pages/src/reactive.rs` for reactive system

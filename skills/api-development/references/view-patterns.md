@@ -106,6 +106,7 @@ pub async fn list_users(Query(params): Query<PaginationParams>) -> ViewResult<Re
 ### Request/Response Serialization
 
 Request types use `Deserialize`, `Validate`, and `Schema`:
+
 ```rust
 #[derive(Debug, Clone, Deserialize, Validate, Schema)]
 pub struct CreateUserRequest {
@@ -115,6 +116,7 @@ pub struct CreateUserRequest {
 ```
 
 Response types use `Serialize` and `Schema`:
+
 ```rust
 #[derive(Debug, Serialize, Schema)]
 pub struct UserResponse {
@@ -125,6 +127,7 @@ pub struct UserResponse {
 ```
 
 JSON serialization uses the reinhardt-provided module:
+
 ```rust
 use reinhardt::core::serde::json;
 let bytes = json::to_vec(&response_data)?;

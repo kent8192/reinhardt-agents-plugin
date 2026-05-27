@@ -1,6 +1,7 @@
 ---
 name: lint
 description: Use when running static analysis, fixing lint errors, or preparing code for commit - covers the full cargo/clippy/rustdoc/semgrep suite with fix-iterate workflow
+versions: ["0.1.2", "0.2.x"]
 ---
 
 # Reinhardt Static Analysis & Linting
@@ -30,6 +31,7 @@ Run all checks in order. Read `references/suite-commands.md` for exact commands 
 ### Fix-Iterate Pattern
 
 When issues are found:
+
 1. Run the failing check
 2. Fix the reported issues
 3. Re-run the same check to verify the fix
@@ -45,6 +47,7 @@ When issues are found:
 ### Diff-Aware Scanning (for PRs)
 
 For checking only changes relative to main:
+
 ```bash
 semgrep scan --config .semgrep/ --baseline-commit origin/main --error --metrics off
 ```
@@ -67,6 +70,7 @@ semgrep scan --config .semgrep/ --baseline-commit origin/main --error --metrics 
 ## Dynamic References
 
 For the latest lint configuration:
+
 1. Read `reinhardt/Makefile.toml` for cargo-make task definitions
 2. Read `reinhardt/.semgrep/` for custom semgrep rules
 3. Read `reinhardt/clippy.toml` or `reinhardt/.clippy.toml` for clippy configuration (if exists)

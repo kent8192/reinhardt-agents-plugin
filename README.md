@@ -29,6 +29,17 @@ plugin_hooks = true
 /plugin install reinhardt-agent-plugin@kent8192
 ```
 
+## Supported Versions
+
+This plugin documents both active reinhardt-web version families:
+
+| Version | Status | Branch |
+|---------|--------|--------|
+| **0.1.2** | Stable | `main` |
+| **0.2.0-rc.2** | Development | `develop/0.2.0` |
+
+Skills use inline version markers — `**(0.1.x)**` / `**(0.2.x)**` — where APIs diverge between versions. Check your project's `Cargo.toml` to determine which version family applies.
+
 ## Features
 
 ### Skills
@@ -51,7 +62,7 @@ plugin_hooks = true
 | `lint` | "lint", "fix warnings", "clippy", "static analysis" | Static analysis workflow with the fix-iterate pattern |
 | `migration` | "upgrade reinhardt", "migrate", "deprecated", "breaking change", "rc.XX" | Version upgrade analysis via CHANGELOG, deprecated API detection, and guided code migration |
 
-### Command
+### Commands
 
 | Command | Description |
 |---------|-------------|
@@ -99,10 +110,21 @@ The PostToolUse hook automatically scans code changes for these reinhardt-specif
 ## Requirements
 
 - **Rust** >= 1.94.0 (2024 Edition)
-- **reinhardt-web** == `0.1.0-rc.29` (current target version of this plugin)
-- **reinhardt-admin-cli** -- `cargo install reinhardt-admin-cli --version "0.1.0-rc.29"` (the `--version` flag is required during the RC phase because Cargo does not select pre-release versions by default)
+- **reinhardt-web** `0.1.2` (stable) / `0.2.0-rc.2` (development) — this plugin documents both version families
+- **reinhardt-admin-cli** -- `cargo install reinhardt-admin-cli --version "0.1.2"` (for 0.2.x: `--version "0.2.0-rc.2"`)
 - **Docker Desktop** -- required for TestContainers-based database tests
 - **semgrep** (optional) -- enables automatic anti-pattern detection via PostToolUse hook
+
+## Platform Compatibility
+
+| Platform | Config File | Status |
+|----------|-------------|--------|
+| **Claude Code** | `CLAUDE.md` + `.claude-plugin/` | Full support (skills, hooks, agents, commands) |
+| **Codex** | `AGENTS.md` + `.codex-plugin/` | Full support (skills, hooks via `PLUGIN_ROOT`) |
+
+`CLAUDE.md` and `AGENTS.md` are kept in sync — edits to one must be mirrored to the other in the same commit. Only documented substitutions (title, attribution footer references) differ between the two files.
+
+Hook commands support both plugin-root variables: `CLAUDE_PLUGIN_ROOT` (Claude Code) and `PLUGIN_ROOT` (Codex native plugin hooks).
 
 ## License
 

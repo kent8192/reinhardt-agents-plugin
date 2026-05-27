@@ -51,6 +51,7 @@ The `#[field]` attribute accepts these options to configure column behavior:
 | `db_column` | `&str` | Override the database column name (defaults to the field name). |
 | `blank` | `bool` | Whether the field is allowed to be empty (validation-level, not DB-level). |
 | `verbose_name` | `&str` | Human-readable name for the field, used in admin and error messages. |
+| `skip_info` | `bool` | **(0.2.x)** Excludes this field from the auto-generated `{Model}Info` companion struct. Use for sensitive data (e.g., password hashes). |
 
 ## Rust Type to Database Type Mapping
 
@@ -205,6 +206,35 @@ pub struct Question {
 pub struct Choice {
     // ... fields
 }
+```
+
+## Model Info Companion Struct (0.2.x)
+
+In 0.2.x, every `#[model]` automatically generates a `{Model}Info` companion struct — a plain data carrier suitable for API DTOs, view layers, and tests. The macro provides bidirectional `From<Model>` / `From<ModelInfo>` conversions out of the box.
+
+**Key behaviors:**
+
+- **Opt-out:** Pass `info = false` to the model attribute: `#[model(info = false)]` to suppress Info struct generation entirely.
+- **Field exclusion:** Annotate individual fields with `#[field(skip_info = true)]` to exclude sensitive data (e.g., password hashes) from the Info struct.
+- **Serde derives:** Serde derives on the model are mirrored onto the Info struct.
+- **Relationship handling:** Marker types (e.g., `ForeignKeyField<T>`, `ManyToManyField<A, B>`) are excluded from the Info struct; FK `_id` fields (plain integer/UUID columns) are included.
+
+```rust
+// 0.2.x: Auto-generated UserInfo struct
+#[model(app_label = "accounts")]
+#[derive(Debug, Clone)]
+pub struct User {
+    #[field(primary_key = true)]
+    pub id: i64,
+    pub username: String,
+    #[field(skip_info = true)]  // excluded from UserInfo
+    pub password_hash: String,
+    pub email: Option<String>,
+}
+// The macro generates:
+// pub struct UserInfo { pub id: i64, pub username: String, pub email: Option<String> }
+// impl From<User> for UserInfo { ... }
+// impl From<UserInfo> for User { ... } (requires defaults for skipped fields)
 ```
 
 ## Custom Manager Attribute (rc.23+)

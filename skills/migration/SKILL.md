@@ -1,6 +1,7 @@
 ---
 name: migration
 description: Use when upgrading reinhardt-web versions or replacing deprecated APIs - analyzes CHANGELOG, detects deprecated API usage, and guides code migration
+versions: ["0.1.2", "0.2.x"]
 ---
 
 # Reinhardt Migration
@@ -11,13 +12,14 @@ Guide developers through reinhardt-web version upgrades and deprecated API repla
 
 - User wants to upgrade reinhardt version
 - User needs to fix deprecated API warnings
-- User mentions: "upgrade", "update reinhardt", "migrate", "deprecated", "version up", "CHANGELOG", "breaking change", "rc.XX"
+- User mentions: "upgrade", "update reinhardt", "migrate", "deprecated", "version up", "CHANGELOG", "breaking change", "rc.XX", "0.2", "major version"
 
 ## Workflow
 
 ### Phase 1: Analysis (delegated to migration-analyzer agent)
 
 Dispatch the **migration-analyzer agent** with:
+
 - Current reinhardt version (from Cargo.toml)
 - Target version (from user)
 - Path to user's application code
@@ -27,6 +29,7 @@ The agent returns a structured migration report covering breaking changes, depre
 ### Phase 2: Planning
 
 Based on the agent's report:
+
 1. Present the migration report to the user
 2. Categorize by priority:
    - **Breaking Changes** — must fix for compilation
@@ -38,6 +41,7 @@ Based on the agent's report:
 ### Phase 3: Execution
 
 For each migration task:
+
 1. Update `Cargo.toml` reinhardt version to target
 2. For each breaking change:
    - Show change context (from CHANGELOG + PR/Issue)
@@ -56,12 +60,14 @@ For each migration task:
 - ALWAYS present the migration report to the user before making changes
 - NEVER modify code without user confirmation
 - For multi-version hops (e.g., rc.18 → rc.22), review each intermediate version's changes — see `references/upgrade-workflow.md` for the worked rc.18 → rc.22 example covering the rc.19 `urls/` directory move and the rc.22 `form!` `strip_arguments` migration
+- For 0.1.x → 0.2.x upgrades, this is a **major version migration** with extensive breaking changes. Use `references/upgrade-workflow.md` "Major Version Upgrade" section for the full migration path.
 - After all migrations, run `cargo check` and `cargo test` to verify
 - If `cargo check` fails after migration, diagnose and fix before proceeding
 
 ## Rollback
 
 If migration fails or user wants to revert:
+
 1. Revert `Cargo.toml` to original version: `git checkout Cargo.toml Cargo.lock`
 2. Revert code changes: `git checkout -- src/`
 3. Verify rollback: `cargo check`
@@ -75,13 +81,15 @@ If migration fails or user wants to revert:
 ## Dynamic References
 
 On each invocation, read from source:
+
 1. `reinhardt/CHANGELOG.md` and `reinhardt/crates/*/CHANGELOG.md`
 2. `reinhardt/announcements/v0.1.0-rc.N.md` — per-release Highlights, Breaking
    Changes, and Related PRs (the announcement file is the canonical source for
    migration recipes that go beyond a single CHANGELOG line)
-3. `#[deprecated]` annotations in reinhardt source via Grep
-4. GitHub PR/Issue descriptions via `gh pr view` / `gh issue view`
-5. GitHub discussions linked from announcement Breaking Changes via
+3. `reinhardt/announcements/v0.2.0-rc.N.md` — per-release announcements for the 0.2.x series
+4. `#[deprecated]` annotations in reinhardt source via Grep
+5. GitHub PR/Issue descriptions via `gh pr view` / `gh issue view`
+6. GitHub discussions linked from announcement Breaking Changes via
    `gh api repos/kent8192/reinhardt-web/discussions/<N>` (the `gh discussion`
    subcommand is unavailable; use the REST API directly)
-6. User's application code via Grep
+7. User's application code via Grep

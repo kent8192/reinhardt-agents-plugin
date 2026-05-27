@@ -4,7 +4,7 @@
 
 The standard workflow for applying model changes to the database:
 
-```
+```text
 Define/Modify Models -> Generate Migration -> Review -> Apply -> Verify
 ```
 
@@ -35,7 +35,8 @@ This compares the current model definitions against the last migration state and
 | `--migration-dir <PATH>` | Migration directory (default: `./migrations`) |
 
 Migration files are named with a sequential number and description:
-```
+
+```text
 migrations/
 +-- polls/
     +-- 0001_initial.rs
@@ -111,6 +112,7 @@ cargo run --bin manage migrate <app_label> zero
 ```
 
 **Rules for rollback:**
+
 - Only roll back migrations that have not been deployed to production
 - Ensure the `down` method is implemented in the migration
 - After rollback, update or remove the corresponding model changes
@@ -382,6 +384,7 @@ async fn test_user_creation(
 ### Under the Hood
 
 `postgres_with_migrations_from_dir()` performs these steps:
+
 1. Starts a PostgreSQL container via TestContainers
 2. Connects via `DatabaseConnection::connect_postgres()`
 3. Loads migrations using `FilesystemSource`
@@ -461,9 +464,31 @@ Between the rc.23 macro refactor and rc.28, the `#[model]` field-registration lo
 
 rc.29 fixes this in two layers: (1) the macro only emits `auto_increment = "true"` from the integer-PK branch, so `Uuid` / `String` / custom-type PKs no longer carry the flag through `FieldState.params` → `ProjectState::to_database_schema` → `ColumnDefinition`; (2) defense-in-depth in the SQLite emitter's `column_to_sql` only pushes `PRIMARY KEY AUTOINCREMENT` when the column type has been widened to `INTEGER` — non-integer PKs now emit plain `PRIMARY KEY`. Integer PKs (`BigInteger` / `Integer` / `SmallInteger`) are unaffected. **Action required on rc.29 upgrade:** if you generated migrations for a `Uuid`-PK model on rc.23-28 and never applied them, regenerate them; applied migrations need no change.
 
+## Version Differences (0.2.x)
+
+The following breaking changes affect the migration API in 0.2.x:
+
+### `Operation::to_reverse_sql` returns `Vec<String>`
+
+In 0.1.x, `Operation::to_reverse_sql` returned a single `String`. In 0.2.x, it returns `Vec<String>` to support multi-statement SQL reverse operations (e.g., a single `CreateIndex` operation that requires dropping multiple dependent objects before the index itself). Callers that pattern-match or store the return value must be updated accordingly.
+
+### `DatabaseConnection::get_database_url_from_env_or_settings` removed
+
+In 0.1.x, `DatabaseConnection::get_database_url_from_env_or_settings(base_dir)` accepted a base directory path and resolved both environment variables and settings files internally. In 0.2.x, this method is removed. Use `DatabaseConnection::database_url_from(settings, env_override)` instead, passing a pre-built `ProjectSettings` instance and an optional environment variable override. This change decouples URL resolution from filesystem discovery, making it easier to test and to use non-standard settings sources.
+
+```rust
+// 0.1.x
+let url = DatabaseConnection::get_database_url_from_env_or_settings(base_dir)?;
+
+// 0.2.x
+let settings = ProjectSettings::from_dir(base_dir)?;
+let url = DatabaseConnection::database_url_from(&settings, Some("DATABASE_URL"))?;
+```
+
 ## Dynamic References
 
 For the latest migration API:
+
 1. Read `reinhardt/crates/reinhardt-commands/src/cli.rs` for CLI command definitions
 2. Read `reinhardt/crates/reinhardt-db/src/migrations/` for migration executor internals
 3. Read `reinhardt/crates/reinhardt-testkit/src/fixtures/testcontainers.rs` for test fixture API

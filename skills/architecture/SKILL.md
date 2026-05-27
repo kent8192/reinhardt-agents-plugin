@@ -1,6 +1,7 @@
 ---
 name: architecture
 description: Use when implementing a complete feature across all reinhardt layers - guides the full workflow from model to API to tests with completion checklist
+versions: ["0.1.2", "0.2.x"]
 ---
 
 # Reinhardt Feature Development Architecture
@@ -67,6 +68,7 @@ Read `references/error-mapping.md` for the standard mapping from service-layer e
 ## Dynamic References
 
 For the latest API:
+
 1. Read `reinhardt/src/lib.rs` for all facade re-exports
 2. Read `reinhardt/crates/reinhardt-rest/src/lib.rs` for serializer types
 3. Read `reinhardt/crates/reinhardt-views/src/lib.rs` for view types

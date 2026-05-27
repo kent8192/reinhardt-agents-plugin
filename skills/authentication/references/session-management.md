@@ -136,6 +136,10 @@ csrf.validate_token(&session_key, &submitted_token).await?;
 | `SESSION_COOKIE_NAME` | `"sessionid"` | Default session cookie name |
 | `SESSION_KEY_USER_ID` | `"_auth_user_id"` | Session key for user ID |
 
+### Version Differences (0.2.x)
+
+In 0.2.x, permission lookups during session resolution use the user ID instead of the username. This aligns with the broader 0.2.x change where all permission resolution is user-ID-based rather than username-based.
+
 ---
 
 ## Session Replication
@@ -162,6 +166,7 @@ Sessions support tenant isolation for multi-tenant applications, ensuring sessio
 ## Dynamic References
 
 For the latest session API:
+
 1. Read `reinhardt/crates/reinhardt-auth/src/sessions/` for all session implementations
 2. Read `reinhardt/crates/reinhardt-auth/src/sessions/backend.rs` for SessionBackend trait
 3. Read `reinhardt/crates/reinhardt-auth/src/sessions/config.rs` for SessionConfig

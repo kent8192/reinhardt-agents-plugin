@@ -1,6 +1,7 @@
 ---
 name: api-development
 description: Use when building REST API endpoints with reinhardt-web - covers serializers, views, URL routing, authentication, and pagination
+versions: ["0.1.2", "0.2.x"]
 ---
 
 # Reinhardt REST API Development
@@ -30,6 +31,7 @@ Guide developers through building REST API endpoints using reinhardt-rest, reinh
 - Use `ModelSerializer` for standard CRUD operations
 - Use `reinhardt-query` for custom queries, NEVER raw SQL
 - ALL code comments must be in English
+- `#[url_patterns]` is removed in 0.2.x -- use `#[routes]` for all URL registration
 
 ## Cross-Domain References
 
@@ -39,6 +41,7 @@ Guide developers through building REST API endpoints using reinhardt-rest, reinh
 ## Dynamic References
 
 For the latest API:
+
 1. Read `reinhardt/crates/reinhardt-rest/src/lib.rs` for serializer and REST types
 2. Read `reinhardt/crates/reinhardt-views/src/lib.rs` for view patterns
 3. Read `reinhardt/crates/reinhardt-urls/src/lib.rs` for URL routing

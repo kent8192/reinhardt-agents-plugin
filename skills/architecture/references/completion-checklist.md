@@ -5,6 +5,7 @@ Run through this checklist after implementing a feature to verify all layers are
 ---
 
 ## Model Layer
+
 - [ ] Model defined with `#[model]` macro
 - [ ] Primary key field defined
 - [ ] `Option<T>` used for all nullable fields
@@ -15,12 +16,14 @@ Run through this checklist after implementing a feature to verify all layers are
 - [ ] Migration reviewed for correctness
 
 ## Serializer Layer
+
 - [ ] Read serializer defined (API response)
 - [ ] Write serializer / input type defined (API request)
 - [ ] Field validation applied where needed
 - [ ] Nested serializers for related models (if applicable)
 
 ## Service Layer
+
 - [ ] Service struct defined with dependency fields
 - [ ] `#[injectable_factory]` macro applied
 - [ ] Constructor receives all dependencies via injection
@@ -29,6 +32,7 @@ Run through this checklist after implementing a feature to verify all layers are
 - [ ] No direct HTTP concerns in service code
 
 ## API Layer
+
 - [ ] View functions defined with HTTP method decorators
 - [ ] URL routes configured and mounted in app config
 - [ ] Authentication configured (if required)
@@ -37,6 +41,7 @@ Run through this checklist after implementing a feature to verify all layers are
 - [ ] Request validation via serializer/input types
 
 ## Admin Layer
+
 - [ ] Model registered with `#[admin]` macro
 - [ ] `list_display` configured (id first, max 6 fields)
 - [ ] `search_fields` includes id
@@ -45,6 +50,7 @@ Run through this checklist after implementing a feature to verify all layers are
 - [ ] `list_per_page` set
 
 ## Test Layer
+
 - [ ] Unit tests for service business logic (mocked deps)
 - [ ] Integration tests with TestContainers (real DB)
 - [ ] API tests for HTTP endpoints
@@ -54,6 +60,7 @@ Run through this checklist after implementing a feature to verify all layers are
 - [ ] Edge cases covered (not found, validation failure, duplicate)
 
 ## Signal Layer (if applicable)
+
 - [ ] Signal receivers connected with `connect_receiver!`
 - [ ] `dispatch_uid` set for each receiver
 - [ ] Receivers are idempotent
@@ -61,11 +68,13 @@ Run through this checklist after implementing a feature to verify all layers are
 - [ ] Signal tests verify behavior in isolation
 
 ## Documentation
+
 - [ ] Rustdoc comments on public types and methods
 - [ ] All comments in English
 - [ ] No `todo!()` left unresolved (or tracked in issue)
 
 ## Code Quality
+
 - [ ] `cargo make fmt-check` passes
 - [ ] `cargo make clippy-check` passes
 - [ ] `cargo doc --no-deps` passes (no warnings)

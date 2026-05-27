@@ -18,7 +18,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-## [0.1.0-rc.29] - 2026-05-13
+## [0.2.0-rc.2] - 2026-05-26
+
+## [0.1.2] - 2026-05-25
 
 ### Added
 - New feature description (#123)
@@ -85,6 +87,7 @@ gh pr view 142 -R kent8192/reinhardt-web --json body,title
 ```
 
 The PR body often contains:
+
 - Detailed migration instructions
 - Before/after code examples
 - Rationale for the change
@@ -93,6 +96,7 @@ The PR body often contains:
 ### Getting linked issue details
 
 If the PR references issues (e.g., "Fixes #98"):
+
 ```bash
 gh issue view 98 -R kent8192/reinhardt-web --json body,title
 ```
@@ -106,7 +110,7 @@ discussion about migration strategies.
 
 Reinhardt is a workspace with multiple crates. Each crate has its own CHANGELOG:
 
-```
+```text
 reinhardt/CHANGELOG.md                          # Workspace-level (facade crate)
 reinhardt/crates/reinhardt-core/CHANGELOG.md
 reinhardt/crates/reinhardt-orm/CHANGELOG.md
@@ -122,11 +126,13 @@ reinhardt/crates/reinhardt-dentdelion/CHANGELOG.md
 ### Which CHANGELOGs to read
 
 Focus on crates that the user's application depends on. Check `Cargo.toml` features:
+
 ```toml
-reinhardt = { version = "0.1.0-rc.29", features = ["auth", "database", "dentdelion"] }
+reinhardt = { version = "0.1.2", features = ["auth", "database", "dentdelion"] }  # or "0.2.0-rc.2"
 ```
 
 This means read CHANGELOGs for:
+
 - `reinhardt` (facade — always read)
 - `reinhardt-auth` (from `auth` feature)
 - `reinhardt-database` (from `database` feature)
@@ -139,18 +145,21 @@ This means read CHANGELOGs for:
 
 release-plz creates per-crate tags in the format:
 
-```
+```text
 [crate-name]@v[version]
 ```
 
 Examples:
-- `reinhardt@v0.1.0-rc.29`
+
+- `reinhardt@v0.1.2`
+- `reinhardt@v0.2.0-rc.2`
 - `reinhardt-core@v0.2.0`
 - `reinhardt-orm@v0.1.5`
 
 ### Using tags for version comparison
 
 To see changes between two versions of a specific crate:
+
 ```bash
 gh api repos/kent8192/reinhardt-web/compare/reinhardt-core@v0.1.0...reinhardt-core@v0.2.0 \
   --jq '.commits[].commit.message'

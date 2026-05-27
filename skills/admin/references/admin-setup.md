@@ -130,3 +130,18 @@ pub fn routes() -> UnifiedRouter {
         .with_di_registrations(admin_di)
 }
 ```
+
+---
+
+## Version Differences (0.2.x)
+
+### SecurityMiddleware Builder
+
+In 0.2.x, `SecurityConfig` is removed. If the admin panel mounts security middleware, use the builder API directly:
+
+```rust
+// 0.2.x
+SecurityMiddleware::new()
+    .with_hsts(true)
+    .with_ssl_redirect(settings.is_production())
+```

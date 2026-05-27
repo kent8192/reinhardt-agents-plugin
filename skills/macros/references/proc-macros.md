@@ -123,6 +123,8 @@ let router = UnifiedRouter::new()
     .route(path!("/users/{user_id}/"), user_detail);
 ```
 
+> **0.2.x note:** `path!` continues to work in 0.2.x with `#[routes]`. The `#[url_patterns]` attribute that previously also consumed `path!` expressions is removed in 0.2.x — use `#[routes]` for all URL registration.
+
 ---
 
 ## `page!`
@@ -247,6 +249,7 @@ receiving handler may discard the value (`_csrf_token`).
 ## Dynamic References
 
 For the latest function-like macro definitions:
+
 1. Read `reinhardt/crates/reinhardt-auth/macros/src/lib.rs` for guard!
 2. Read `reinhardt/crates/reinhardt-core/macros/src/lib.rs` for installed_apps!
 3. Read `reinhardt/crates/reinhardt-urls/routers-macros/src/lib.rs` for path!

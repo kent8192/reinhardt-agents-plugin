@@ -11,7 +11,7 @@ Reinhardt provides two query APIs at different abstraction levels:
 
 The `Model` trait provides an `objects()` method that returns a `Manager<M>`, which is the entry point for all database operations. Manager methods return a `QuerySet<M>` for fluent query building.
 
-```
+```text
 Model::objects() -> Manager<M>
     .all()             -> QuerySet<M>   -> .all().await -> Vec<M>
     .filter(...)       -> QuerySet<M>   -> .all().await -> Vec<M>
@@ -285,7 +285,7 @@ let count = User::objects().count_with_conn(&conn).await?;
 
 ---
 
-## CustomManager / HasCustomManager (rc.23+)
+## CustomManager (0.1.x: HasCustomManager / 0.2.x: Objects Associated Type)
 
 For Django-style custom object managers — typically used to enforce row-level access control, default tenant filters, or `bulk_update` permission checks — Reinhardt introduces the opt-in `CustomManager` and `HasCustomManager` traits in `reinhardt-db` (#3981).
 
@@ -318,8 +318,27 @@ impl<M: Model> CustomManager<M> for TenantScopedManager {
 }
 ```
 
-A future v0.2.0 may unify `Manager` and `CustomManager` through an associated type on `Model`; for now the two access paths coexist (#3981).
+### Version Differences
 
+**0.1.x (rc.23+):** Uses the `HasCustomManager` trait with a `custom_manager()` method. `Model::objects()` returns `Manager<Self>` by default; the custom manager is a secondary, opt-in access path.
+
+**0.2.x:** The `HasCustomManager` trait is removed. The `Model` trait now has an associated type `type Objects: CustomManager<Model = Self> + Default`. `Model::objects()` returns the custom manager directly. When writing manual `Model` implementations (without the `#[model]` macro), you must add `type Objects = Manager<Self>;` for the default manager.
+
+```rust
+// 0.1.x
+impl HasCustomManager for Article {
+    type Manager = PublishedManager;
+    fn custom_manager() -> Self::Manager { PublishedManager }
+}
+
+// 0.2.x — Objects associated type on Model
+// (handled automatically by #[model(manager = PublishedManager)])
+// For manual impls:
+impl Model for Article {
+    type Objects = PublishedManager;
+    // ...
+}
+```
 
 ## Low-Level Query Builder (reinhardt-query)
 

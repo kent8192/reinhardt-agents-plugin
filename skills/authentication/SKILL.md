@@ -1,6 +1,7 @@
 ---
 name: authentication
 description: Use when configuring authentication in reinhardt-web applications - covers auth backends (JWT, Session, Token, OAuth2/Social), user models, password hashing, and session management
+versions: ["0.1.2", "0.2.x"]
 ---
 
 # Reinhardt Authentication
@@ -75,6 +76,7 @@ Guide developers through authentication setup using reinhardt-auth, including ba
 ## Dynamic References
 
 For the latest auth API:
+
 1. Read `reinhardt/crates/reinhardt-auth/src/lib.rs` for module structure and re-exports
 2. Read `reinhardt/crates/reinhardt-auth/src/core/base_user.rs` for BaseUser trait
 3. Read `reinhardt/crates/reinhardt-auth/src/jwt.rs` for JWT types

@@ -5,6 +5,50 @@ All notable changes to the **reinhardt-agent-plugin** Claude Code and Codex plug
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-05-27
+
+Updates all skills, commands, and agents to support both **reinhardt-web v0.1.2** (stable) and
+**v0.2.0-rc.2** (development). Version strings bumped from `0.1.0-rc.29` to `0.1.2`; `0.2.x`
+differences documented with inline version markers throughout.
+
+### Added
+
+- **Dual-version documentation** — every SKILL.md now carries `versions: ["0.1.2", "0.2.x"]`
+  in frontmatter; version-conditional sections use `**(0.1.x)**` / `**(0.2.x)**` inline markers
+  or `#### 0.1.x (stable)` / `#### 0.2.x` block headings.
+- **`skills/modeling`** — `{Model}Info` companion struct auto-generation (0.2.x), `#[model(info = false)]`,
+  `#[field(skip_info = true)]`, `type Objects` associated type unification replacing `HasCustomManager`.
+- **`skills/authentication`** — unified `AuthBackend` trait returning `Box<dyn AuthIdentity>` (0.2.x),
+  removal of `DefaultUser`/`DefaultUserManager`, user-ID-based permission lookups.
+- **`skills/api-development`** — `#[url_patterns]` removal (0.2.x), `#[routes]` simplification,
+  `ClientRouter` mandatory `name` first arg, type-safe URL reversal removal.
+- **`skills/pages`** — explicit dependency arrays for `use_effect`/`use_memo`/`use_callback` (0.2.x),
+  auto-wrapping of reactive expressions, `reinhardt::pages::navigate` SPA pattern.
+- **`skills/macros`** — 0.2.x macro changes: `#[url_patterns]` removed, `#[routes]` simplified,
+  `#[model(info)]`/`#[field(skip_info)]` additions.
+- **`skills/migration`** — "Major Version Upgrade: 0.1.x → 0.2.x" section with full migration path.
+- **`skills/dependency-injection`** — `InjectionContext` per-context registry isolation (0.2.x),
+  `Injectable` impls for extractors, `#[serial(di_registry)]` no longer needed.
+- **`skills/configuration`** — `SecurityConfig` removal in 0.2.x, `SecurityMiddleware` builder methods.
+- **`skills/testing`** — DI override tests no longer require `#[serial(di_registry)]` in 0.2.x.
+- **`skills/authorization`** — user-ID-based permission lookups (0.2.x), `AuthIdentity` type changes.
+- **`agents/migration-analyzer.md`** — version family detection (0.1.x vs 0.2.x), major-version
+  upgrade awareness.
+- **`agents/code-reviewer.md`** — 0.2.x anti-pattern detection (`HasCustomManager`, `#[url_patterns]`,
+  `named_route*`, `SecurityConfig`).
+- **`commands/reinhardt-upgrade.md`** — 0.1.x → 0.2.x major upgrade path handling.
+
+### Changed
+
+- All `0.1.0-rc.29` version strings → `0.1.2` with `# For 0.2.x: "0.2.0-rc.2"` comments.
+- **`README.md`** — requirements section shows dual version support.
+- **`.claude-plugin/plugin.json`** — version bumped from `1.1.0` to `1.2.0`.
+
+### Compatibility
+
+- Target reinhardt-web versions: **`0.1.2`** (stable) / **`0.2.0-rc.2`** (development).
+- No breaking changes to plugin consumers; all updates are additive.
+
 ## [1.1.0] - 2026-05-16
 
 Synchronizes documentation, skills, agents, and commands with **reinhardt-web v0.1.0-rc.23 → v0.1.0-rc.29**
