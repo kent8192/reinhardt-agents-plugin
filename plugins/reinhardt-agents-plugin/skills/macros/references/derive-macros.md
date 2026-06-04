@@ -1,0 +1,257 @@
+# Reinhardt Derive Macros Reference
+
+All derive macros are re-exported through the `reinhardt` facade crate.
+
+---
+
+## Model & ORM
+
+### `#[derive(Model)]`
+
+**Crate:** `reinhardt-core/macros`
+
+Auto-generate `Model` trait implementation and migration registration.
+
+```rust
+#[derive(Model, Clone, Debug, Serialize, Deserialize)]
+pub struct Post {
+    pub id: Option<Uuid>,
+    pub title: String,
+    pub content: String,
+}
+```
+
+> **Note:** Prefer using `#[model]` attribute macro, which auto-derives `Model` along with other traits.
+
+### `#[derive(QueryFields)]`
+
+**Crate:** `reinhardt-core/macros`
+
+Generate type-safe field lookups for ORM queries.
+
+```rust
+#[derive(QueryFields)]
+pub struct User {
+    pub id: Uuid,
+    pub username: String,
+    pub email: String,
+    pub age: i32,
+}
+
+// Generated: User::id(), User::username(), User::email(), User::age()
+// Usage:
+let users = User::objects()
+    .filter(User::age().gte(18))
+    .order_by(User::username(), true)
+    .all().await?;
+```
+
+### `#[derive(OrmReflectable)]`
+
+**Crate:** `reinhardt-core/macros`
+
+ORM reflection for association proxies.
+
+```rust
+#[derive(OrmReflectable)]
+pub struct UserProfile {
+    pub user_id: Uuid,
+    pub bio: String,
+}
+```
+
+---
+
+## Validation
+
+### `#[derive(Validate)]`
+
+**Crate:** `reinhardt-core/macros`
+
+Struct-level validation from field attributes.
+
+```rust
+#[derive(Validate)]
+pub struct CreateUserRequest {
+    #[validate(length(min = 3, max = 50))]
+    pub username: String,
+
+    #[validate(email)]
+    pub email: String,
+
+    #[validate(url)]
+    pub website: Option<String>,
+
+    #[validate(range(min = 0, max = 150))]
+    pub age: i32,
+
+    #[validate(length(min = 8))]
+    pub password: String,
+}
+
+// Usage:
+let request = CreateUserRequest { /* ... */ };
+request.validate()?; // Returns Result<(), ValidationErrors>
+```
+
+**Validation Rules:**
+
+| Rule | Description | Example |
+|------|-------------|---------|
+| `email` | Valid email format | `#[validate(email)]` |
+| `url` | Valid URL format | `#[validate(url)]` |
+| `length(min, max)` | String length range | `#[validate(length(min = 3, max = 50))]` |
+| `range(min, max)` | Numeric range | `#[validate(range(min = 0, max = 100))]` |
+
+---
+
+## API Documentation
+
+### `#[derive(Schema)]`
+
+**Crate:** `reinhardt-rest/openapi-macros` (also available in `reinhardt-core/macros`)
+
+Auto-generate OpenAPI 3.0 schema definitions.
+
+```rust
+#[derive(Schema, Serialize)]
+#[schema(title = "User Response", description = "User data returned by API")]
+pub struct UserResponse {
+    #[schema(description = "User unique identifier", read_only)]
+    pub id: Uuid,
+
+    #[schema(description = "Username", example = "alice")]
+    pub username: String,
+
+    #[schema(description = "Email address", format = "email")]
+    pub email: String,
+
+    #[schema(deprecated)]
+    pub legacy_field: Option<String>,
+}
+```
+
+**Container Attributes (`#[schema(...)]`):**
+
+| Attribute | Description |
+|-----------|-------------|
+| `title = "..."` | Override schema title |
+| `description = "..."` | Schema description |
+| `example = "..."` | Example value |
+| `deprecated` | Mark as deprecated |
+| `nullable` | Allow null values |
+
+**Field Attributes (`#[schema(...)]`):**
+
+| Attribute | Description |
+|-----------|-------------|
+| `description = "..."` | Field description |
+| `example = "..."` | Field example |
+| `default` | Has default value |
+| `deprecated` | Field deprecated |
+| `read_only` | Read-only field |
+| `write_only` | Write-only field |
+| `format = "..."` | OpenAPI format (`email`, `uri`, `date-time`, etc.) |
+| `minimum` / `maximum` | Numeric constraints |
+| `exclusive_minimum` / `exclusive_maximum` | Exclusive numeric constraints |
+| `multiple_of` | Multiple constraint |
+| `min_length` / `max_length` | String length constraints |
+| `pattern = "..."` | Regex pattern |
+| `min_items` / `max_items` | Array item count |
+| `unique_items` | Array uniqueness |
+| `nullable` | Nullable field |
+| `default_value = "..."` | Default value (JSON) |
+
+---
+
+## SQL Identifiers
+
+### `#[derive(Iden)]`
+
+**Crate:** `reinhardt-query/macros`
+
+Generate SQL identifier names for use with the low-level query builder.
+
+```rust
+#[derive(Iden)]
+pub enum Users {
+    Table,
+    Id,
+    #[iden = "email_address"]
+    Email,
+    Username,
+}
+
+// Usage with reinhardt-query:
+// Users::Table → "users"
+// Users::Id → "id"
+// Users::Email → "email_address"
+// Users::Username → "username"
+```
+
+**Attributes:**
+
+| Attribute | Description |
+|-----------|-------------|
+| `#[iden = "custom_name"]` | Custom SQL identifier |
+| `#[iden("custom_name")]` | Alternative syntax |
+
+---
+
+## gRPC/GraphQL Integration
+
+### `#[derive(GrpcGraphQLConvert)]`
+
+**Crate:** `reinhardt-graphql/macros`
+
+Auto-generate conversion between Protobuf and GraphQL types.
+
+```rust
+#[derive(GrpcGraphQLConvert)]
+pub struct UserMessage {
+    pub id: String,
+    pub name: String,
+}
+```
+
+### `#[derive(GrpcSubscription)]`
+
+**Crate:** `reinhardt-graphql/macros`
+
+Map gRPC streaming to GraphQL subscriptions.
+
+```rust
+#[derive(GrpcSubscription)]
+pub struct UserEventSubscription {
+    // ...
+}
+```
+
+---
+
+## App Configuration
+
+### `#[derive(AppConfig)]`
+
+**Crate:** `reinhardt-core/macros`
+
+AppConfig factory generation (internal — used by `#[app_config]` attribute).
+
+> **Note:** Prefer using the `#[app_config]` attribute macro.
+
+### `#[derive(ApplyUpdate)]`
+
+**Crate:** `reinhardt-core/macros`
+
+ApplyUpdate trait generation (internal — used by `#[apply_update]` attribute).
+
+> **Note:** Prefer using the `#[apply_update]` attribute macro.
+
+## Dynamic References
+
+For the latest derive macro definitions:
+
+1. Read `reinhardt/crates/reinhardt-core/macros/src/lib.rs` for Model, QueryFields, Validate, Schema, OrmReflectable
+2. Read `reinhardt/crates/reinhardt-query/macros/src/lib.rs` for Iden
+3. Read `reinhardt/crates/reinhardt-rest/openapi-macros/src/lib.rs` for Schema (REST variant)
+4. Read `reinhardt/crates/reinhardt-graphql/macros/src/lib.rs` for GrpcGraphQLConvert, GrpcSubscription

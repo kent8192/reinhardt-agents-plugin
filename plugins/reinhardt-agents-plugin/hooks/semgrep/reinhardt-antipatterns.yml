@@ -1,0 +1,84 @@
+rules:
+  # ERROR: glob re-exports hide API surface
+  - id: reinhardt-no-glob-reexport
+    patterns:
+      - pattern-regex: "pub\\s+use\\s+[\\w:]+::\\*\\s*;"
+    message: >-
+      Glob re-export detected (`pub use module::*`). Reinhardt requires explicit
+      re-exports to control the public API surface. Use `pub use module::{Type1, Type2};`
+      instead.
+    languages: [generic]
+    severity: ERROR
+    paths:
+      include:
+        - "*.rs"
+
+  # ERROR: reinhardt-test must not use workspace = true in dev-dependencies
+  - id: reinhardt-no-workspace-test-dep
+    patterns:
+      - pattern-regex: 'reinhardt-test\s*=\s*\{[^}]*workspace\s*=\s*true'
+    message: >-
+      `reinhardt-test = { workspace = true }` in dev-dependencies is forbidden
+      in functional crates. Use an optional dependency or path-only dev-dependency
+      instead (see KI-2).
+    languages: [generic]
+    severity: ERROR
+    paths:
+      include:
+        - "Cargo.toml"
+
+  # WARNING: plain #[test] without rstest
+  - id: reinhardt-no-plain-test-attr
+    patterns:
+      - pattern-regex: "#\\[test\\]"
+    message: >-
+      Plain `#[test]` attribute found. Reinhardt requires `rstest` for all tests.
+      Use `#[rstest]` instead and import `use rstest::*;`.
+    languages: [generic]
+    severity: WARNING
+    paths:
+      include:
+        - "*.rs"
+
+  # WARNING: non-English comments (non-ASCII in // or /// comment lines)
+  - id: reinhardt-non-english-comments
+    patterns:
+      - pattern-regex: "^\\s*//[/!]?\\s*.*[^\\x00-\\x7F]"
+    message: >-
+      Non-English characters detected in code comment. All code comments must
+      be written in English (no exceptions). String literals and doc tests
+      are exempt from this rule.
+    languages: [generic]
+    severity: WARNING
+    paths:
+      include:
+        - "*.rs"
+
+  # WARNING: raw SQL instead of reinhardt-query
+  - id: reinhardt-no-raw-sql
+    patterns:
+      - pattern-regex: '(sqlx::query[^_!]|sqlx::query!\s*\(|\.execute\(\s*"(SELECT|INSERT|UPDATE|DELETE|CREATE|DROP|ALTER))'
+    message: >-
+      Raw SQL query detected. Use `reinhardt-query` for type-safe query
+      construction instead of raw SQL strings.
+    languages: [generic]
+    severity: WARNING
+    paths:
+      include:
+        - "*.rs"
+      exclude:
+        - "**/migrations/**"
+
+  # WARNING: non-standard AAA test labels
+  - id: reinhardt-aaa-labels
+    patterns:
+      - pattern-regex: "//\\s*(Setup|Execute|Verify|Given|When|Then)\\b"
+    message: >-
+      Non-standard test phase label detected. Use only the standard AAA labels:
+      `// Arrange`, `// Act`, `// Assert`. Do not use Setup/Execute/Verify or
+      Given/When/Then.
+    languages: [generic]
+    severity: WARNING
+    paths:
+      include:
+        - "*.rs"
