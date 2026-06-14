@@ -1,7 +1,7 @@
 ---
 name: pages
 description: Use when building WASM frontend pages with reinhardt-pages - covers page!/head!/form! macros, reactive hooks (Signal/Effect/useState), routing, SSR/hydration, server functions, and API client
-versions: ["0.1.2", "0.2.x"]
+versions: ["0.1.x", "0.2.0"]
 ---
 
 # Reinhardt Pages (WASM Frontend)

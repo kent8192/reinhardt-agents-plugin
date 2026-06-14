@@ -218,7 +218,7 @@ impl UserViewSet {
 
 **Removed in 0.2.x.** This macro is entirely removed in 0.2.x. Use `#[routes]` for URL pattern registration instead.
 
-In 0.1.2, `#[url_patterns]` was a legacy attribute for registering URL patterns. All new code should use `#[routes]`.
+In 0.1.3, `#[url_patterns]` was a legacy attribute for registering URL patterns. All new code should use `#[routes]`.
 
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: signals
 description: Use when working with reinhardt signals and background tasks - covers model signals, transaction-aware signals, reliable async side-effects, and task queue integration
-versions: ["0.1.2", "0.2.x"]
+versions: ["0.1.x", "0.2.0"]
 ---
 
 # Reinhardt Signals & Async Side-Effects
