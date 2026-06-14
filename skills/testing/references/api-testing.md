@@ -408,7 +408,7 @@ past the facade. (#4288)
 
 ```toml
 [dev-dependencies]
-reinhardt = { version = "0.1.2", features = ["test", "msw"] }  # For 0.2.x: "0.2.0-rc.2"
+reinhardt = { version = "0.2.0", features = ["test", "msw"] }
 ```
 
 The facade flag expands to `["test", "pages", "reinhardt-test/msw", "reinhardt-pages/msw"]`.
