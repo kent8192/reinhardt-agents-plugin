@@ -5,6 +5,17 @@ All notable changes to the **reinhardt-agents-plugin** Claude Code and Codex plu
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`agents/main-range-pr-merger.md`** — custom agent for forwarding every
+  first-parent PR merge from a `main` version range into a target branch, with
+  `wtp`-based worktree setup, conflict-resolution rules, PR completeness
+  auditing, and Draft PR publication guidance.
+- **README** — documents the new `main-range-pr-merger` agent in the Agents
+  table.
+
 ## [1.2.0] - 2026-05-27
 
 Updates all skills, commands, and agents to support both **reinhardt-web v0.1.2** (stable) and
