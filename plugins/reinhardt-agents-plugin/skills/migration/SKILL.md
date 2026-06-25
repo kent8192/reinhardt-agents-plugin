@@ -1,7 +1,6 @@
 ---
 name: migration
-description: Use when upgrading reinhardt-web versions or replacing deprecated APIs - analyzes CHANGELOG, detects deprecated API usage, and guides code migration
-versions: ["0.1.2", "0.2.x"]
+description: Use when upgrading reinhardt-web versions or replacing deprecated APIs, including 0.1.x to 0.2.x and 0.2.x to 0.3.0 stable migrations - analyzes migration guides, CHANGELOG entries, deprecated API usage, and application code before guiding code changes
 ---
 
 # Reinhardt Migration
@@ -12,7 +11,7 @@ Guide developers through reinhardt-web version upgrades and deprecated API repla
 
 - User wants to upgrade reinhardt version
 - User needs to fix deprecated API warnings
-- User mentions: "upgrade", "update reinhardt", "migrate", "deprecated", "version up", "CHANGELOG", "breaking change", "rc.XX", "0.2", "major version"
+- User mentions: "upgrade", "update reinhardt", "migrate", "deprecated", "version up", "CHANGELOG", "breaking change", "rc.XX", "0.2", "0.3", "major version"
 
 ## Workflow
 
@@ -61,6 +60,7 @@ For each migration task:
 - NEVER modify code without user confirmation
 - For multi-version hops (e.g., rc.18 → rc.22), review each intermediate version's changes — see `references/upgrade-workflow.md` for the worked rc.18 → rc.22 example covering the rc.19 `urls/` directory move and the rc.22 `form!` `strip_arguments` migration
 - For 0.1.x → 0.2.x upgrades, this is a **major version migration** with extensive breaking changes. Use `references/upgrade-workflow.md` "Major Version Upgrade" section for the full migration path.
+- For 0.2.x → 0.3.0 upgrades, read `references/0.3-upgrade.md` first. If a local `reinhardt-web` checkout has `instructions/MIGRATION_0.3.md`, prefer that current guide and use the bundled reference as the fallback checklist.
 - After all migrations, run `cargo check` and `cargo test` to verify
 - If `cargo check` fails after migration, diagnose and fix before proceeding
 
@@ -80,16 +80,21 @@ If migration fails or user wants to revert:
 
 ## Dynamic References
 
-On each invocation, read from source:
+On each invocation, read from source. If a local `reinhardt-web` checkout is
+available, prefer its current release docs before falling back to GitHub or
+the bundled reference files:
 
-1. `reinhardt/CHANGELOG.md` and `reinhardt/crates/*/CHANGELOG.md`
-2. `reinhardt/announcements/v0.1.0-rc.N.md` — per-release Highlights, Breaking
+1. `reinhardt/instructions/MIGRATION_0.3.md` for the public 0.2.x → 0.3.0 migration surface
+2. `references/0.3-upgrade.md` when the local 0.3 guide is unavailable
+3. `reinhardt/instructions/MIGRATION_0.2.md` for the public 0.1.x → 0.2.x migration surface
+4. `reinhardt/CHANGELOG.md` and `reinhardt/crates/*/CHANGELOG.md`
+5. `reinhardt/announcements/v0.1.0-rc.N.md` — per-release Highlights, Breaking
    Changes, and Related PRs (the announcement file is the canonical source for
    migration recipes that go beyond a single CHANGELOG line)
-3. `reinhardt/announcements/v0.2.0-rc.N.md` — per-release announcements for the 0.2.x series
-4. `#[deprecated]` annotations in reinhardt source via Grep
-5. GitHub PR/Issue descriptions via `gh pr view` / `gh issue view`
-6. GitHub discussions linked from announcement Breaking Changes via
+6. `reinhardt/announcements/v0.2.0-rc.N.md` — historical release-candidate announcements when the source or target is an RC
+7. `#[deprecated]` annotations in reinhardt source via Grep
+8. GitHub PR/Issue descriptions via `gh pr view` / `gh issue view`
+9. GitHub discussions linked from announcement Breaking Changes via
    `gh api repos/kent8192/reinhardt-web/discussions/<N>` (the `gh discussion`
    subcommand is unavailable; use the REST API directly)
-7. User's application code via Grep
+10. User's application code via Grep
