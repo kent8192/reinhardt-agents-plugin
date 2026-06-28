@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`agents/main-range-pr-merger.md`** — custom agent for forwarding every
+  first-parent PR merge from a `main` version range into a target branch, with
+  `wtp`-based worktree setup, conflict-resolution rules, PR completeness
+  auditing, and Draft PR publication guidance.
+- **README** — documents the new `main-range-pr-merger` agent in the Agents
+  table.
+
 ### Changed
 
 - Align README, commands, skills, agents, and packaged plugin docs with the
