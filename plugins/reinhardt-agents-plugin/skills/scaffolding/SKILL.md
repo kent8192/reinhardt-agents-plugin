@@ -1,7 +1,7 @@
 ---
 name: scaffolding
 description: Use when creating a new reinhardt project or adding an app - guides feature flag selection, template type, database backend, and authentication setup
-versions: ["0.1.2", "0.2.x"]
+versions: ["0.1.x", "0.2.0"]
 ---
 
 # Reinhardt Project Scaffolding
@@ -17,7 +17,7 @@ Guide developers through creating new reinhardt-web projects and adding apps wit
 ## Prerequisites
 
 - Rust toolchain installed (edition 2024, >= 1.94.0)
-- `reinhardt-admin` CLI available — install with `cargo install reinhardt-admin-cli --version "0.1.2"` (for 0.2.x: `--version "0.2.0-rc.2"`)
+- `reinhardt-admin` CLI available — install with `cargo install reinhardt-admin-cli --version "0.2.0"`
 - For database features: Docker Desktop running (needed for TestContainers)
 
 ## Workflow

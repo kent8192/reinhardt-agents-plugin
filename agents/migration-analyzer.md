@@ -19,10 +19,10 @@ Called by the migration skill with:
 
 Before analysis, determine the version families involved:
 
-- **0.1.x family**: `0.1.0-rc.*`, `0.1.0`, `0.1.1`, `0.1.2` — stable series
-- **0.2.x family**: `0.2.0-rc.*`, `0.2.0`, `0.2.1`, `0.2.2` — public 0.2 series
+- **0.1.x family**: `0.1.0-rc.*`, `0.1.0`, `0.1.1`, `0.1.2`, `0.1.3` — legacy stable series
+- **0.2.x family**: `0.2.0-rc.*`, `0.2.0`, `0.2.1`, `0.2.2` — stable 0.2 line with breaking changes from 0.1.x
 - **0.3.0 family**: `0.3.0-alpha.*`, `0.3.0-rc.*`, `0.3.0` — next major stable line
-- **Cross-family upgrade** (0.1.x → 0.2.x): Flag as a **major version migration** with extensive breaking changes. Use the migration skill's "Major Version Upgrade: 0.1.x → 0.2.x" section for the comprehensive migration path.
+- **Cross-family upgrade** (0.1.x → 0.2.0): Flag as a **major version migration** with extensive breaking changes. Use the migration skill's "Major Version Upgrade: 0.1.x → 0.2.0" section and milestone #1 for the comprehensive migration path.
 - **Cross-family upgrade** (0.2.x → 0.3.0): Flag as a **major version migration**. Use `../skills/migration/references/0.3-upgrade.md` and prefer `reinhardt/instructions/MIGRATION_0.3.md` when the local source checkout is available.
 
 ## Analysis Steps
@@ -136,7 +136,7 @@ Return a structured report in this format:
 - ALWAYS verify PR/Issue details via `gh` CLI — do not fabricate context
 - ONLY report deprecated APIs whose `since` version falls in the upgrade range
 - ONLY report application code usage that actually exists (verified by grep)
-- If reinhardt source is not available locally, note it and skip Steps 3-4
+- If reinhardt source is not available locally, note it, skip only the source-only deprecated annotation scan in Step 3, and still run Step 4 application scans using bundled fallback symbols when available
 - If `gh` CLI fails, note the error and continue with CHANGELOG-only analysis
 - For 0.1.x → 0.2.x upgrades, include ALL breaking changes from the "Major Version Upgrade" reference in the report, even if the user's code doesn't directly use the affected APIs (they may use them transitively)
 - For 0.1.x → 0.2.x upgrades, also check `reinhardt/announcements/v0.2.0-rc.N.md` for 0.2.x-series release notes

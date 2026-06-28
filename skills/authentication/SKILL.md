@@ -1,7 +1,7 @@
 ---
 name: authentication
 description: Use when configuring authentication in reinhardt-web applications - covers auth backends (JWT, Session, Token, OAuth2/Social), user models, password hashing, and session management
-versions: ["0.1.2", "0.2.x"]
+versions: ["0.1.x", "0.2.0"]
 ---
 
 # Reinhardt Authentication
