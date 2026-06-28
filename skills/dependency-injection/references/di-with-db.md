@@ -2,7 +2,14 @@
 
 ## DatabaseConnection Injection
 
-`DatabaseConnection` is automatically available as an injectable type when the database feature is enabled. It provides a connection from the pool for the current request.
+`DatabaseConnection` is available from the DI registry when the database feature
+is enabled. In 0.3.x, examples that consume it through `Depends` assume a keyed
+provider such as `PrimaryDatabase`:
+
+```rust
+#[injectable_key]
+struct PrimaryDatabase;
+```
 
 ```rust
 use reinhardt::db::prelude::*;
@@ -12,7 +19,7 @@ use reinhardt::views::prelude::*;
 #[get("/users/{id}/", name = "user_retrieve")]
 pub async fn get_user(
     Path(id): Path<i64>,
-    #[inject] db: Depends<DatabaseConnection>,
+    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
 ) -> ViewResult<Response> {
     let user = User::objects()
         .filter(User::id.eq(id))
@@ -32,7 +39,7 @@ pub async fn get_user(
 #[post("/transfers/", name = "transfer_create")]
 pub async fn transfer_funds(
     Json(data): Json<TransferRequest>,
-    #[inject] db: Depends<DatabaseConnection>,
+    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
 ) -> ViewResult<Response> {
 
     // Begin a transaction
@@ -138,7 +145,7 @@ use reinhardt::views::prelude::*;
 
 #[get("/cart/", name = "cart_get")]
 pub async fn get_cart(
-    #[inject] session: Depends<Session>,
+    #[inject] session: Session,
 ) -> ViewResult<Response> {
     let cart: Option<Cart> = session.get("cart").await?;
     let body = match cart {
@@ -153,7 +160,7 @@ pub async fn get_cart(
 #[post("/cart/items/", name = "cart_add_item")]
 pub async fn add_to_cart(
     Json(item): Json<CartItem>,
-    #[inject] session: Depends<Session>,
+    #[inject] session: Session,
 ) -> ViewResult<Response> {
     let mut cart: Cart = session
         .get("cart")
@@ -177,9 +184,9 @@ Handlers can receive any combination of injectable types:
 #[post("/orders/", name = "order_create")]
 pub async fn create_order(
     #[inject] AuthInfo(state): AuthInfo,
-    #[inject] db: Depends<DatabaseConnection>,
-    #[inject] email_service: Depends<EmailService>,
-    #[inject] session: Depends<Session>,
+    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
+    #[inject] email_service: EmailService,
+    #[inject] session: Session,
 ) -> ViewResult<Response> {
     let cart: Cart = session
         .get("cart")
@@ -217,7 +224,7 @@ use std::sync::Arc;
 #[injectable(scope = Singleton)]
 pub struct UserRepository {
     #[inject]
-    pool: Depends<DatabaseConnection>,
+    pool: Depends<PrimaryDatabase, DatabaseConnection>,
 }
 
 impl UserRepository {
@@ -262,7 +269,7 @@ impl UserRepository {
 ```rust
 #[get("/users/", name = "user_list")]
 pub async fn list_users(
-    #[inject] user_repo: Depends<UserRepository>,
+    #[inject] user_repo: UserRepository,
 ) -> ViewResult<Response> {
     let users = user_repo.find_active().await?;
     Ok(Response::new(StatusCode::OK)
@@ -273,7 +280,7 @@ pub async fn list_users(
 #[get("/users/by-email/{email}/", name = "user_by_email")]
 pub async fn find_by_email(
     Path(email): Path<String>,
-    #[inject] user_repo: Depends<UserRepository>,
+    #[inject] user_repo: UserRepository,
 ) -> ViewResult<Response> {
     let user = user_repo
         .find_by_email(&email)
@@ -293,9 +300,9 @@ pub async fn find_by_email(
 #[injectable(scope = Singleton)]
 pub struct UserService {
     #[inject]
-    repo: Depends<UserRepository>,
+    repo: UserRepository,
     #[inject]
-    email: Depends<EmailService>,
+    email: EmailService,
 }
 
 impl UserService {

@@ -37,7 +37,7 @@ Guide developers through DI configuration using reinhardt-di, including service 
 - `#[injectable_factory]` is a deprecated 0.2 compatibility alias in 0.3.x — do not use it in new code
 - Use `#[injectable_key]` plus `FactoryOutput<K, T>` when a provider function returns a value type that is not a unique dependency identity
 - Consume keyed provider outputs with `Depends<K, T>`; remove old `DependsResult` / `DependsOption` sugar aliases
-- `Injected<T>` is the wrapper type (NOT `Inject<T>` — that type does not exist)
+- In 0.3.x, inject direct `T` values for normal dependencies and use `Depends<K, T>` only for keyed `FactoryOutput<K, T>` provider output
 - Reinhardt DI checks: global registry → scope cache → pre-seeded values → `DependencyNotRegistered` error
 - Circular dependencies are detected at runtime and return `Err(DiError::CircularDependency)` — they do NOT panic
 - `#[use_inject]` enables `#[inject]` in general async functions (not just handlers)

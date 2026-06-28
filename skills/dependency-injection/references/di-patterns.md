@@ -7,11 +7,8 @@ Reinhardt's DI system is FastAPI-inspired with compile-time type safety and asyn
 ```text
 reinhardt-di
   ├── Injectable trait          (core injection interface)
-  ├── Injected<T>               (Arc-wrapped dependency with metadata)
-  ├── Depends<T>                (FastAPI-style Depends wrapper)
   ├── Depends<K, T>             (0.3 keyed dependency wrapper)
   ├── FactoryOutput<K, T>       (0.3 keyed provider output)
-  ├── OptionalInjected<T>       (= Option<Injected<T>>)
   ├── InjectionContext           (dependency resolution container)
   ├── OverrideRegistry           (test override support)
   ├── FunctionHandle<O>          (fluent override API)
@@ -45,7 +42,7 @@ struct PrimaryDatabase;
 
 #[injectable(scope = "singleton")]
 async fn create_database(
-    #[inject] config: Depends<AppConfig>,
+    #[inject] config: AppConfig,
 ) -> FactoryOutput<PrimaryDatabase, DatabaseConnection> {
     FactoryOutput::new(
         DatabaseConnection::connect(&config.database_url)
@@ -55,13 +52,13 @@ async fn create_database(
 }
 
 #[injectable(scope = "singleton")]
-async fn create_email_service(#[inject] config: Depends<AppConfig>) -> EmailService {
+async fn create_email_service(#[inject] config: AppConfig) -> EmailService {
     EmailService::new(&config.email_api_key)
 }
 
 #[injectable(scope = "transient")]
 async fn create_request_logger(
-    #[inject] config: Depends<AppConfig>,
+    #[inject] config: AppConfig,
     #[inject] user_info: AuthInfo,
 ) -> RequestLogger {
     RequestLogger::new(config.log_level, user_info.user_id())
@@ -165,22 +162,22 @@ async fn custom_auth() -> CustomAuth {
 ### `#[inject]` Inside Providers
 
 Parameters marked with `#[inject]` are resolved from the `InjectionContext`
-before the provider body executes. Use `Depends<T>` or `Depends<K, T>` for
-injected dependencies:
+before the provider body executes. Use direct `T` for normal injectable values
+and `Depends<K, T>` only when consuming keyed provider output:
 
 ```rust
 #[injectable(scope = "singleton")]
 async fn create_user_service(
-    #[inject] db: Depends<DatabaseConnection>,  // Resolved via Depends (Arc-wrapped with metadata)
-    #[inject] config: AppConfig,                // Resolved as T (cloned from Arc)
+    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>, // Resolves FactoryOutput<PrimaryDatabase, DatabaseConnection>
+    #[inject] config: AppConfig,                              // Resolves direct Injectable value
 ) -> UserService {
     UserService::new(db, config)
 }
 ```
 
-- `Depends<T>` parameter: resolves `T` via DI with caching, circular dependency detection, and metadata
 - `Depends<K, T>` parameter: resolves keyed provider output `FactoryOutput<K, T>`
-- `T` parameter: resolves `T`, then clones out of `Arc`
+- `T` parameter: resolves `T` as a direct `Injectable` value; the generated
+  resolver clones from the cached `Arc<T>` when cache lookup is used
 
 ---
 
@@ -246,67 +243,20 @@ async fn create_cache(#[inject] config: AppConfig) -> CacheClient {
 }
 ```
 
-### Differences from legacy `#[injectable]`
+### Differences from legacy `#[injectable_factory]`
 
-| Feature | `#[injectable]` (function) | `#[injectable]` |
+| Feature | `#[injectable]` provider function | Legacy `#[injectable_factory]` |
 |---------|--------------------------|------------------------|
 | Sync/async | Both supported | Async only |
-| Scope control | Per-parameter `#[inject(scope = ...)]` | Per-function `scope = "..."` |
-| Override support | `ctx.dependency(fn).override_with(value)` | Not supported |
-| Registration | Generates `Injectable` impl for return type | Registers factory in global registry |
+| Scope control | `scope = "..."` | `scope = "..."` |
+| Override support | `ctx.dependency(fn).override_with(value)` | Compatibility only |
+| Registration | Registers provider output in the global registry | Deprecated alias |
 
 For 0.3.x code, **prefer `#[injectable]`** for provider functions. The
-`#[injectable]` macro is retained only as a deprecated compatibility
+`#[injectable_factory]` macro is retained only as a deprecated compatibility
 alias for older 0.2-era code. When a provider function returns a value type
 that is not a unique dependency identity, use `#[injectable_key]` with
 `FactoryOutput<K, T>` and consume it as `Depends<K, T>`.
-
----
-
-## `Injected<T>` Wrapper
-
-`Injected<T>` is the internal wrapper type for injected dependencies. It wraps `Arc<T>` with injection metadata.
-
-```rust
-use reinhardt_di::{Injected, OptionalInjected};
-
-// In handler parameters
-async fn handler(
-    db: Injected<Database>,                       // Required dependency
-    cache: OptionalInjected<RedisCache>,           // Optional dependency
-) -> String {
-    // Injected<T> implements Deref<Target = T>
-    db.query("SELECT 1").await;
-
-    if let Some(cache) = cache {
-        cache.get("key").await;
-    }
-    "OK".to_string()
-}
-```
-
-### Key API
-
-| Method | Description |
-|--------|-------------|
-| `Injected::<T>::resolve(&ctx)` | Resolve with cache (default) |
-| `Injected::<T>::resolve_uncached(&ctx)` | Resolve without cache |
-| `Injected::from_value(value)` | Create from value (for testing) |
-| `injected.into_inner()` | Extract inner `T` value (requires `T: Clone`) |
-| `injected.try_unwrap()` | Extract inner `T` without `Clone`. Returns `Result<T, Self>` (succeeds when refcount == 1) |
-| `injected.as_arc()` | Get `&Arc<T>` reference |
-| `injected.metadata()` | Get injection metadata (scope, cached) |
-
-### `OptionalInjected<T>`
-
-Type alias for `Option<Injected<T>>`. Used with `#[inject(optional = true)]`:
-
-```rust
-// Correct pairing:
-// #[inject(optional = true)]  → OptionalInjected<T>
-// #[inject] or #[inject(optional = false)]  → Injected<T>
-// Mismatches cause compile errors.
-```
 
 ---
 
@@ -371,7 +321,7 @@ pub trait Injectable: Sized + Send + Sync + 'static {
 
 | Type | Behavior |
 |------|----------|
-| `Depends<T>` where `T: Send + Sync + 'static` | Resolves `T` with DI metadata and caching |
+| `Depends<K, T>` where `K: InjectableKey` | Resolves keyed provider output `FactoryOutput<K, T>` |
 | `Option<T>` where `T: Injectable` | Returns `Some(T)` on success, `None` on any error |
 
 ---
@@ -386,7 +336,7 @@ use reinhardt::views::prelude::*;
 
 #[get("/users/", name = "user_list")]
 pub async fn list_users(
-    #[inject] user_service: Depends<UserService>,
+    #[inject] user_service: UserService,
 ) -> ViewResult<Response> {
     let users = user_service.list_active().await?;
     Ok(Response::new(StatusCode::OK)
@@ -396,8 +346,8 @@ pub async fn list_users(
 #[post("/users/", name = "user_create")]
 pub async fn create_user(
     Json(body): Json<CreateUserRequest>,
-    #[inject] user_service: Depends<UserService>,
-    #[inject] email_service: Depends<EmailService>,
+    #[inject] user_service: UserService,
+    #[inject] email_service: EmailService,
 ) -> ViewResult<Response> {
     let user = user_service.create(&body).await?;
     email_service.send_welcome(&user).await?;
@@ -418,8 +368,8 @@ use reinhardt_core::use_inject;
 #[use_inject]
 pub async fn process_order(
     request: Request,                                    // Regular parameter (passed through)
-    #[inject] order_service: Depends<OrderService>,      // Injected from DI context
-    #[inject] notification: Depends<NotificationService>,
+    #[inject] order_service: OrderService,      // Injected from DI context
+    #[inject] notification: NotificationService,
 ) -> ViewResult<Response> {
     let order = order_service.process(&request).await?;
     notification.send_order_confirmation(&order).await?;
@@ -432,7 +382,8 @@ pub async fn process_order(
 1. Renames the original function to `{name}_original`
 2. Generates a wrapper with signature `Fn(Request, ...) -> Future`
 3. Extracts `InjectionContext` from `Request.get_di_context()`
-4. Resolves `#[inject]` parameters via `Injected::<T>::resolve()`
+4. Resolves `#[inject]` parameters as direct `T` values or wrapper types such
+   as `Depends<K, T>`
 5. Calls the original function with all resolved dependencies
 
 ### Rules
@@ -464,27 +415,37 @@ When resolving a type `T`:
 
 ---
 
-## `Depends<T>` Wrapping
+## `Depends<K, T>` Wrapping
 
-Singleton services are resolved as `Depends<T>` (internally `Arc<T>` with DI metadata). `Depends<T>` requires only `T: Send + Sync + 'static` — `Clone` is **NOT** required on `T`.
+`Depends<K, T>` resolves a keyed provider output from the registry. The provider
+must return `FactoryOutput<K, T>`, and `K` must implement `InjectableKey`.
+`Depends<K, T>` dereferences to `T` and only requires `T: Send + Sync + 'static`
+for shared access; extracting an owned `T` with `.into_inner()` requires `T:
+Clone`.
 
-Factory parameters and handler injection can receive either `Depends<T>` or `T`:
+Factory parameters and handler injection can receive either `Depends<K, T>` for
+keyed provider output or direct `T` for normal injectable values:
 
 ```rust
-// Receives Depends<T> — Arc-wrapped with caching and metadata
+#[injectable_key]
+struct AppConfigKey;
+
+// Receives keyed FactoryOutput<AppConfigKey, AppConfig>
 #[injectable(scope = "singleton")]
-async fn create_user_service(#[inject] config: Depends<AppConfig>) -> UserService {
+async fn create_user_service(
+    #[inject] config: Depends<AppConfigKey, AppConfig>,
+) -> UserService {
     UserService::new(config)
 }
 
-// Receives T (non-Depends) — cloned out of Arc automatically
+// Receives direct Injectable value
 #[injectable(scope = "transient")]
 async fn make_handler(#[inject] service: MyService) -> String {
     service.value
 }
 ```
 
-### Extracting Values from `Depends<T>` and `Injected<T>`
+### Extracting Values from `Depends<K, T>`
 
 | Method | Requires `T: Clone` | Behavior |
 |--------|---------------------|----------|
@@ -494,8 +455,11 @@ async fn make_handler(#[inject] service: MyService) -> String {
 Prefer `try_unwrap()` when the wrapper is the sole owner (e.g., at the end of a request scope) to avoid requiring `Clone` on `T`:
 
 ```rust
+#[injectable_key]
+struct StateLockKey;
+
 #[injectable(scope = "request")]
-async fn create_processor(#[inject] lock: Depends<RwLock<State>>) -> Processor {
+async fn create_processor(#[inject] lock: Depends<StateLockKey, RwLock<State>>) -> Processor {
     // RwLock<State> does not implement Clone
     // try_unwrap() works because the factory is the sole consumer
     let state_lock = lock.try_unwrap().expect("sole owner");
@@ -561,12 +525,12 @@ Extract shared logic into a third service:
 
 // GOOD: Both depend on UserRepository (no cycle)
 #[injectable(scope = "singleton")]
-async fn create_user_service(#[inject] repo: Depends<UserRepository>) -> UserService {
+async fn create_user_service(#[inject] repo: UserRepository) -> UserService {
     UserService::new(repo)
 }
 
 #[injectable(scope = "singleton")]
-async fn create_order_service(#[inject] repo: Depends<UserRepository>) -> OrderService {
+async fn create_order_service(#[inject] repo: UserRepository) -> OrderService {
     OrderService::new(repo)
 }
 ```
@@ -618,33 +582,17 @@ async fn test_with_mock_database() {
 | `.has_override()` | Check if override is set |
 | `.get_override()` | Get current override value |
 
-### Override via `Injected::from_value()`
-
-For unit tests that don't need a full `InjectionContext`:
+### Build a `Depends<K, T>` Wrapper Directly
 
 ```rust
-#[rstest]
-fn test_handler_logic() {
-    // Arrange
-    let mock_db = DatabaseConnection::in_memory();
-    let injected_db = Injected::from_value(mock_db);
+#[injectable_key]
+struct TestConfigKey;
 
-    // Act
-    let result = process_with_db(&injected_db);
-
-    // Assert
-    assert!(result.is_ok());
-}
-```
-
-### Override via `Depends::from_value()`
-
-```rust
 #[rstest]
 fn test_with_depends() {
     // Arrange
     let mock_config = AppConfig { debug: true, max_retries: 0 };
-    let depends = Depends::from_value(mock_config);
+    let depends = Depends::<TestConfigKey, AppConfig>::from_value(mock_config);
 
     // Act & Assert
     assert_eq!(depends.max_retries, 0);
@@ -671,7 +619,7 @@ Inside `#[injectable]` execution, use `get_di_context` to access the DI context 
 use reinhardt::di::{get_di_context, try_get_di_context, ContextLevel};
 
 #[injectable(scope = "transient")]
-async fn make_router(#[inject] config: Depends<AppConfig>) -> Router {
+async fn make_router(#[inject] config: AppConfig) -> Router {
     // Access the DI context directly
     let di_ctx = get_di_context(ContextLevel::Current);
     Router::new().with_di_context(di_ctx)
@@ -721,7 +669,7 @@ DiError::Authentication(String)              // Maps to HTTP 401
 | Endpoint DI | `#[inject]` in `#[get]`/`#[post]` etc. |
 | General function DI | `#[use_inject]` + `#[inject]` |
 | Test mocking (factory) | `ctx.dependency(fn).override_with(value)` |
-| Test mocking (unit) | `Injected::from_value()` / `Depends::from_value()` |
+| Test mocking (unit) | Construct direct values or use `Depends::<K, T>::from_value()` for keyed wrappers |
 
 ---
 
@@ -764,7 +712,7 @@ async fn handler(
 | Without explicit identity | With keyed identity |
 |---------------------------|---------------------|
 | Duplicate registration panics at startup | Distinct providers can share `T` safely |
-| `Depends<Vec<String>>` — ambiguous intent | `Depends<AllowedOrigins, Vec<String>>` — self-documenting |
+| Single-key value identity for `Vec<String>` — ambiguous intent | `Depends<AllowedOrigins, Vec<String>>` — self-documenting |
 | Provider meaning hidden in function names | Provider meaning encoded in the DI type |
 
 ### When to Use Keys
@@ -807,7 +755,7 @@ In 0.2.x, the `Injectable` trait provides implementations for `Path<T>`, `Query<
 #[get("/items/:id")]
 pub async fn get_item(
     #[inject] Path(id): Path<i64>,   // Injectable in 0.2.x
-    #[inject] service: Depends<ItemService>,
+    #[inject] service: ItemService,
 ) -> ViewResult<Response> {
     // ...
 }

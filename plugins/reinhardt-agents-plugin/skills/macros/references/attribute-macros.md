@@ -153,11 +153,19 @@ pub struct UserDocument {
 | `use_inject` | `bool` | Enable `#[inject]` on parameters |
 | `pre_validate` | `bool` | Run validation before handler |
 
+Examples that inject `Depends<PrimaryDatabase, DatabaseConnection>` assume a
+database provider key in scope:
+
+```rust
+#[injectable_key]
+struct PrimaryDatabase;
+```
+
 ```rust
 #[get("/users/{id}/", name = "user_detail", use_inject = true)]
 pub async fn user_detail(
     Path(id): Path<Uuid>,
-    #[inject] db: Depends<DatabaseConnection>,
+    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
 ) -> ViewResult<Response> {
     // ...
 }
@@ -273,7 +281,7 @@ Mark a parameter for DI resolution.
 #[get("/config/", name = "config_info", use_inject = true)]
 pub async fn config_info(
     #[inject] config: AppConfig,
-    #[inject] db: Depends<DatabaseConnection>,
+    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
     #[inject(cache = false)] counter: RequestCounter,  // Fresh instance each time
 ) -> ViewResult<Response> {
     // ...
@@ -348,7 +356,7 @@ struct PrimaryDatabase;
 
 #[injectable(scope = "singleton")]
 async fn create_db_pool(
-    #[inject] settings: Depends<ProjectSettings>,
+    #[inject] settings: ProjectSettings,
 ) -> FactoryOutput<PrimaryDatabase, DatabaseConnection> {
     FactoryOutput::new(DatabaseConnection::connect(&settings.database_url).await.unwrap())
 }
@@ -589,7 +597,7 @@ gRPC service method with DI support.
 ```rust
 #[grpc_handler]
 pub async fn get_user(
-    #[inject] db: Depends<DatabaseConnection>,
+    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
     request: Request<GetUserRequest>,
 ) -> Result<Response<UserResponse>, Status> {
     // ...
@@ -605,7 +613,7 @@ GraphQL resolver with DI support.
 ```rust
 #[graphql_handler]
 pub async fn get_user(
-    #[inject] db: Depends<DatabaseConnection>,
+    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
     ctx: &Context<'_>,
 ) -> Result<User, Error> {
     // ...

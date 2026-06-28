@@ -106,10 +106,13 @@ Implement business logic as an injectable service.
 ```rust
 use reinhardt::prelude::*;
 
+#[injectable_key]
+struct PrimaryDatabase;
+
 #[injectable(scope = "request")]
 pub struct ProductService {
     #[inject]
-    db: Depends<DatabaseConnection>,
+    db: Depends<PrimaryDatabase, DatabaseConnection>,
 }
 
 impl ProductService {

@@ -53,7 +53,7 @@ use reinhardt::sessions::{SessionConfig, SessionEngine};
 use reinhardt::di::prelude::*;
 
 #[injectable(scope = "singleton")]
-async fn session_config(#[inject] settings: Depends<ProjectSettings>) -> SessionConfig {
+async fn session_config(#[inject] settings: ProjectSettings) -> SessionConfig {
     SessionConfig {
         engine: SessionEngine::Database,
         cookie_name: "sessionid".to_string(),

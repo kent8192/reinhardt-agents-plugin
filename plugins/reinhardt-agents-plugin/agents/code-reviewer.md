@@ -54,7 +54,7 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] `#[inject]` used correctly in handlers
 - [ ] No duplicate provider identities; use `#[injectable_key]` + `FactoryOutput<K, T>` when multiple providers return the same value type
 - [ ] No `#[injectable]` or `#[injectable_factory]` for framework-managed types (`reinhardt::*`) — use application-owned wrapper/key types
-- [ ] Prefer `try_unwrap()` over `into_inner()` for non-Clone types in `Depends<T>` / `Depends<K, T>` / `Injected<T>`
+- [ ] Prefer `try_unwrap()` over `into_inner()` for non-Clone values wrapped in `Depends<K, T>`
 - [ ] **(0.3.x)** No new `#[injectable_factory]`, `DependsResult`, or `DependsOption` usage — use `#[injectable]`, `FactoryOutput<K, T>`, and `Depends<K, T>`
 - [ ] `cargo run --bin check-di -- --validate` passes
 

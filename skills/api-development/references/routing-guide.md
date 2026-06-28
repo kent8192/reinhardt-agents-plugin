@@ -166,7 +166,7 @@ Register services using `#[injectable]` instead of manual `set_singleton`:
 use reinhardt::di::prelude::*;
 
 #[injectable(scope = "singleton")]
-async fn create_email_service(#[inject] config: Depends<AppConfig>) -> EmailService {
+async fn create_email_service(#[inject] config: AppConfig) -> EmailService {
     EmailService::new(&config.email_api_key)
 }
 ```

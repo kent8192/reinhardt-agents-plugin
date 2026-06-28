@@ -310,7 +310,8 @@ Apply changes in this order to minimize intermediate compilation failures:
 
 1. **Cargo.toml**: update the `reinhardt` dependency to `version = "0.2.0"`.
 
-2. **Removed API scan** (#4520): search for the removed 0.1.x surface before editing:
+2. **Removed API scan** (#4520): search for the removed 0.1.x surface before editing
+   this 0.2.x migration path:
    typed URL helpers (`ResolvedUrls`, `url_prelude`, generated reverse
    accessors), `#[routes(...)]` flags, `UrlResolverUnprefixed`,
    `reverse_single_pass`, `reverse_with_aho_corasick`, `SeaRc`, `Injected`,

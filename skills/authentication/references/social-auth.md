@@ -91,7 +91,7 @@ use reinhardt::auth::social::SocialAuthBackend;
 use reinhardt::di::prelude::*;
 
 #[injectable(scope = "singleton")]
-async fn social_auth(#[inject] settings: Depends<ProjectSettings>) -> SocialAuthBackend {
+async fn social_auth(#[inject] settings: ProjectSettings) -> SocialAuthBackend {
     SocialAuthBackend::new()
         .with_provider(ProviderConfig::google(
             &settings.google_client_id,

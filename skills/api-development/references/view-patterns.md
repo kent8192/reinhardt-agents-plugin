@@ -175,8 +175,9 @@ pub async fn admin_list_users(
 |------|-------------|
 | `AuthInfo` | Lightweight JWT auth state with `state.user_id()` |
 | `CurrentUser<T>` | Full user model resolution from auth token or session |
-| `Depends<T>` / `Depends<K, T>` | Shared service from the DI container |
-| `Depends<DatabaseConnection>` or keyed DB dependency | Database connection from the pool |
+| `T` | Direct injectable service/configuration value from the DI container |
+| `Depends<K, T>` | Keyed provider output from the DI container |
+| `Depends<PrimaryDatabase, DatabaseConnection>` | Keyed database connection from the pool |
 
 ## Generic Views
 
