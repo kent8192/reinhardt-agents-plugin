@@ -252,9 +252,9 @@ async fn create_cache(#[inject] config: AppConfig) -> CacheClient {
 | Override support | `ctx.dependency(fn).override_with(value)` | Compatibility only |
 | Registration | Registers provider output in the global registry | Deprecated alias |
 
-For 0.3.x code, **prefer `#[injectable]`** for provider functions. The
-`#[injectable_factory]` macro is retained only as a deprecated compatibility
-alias for older 0.2-era code. When a provider function returns a value type
+For 0.3.x code, **`#[injectable]` is the supported provider macro**. Use
+`#[injectable_factory]` only when maintaining older 0.2-era code; it is a
+deprecated compatibility alias. When a provider function returns a value type
 that is not a unique dependency identity, use `#[injectable_key]` with
 `FactoryOutput<K, T>` and consume it as `Depends<K, T>`.
 
