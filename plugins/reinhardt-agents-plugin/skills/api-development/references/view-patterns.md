@@ -139,6 +139,7 @@ Use `#[inject]` to receive services and auth context from the DI container:
 
 ```rust
 use reinhardt::di::prelude::*;
+use reinhardt::CurrentUser;
 use reinhardt::views::prelude::*;
 
 #[get("/profile/", name = "user_profile")]
@@ -155,7 +156,7 @@ pub async fn get_profile(
 
 #[get("/admin/users/", name = "admin_user_list")]
 pub async fn admin_list_users(
-    #[inject] reinhardt::CurrentUser(user): reinhardt::CurrentUser<User>,
+    #[inject] CurrentUser(user): CurrentUser<User>,
     Query(params): Query<PaginationParams>,
 ) -> ViewResult<Response> {
     if !user.is_staff {
@@ -269,9 +270,11 @@ impl ViewSet for UserViewSet {
         User::objects().all()
     }
 
-    fn get_permissions(&self) -> Vec<Box<dyn Permission>> {
-        vec![Box::new(IsAuthenticated)]
-    }
+}
+
+fn user_handler() -> ModelViewSetHandler<User> {
+    ModelViewSetHandler::<User>::new()
+        .add_permission(std::sync::Arc::new(IsAuthenticated))
 }
 ```
 

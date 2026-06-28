@@ -88,21 +88,22 @@ let microsoft = ProviderConfig::microsoft(
 
 ```rust
 use reinhardt::auth::social::SocialAuthBackend;
-use reinhardt::di::prelude::*;
+use reinhardt::auth::{GitHubProvider, GoogleProvider, ProviderConfig, SocialAuthError};
+use std::sync::Arc;
 
-#[injectable(scope = "singleton")]
-async fn social_auth(#[inject] settings: ProjectSettings) -> SocialAuthBackend {
-    SocialAuthBackend::new()
-        .with_provider(ProviderConfig::google(
-            &settings.google_client_id,
-            &settings.google_client_secret,
-            &settings.google_callback_url,
-        ))
-        .with_provider(ProviderConfig::github(
-            &settings.github_client_id,
-            &settings.github_client_secret,
-            &settings.github_callback_url,
-        ))
+async fn social_auth(settings: &ProjectSettings) -> Result<SocialAuthBackend, SocialAuthError> {
+    let mut backend = SocialAuthBackend::new();
+    backend.register_provider(Arc::new(GoogleProvider::new(ProviderConfig::google(
+        settings.google_client_id.clone(),
+        settings.google_client_secret.clone(),
+        settings.google_callback_url.clone(),
+    )).await?));
+    backend.register_provider(Arc::new(GitHubProvider::new(ProviderConfig::github(
+        settings.github_client_id.clone(),
+        settings.github_client_secret.clone(),
+        settings.github_callback_url.clone(),
+    )).await?));
+    Ok(backend)
 }
 ```
 

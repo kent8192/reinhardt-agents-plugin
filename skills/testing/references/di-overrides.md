@@ -136,7 +136,7 @@ Compile-time behavior is pinned by trybuild UI tests in
 
 ```toml
 [dev-dependencies]
-reinhardt = { version = "0.3.0", features = ["test"] }
+reinhardt = { version = "...", features = ["test"] }
 rstest = "0.23"
 serial_test = "3"
 tokio = { version = "1", features = ["full"] }

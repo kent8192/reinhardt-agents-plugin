@@ -61,7 +61,7 @@ suite:
 rg -n "AuthUser|create_resource|create_resource_with_deps|use_effect_event|use_effect_event_with" src crates examples
 rg -n "\\.(function|route|handler_with_method)(_named)?\\(|FunctionHandler|Depends(Result|Option)" src crates examples
 rg -n "FactoryOutput<|Depends<[^,>]+>|injectable_factory|InjectableKey" src crates examples
-rg -n "pages\\.rs|server_urls|client/pages|src/shared/(forms|types)\\.rs" src examples
+rg --files src examples | rg '(^|/)(pages\.rs|server_urls\.rs|client/pages(/|\.rs$)|src/shared/(forms|types)\.rs$)'
 ```
 
 ## Important Rules

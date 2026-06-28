@@ -56,11 +56,15 @@ timeout_secs = 60
 
 ### Accessing the Fragment
 
+`#[settings]` composes fragment fields on `ProjectSettings`; it does not
+automatically register `ProjectSettings` in the DI container. In handlers, use
+the project's settings accessor or inject an app-owned wrapper that you
+registered separately.
+
 ```rust
 #[get("/status/", name = "status")]
-pub async fn status(
-    #[inject] settings: ProjectSettings,
-) -> ViewResult<Response> {
+pub async fn status() -> ViewResult<Response> {
+    let settings = crate::config::settings::get_settings();
     let api_key = &settings.myapp.api_key;
     let timeout = settings.myapp.timeout_secs;
     // ...

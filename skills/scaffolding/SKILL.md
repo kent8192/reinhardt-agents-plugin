@@ -17,7 +17,7 @@ Guide developers through creating new reinhardt-web projects and adding apps wit
 ## Prerequisites
 
 - Rust toolchain installed (edition 2024, >= 1.94.0)
-- `reinhardt-admin` CLI available — install the target line, e.g. `cargo install reinhardt-admin-cli --version "0.3.0"`
+- `reinhardt-admin` CLI available — install the current stable CLI with `cargo install reinhardt-admin-cli`
 - For database features: Docker Desktop running (needed for TestContainers)
 
 ## Workflow

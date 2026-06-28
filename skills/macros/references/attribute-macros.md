@@ -347,6 +347,8 @@ Mark a sync or async function as a dependency provider with automatic registrati
 In 0.3.x, return `FactoryOutput<K, T>` when the produced value type needs an
 explicit provider identity. `#[injectable_factory]` remains only as a deprecated
 0.2 compatibility alias.
+The `DbSettings` parameter below represents an application-owned settings type
+or fragment that your app has registered as an injectable value.
 
 ```rust
 use reinhardt::di::{FactoryOutput, injectable, injectable_key};
@@ -356,7 +358,7 @@ struct PrimaryDatabase;
 
 #[injectable(scope = "singleton")]
 async fn create_db_pool(
-    #[inject] settings: ProjectSettings,
+    #[inject] settings: DbSettings,
 ) -> FactoryOutput<PrimaryDatabase, DatabaseConnection> {
     FactoryOutput::new(DatabaseConnection::connect(&settings.database_url).await.unwrap())
 }

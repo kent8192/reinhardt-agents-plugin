@@ -289,9 +289,11 @@ pub async fn login(
 }
 
 // CurrentUser extractor via DI
+use reinhardt::CurrentUser;
+
 #[server_fn]
 pub async fn me(
-    #[inject] reinhardt::CurrentUser(user): reinhardt::CurrentUser<User>,
+    #[inject] CurrentUser(user): CurrentUser<User>,
 ) -> Result<UserInfo, ServerFnError> {
     Ok(UserInfo::from(&user))
 }

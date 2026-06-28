@@ -127,7 +127,7 @@ The PostToolUse hook automatically scans code changes for these reinhardt-specif
 
 - **Rust** >= 1.96.0 (2024 Edition)
 - **reinhardt-web** `0.3.0`; legacy `0.2.x` / `0.1.x` guidance is kept for migrations
-- **reinhardt-admin-cli** -- `cargo install reinhardt-admin-cli --version "0.3.0"`
+- **reinhardt-admin-cli** -- `cargo install reinhardt-admin-cli`
 - **Docker Desktop** -- required for TestContainers-based database tests
 - **semgrep** (optional) -- enables automatic anti-pattern detection via PostToolUse hook
 

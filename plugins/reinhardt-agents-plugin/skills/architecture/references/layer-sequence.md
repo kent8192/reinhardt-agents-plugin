@@ -123,7 +123,7 @@ impl ProductService {
             description: input.description,
             created_at: None,
         };
-        let saved = Product::objects().create(product).execute(&*self.db).await?;
+        let saved = Product::objects().create(product).await?;
         Ok(ProductSerializer::from_model(&saved))
     }
 

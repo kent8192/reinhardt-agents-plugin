@@ -148,13 +148,13 @@ secure_ssl_redirect = true
 
 ## Accessing Settings in Code
 
-Settings are registered in the DI container and injected into handlers:
+Build composed settings through the project's settings accessor. The
+`#[settings]` macro does not automatically register `ProjectSettings` in DI.
 
 ```rust
 #[get("/info/", name = "app_info")]
-pub async fn app_info(
-    #[inject] settings: ProjectSettings,
-) -> ViewResult<Response> {
+pub async fn app_info() -> ViewResult<Response> {
+    let settings = crate::config::settings::get_settings();
     let debug = settings.core.debug;
     // ...
 }
@@ -163,6 +163,8 @@ pub async fn app_info(
 ### Accessing Specific Fragments
 
 ```rust
+let settings = crate::config::settings::get_settings();
+
 // Access core settings
 let secret = &settings.core.secret_key;
 let debug = settings.core.debug;

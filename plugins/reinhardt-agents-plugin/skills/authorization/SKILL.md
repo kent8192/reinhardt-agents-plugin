@@ -55,7 +55,7 @@ Guide developers through authorization setup using reinhardt-auth, including per
 - `AuthUser<T>` is removed in 0.3.x — replace it with `CurrentUser<T>` before upgrading
 - Permission checks run **before** the handler executes
 - `#[permission_required]` is for attribute-based access control on views
-- For ViewSet per-action permissions, use `get_permissions_for_action()`
+- For ViewSet permissions, use handler builder APIs such as `ModelViewSetHandler::add_permission(...)`; per-action override hooks are not part of the current ViewSet API
 
 ## Cross-Domain References
 

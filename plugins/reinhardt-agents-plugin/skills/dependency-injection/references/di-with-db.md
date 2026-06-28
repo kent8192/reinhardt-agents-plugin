@@ -14,6 +14,7 @@ struct PrimaryDatabase;
 ```rust
 use reinhardt::db::prelude::*;
 use reinhardt::di::prelude::*;
+use reinhardt::CurrentUser;
 use reinhardt::views::prelude::*;
 
 #[get("/users/{id}/", name = "user_retrieve")]
@@ -95,7 +96,7 @@ pub async fn get_profile(
 #[delete("/admin/users/{id}/", name = "admin_user_delete")]
 pub async fn delete_user(
     Path(id): Path<i64>,
-    #[inject] reinhardt::CurrentUser(admin): reinhardt::CurrentUser<User>,
+    #[inject] CurrentUser(admin): CurrentUser<User>,
 ) -> ViewResult<Response> {
     if !admin.is_staff {
         return Err(AppError::Authentication("Admin access required".into()));
@@ -116,12 +117,12 @@ Use `Option<CurrentUser<T>>` for endpoints that work for both authenticated and 
 ```rust
 #[get("/posts/", name = "post_list")]
 pub async fn list_posts(
-    #[inject] auth: Option<reinhardt::CurrentUser<User>>,
+    #[inject] auth: Option<CurrentUser<User>>,
 ) -> ViewResult<Response> {
     let mut query = Post::objects().filter(Post::is_published.eq(true));
 
     // Authenticated users see their own drafts too
-    if let Some(reinhardt::CurrentUser(user)) = &auth {
+    if let Some(CurrentUser(user)) = &auth {
         query = query.or_filter(Post::author_id.eq(user.id));
     }
 

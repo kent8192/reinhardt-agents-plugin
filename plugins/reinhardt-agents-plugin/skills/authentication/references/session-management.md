@@ -35,33 +35,20 @@ pub trait SessionBackend: Send + Sync {
 
 ## Session Configuration
 
-```rust
-pub struct SessionConfig {
-    pub engine: SessionEngine,
-    pub cookie_name: String,         // Default: "sessionid"
-    pub cookie_age: Duration,        // Default: 2 weeks
-    pub cookie_secure: bool,         // HTTPS only
-    pub cookie_httponly: bool,        // No JS access
-    pub cookie_samesite: SameSite,   // Lax, Strict, None
-}
-```
+Use the `SessionSettings` fragment under `[auth_session]` and convert it to the
+compatibility `SessionConfig` value when wiring session middleware.
 
-### Setup via DI
+### Setup from ProjectSettings
 
 ```rust
-use reinhardt::sessions::{SessionConfig, SessionEngine};
-use reinhardt::di::prelude::*;
+use reinhardt::settings;
+use reinhardt_auth::{sessions::config::SessionConfig, SessionSettings};
 
-#[injectable(scope = "singleton")]
-async fn session_config(#[inject] settings: ProjectSettings) -> SessionConfig {
-    SessionConfig {
-        engine: SessionEngine::Database,
-        cookie_name: "sessionid".to_string(),
-        cookie_age: Duration::from_secs(60 * 60 * 24 * 14),
-        cookie_secure: settings.is_production(),
-        cookie_httponly: true,
-        cookie_samesite: SameSite::Lax,
-    }
+#[settings(core: CoreSettings | auth_session: SessionSettings)]
+pub struct ProjectSettings;
+
+fn session_config(settings: &ProjectSettings) -> SessionConfig {
+    settings.auth_session.to_config()
 }
 ```
 
