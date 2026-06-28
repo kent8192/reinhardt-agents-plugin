@@ -19,9 +19,9 @@ Called by the migration skill with:
 
 Before analysis, determine the version families involved:
 
-- **0.1.x family**: `0.1.0-rc.*`, `0.1.0`, `0.1.1`, `0.1.2` — stable series
-- **0.2.x family**: `0.2.0-rc.*` — development series with breaking changes from 0.1.x
-- **Cross-family upgrade** (0.1.x → 0.2.x): Flag as a **major version migration** with extensive breaking changes. Use the migration skill's "Major Version Upgrade: 0.1.x → 0.2.x" section for the comprehensive migration path.
+- **0.1.x family**: `0.1.0-rc.*`, `0.1.0`, `0.1.1`, `0.1.2`, `0.1.3` — legacy stable series
+- **0.2.x family**: `0.2.0-rc.*`, `0.2.0` — stable 0.2 line with breaking changes from 0.1.x
+- **Cross-family upgrade** (0.1.x → 0.2.0): Flag as a **major version migration** with extensive breaking changes. Use the migration skill's "Major Version Upgrade: 0.1.x → 0.2.0" section and milestone #1 for the comprehensive migration path.
 
 ## Analysis Steps
 

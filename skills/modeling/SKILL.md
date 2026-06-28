@@ -1,7 +1,7 @@
 ---
 name: modeling
 description: Use when defining database models, working with QuerySets, or managing migrations in reinhardt-web applications
-versions: ["0.1.2", "0.2.x"]
+versions: ["0.1.x", "0.2.0"]
 ---
 
 # Reinhardt Data Modeling

@@ -16,6 +16,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **README** — documents the new `main-range-pr-merger` agent in the Agents
   table.
 
+### Changed
+
+- Align README, commands, skills, agents, and packaged plugin docs with the
+  stable `reinhardt-web` `0.2.0` release instead of the older `0.2.0-rc.2`
+  development target.
+- Update the 0.1.x to 0.2.0 upgrade workflow to use
+  `reinhardt-web` milestone
+  [`v0.2.0-rc`](https://github.com/kent8192/reinhardt-web/milestone/1)
+  as the issue-level source map for 0.2.0 migration surfaces.
+- Make generated Cargo.toml examples stable-first with `reinhardt = "0.2.0"`
+  and keep `0.1.x` guidance only for migration analysis.
+- Set Claude Code and Codex plugin manifest versions to `0.2.0`.
+
 ## [1.2.0] - 2026-05-27
 
 Updates all skills, commands, and agents to support both **reinhardt-web v0.1.2** (stable) and

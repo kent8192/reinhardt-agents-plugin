@@ -18,9 +18,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-## [0.2.0-rc.2] - 2026-05-26
+## [0.2.0] - 2026-06-11
 
-## [0.1.2] - 2026-05-25
+## [0.1.3] - 2026-05-31
 
 ### Added
 - New feature description (#123)
@@ -128,7 +128,7 @@ reinhardt/crates/reinhardt-dentdelion/CHANGELOG.md
 Focus on crates that the user's application depends on. Check `Cargo.toml` features:
 
 ```toml
-reinhardt = { version = "0.1.2", features = ["auth", "database", "dentdelion"] }  # or "0.2.0-rc.2"
+reinhardt = { version = "0.1.3", features = ["auth", "database", "dentdelion"] }  # or "0.2.0"
 ```
 
 This means read CHANGELOGs for:
@@ -151,8 +151,8 @@ release-plz creates per-crate tags in the format:
 
 Examples:
 
-- `reinhardt@v0.1.2`
-- `reinhardt@v0.2.0-rc.2`
+- `reinhardt@v0.1.3`
+- `reinhardt@v0.2.0`
 - `reinhardt-core@v0.2.0`
 - `reinhardt-orm@v0.1.5`
 
@@ -161,7 +161,7 @@ Examples:
 To see changes between two versions of a specific crate:
 
 ```bash
-gh api repos/kent8192/reinhardt-web/compare/reinhardt-core@v0.1.0...reinhardt-core@v0.2.0 \
+gh api repos/kent8192/reinhardt-web/compare/reinhardt-core@v0.1.3...reinhardt-core@v0.2.0 \
   --jq '.commits[].commit.message'
 ```
 

@@ -52,28 +52,38 @@ Verify branch/worktree conflicts before creating the work branch:
 
 ```bash
 wtp list
-git branch -a --list '<work_branch>'
+if git show-ref --verify --quiet 'refs/heads/<work_branch>'; then
+  echo 'local branch already exists: <work_branch>'
+  exit 1
+fi
+if git show-ref --verify --quiet 'refs/remotes/origin/<work_branch>'; then
+  echo 'remote branch already exists: origin/<work_branch>'
+  exit 1
+fi
 ```
 
 Choose the branch topology from the user's request:
 
-- If the request explicitly says to branch from `main` or from the source
-  version, create the worktree from `source_range_end`, merge the target branch
-  into it, and run the completeness audit against the target branch.
-- Otherwise, prefer creating the worktree from the target branch and applying
-  first-parent PR merges in order. This produces a simpler PR diff when the
-  goal is only to propagate a main-range PR set.
+- For PR-only requests, create the worktree from the target branch and apply
+  first-parent PR merges in order. This keeps direct source-range commits out of
+  the final PR unless the user explicitly requested them.
+- Use a source-based worktree only when the request explicitly includes the
+  full source version state or direct non-PR commits. In that case, create the
+  worktree from `source_range_end`, merge the target branch into it, and run the
+  completeness audit against the target branch.
 
 Target-based worktree:
 
 ```bash
-wtp add -b <work_branch> origin/<target_branch> --quiet
+worktree_path="$(wtp add -b <work_branch> origin/<target_branch> --quiet)"
+cd "$worktree_path"
 ```
 
 Source-based worktree:
 
 ```bash
-wtp add -b <work_branch> '<source_range_end>^{commit}' --quiet
+worktree_path="$(wtp add -b <work_branch> '<source_range_end>^{commit}' --quiet)"
+cd "$worktree_path"
 git merge --no-ff origin/<target_branch>
 ```
 
@@ -152,7 +162,7 @@ Build the expected file set from all first-parent merge commits:
 
 ```bash
 for merge in <merge_shas>; do
-  git diff-tree --no-commit-id --name-only -r -m --first-parent "$merge"
+  git diff --name-only "$merge^1" "$merge" --
 done | sort -u
 ```
 

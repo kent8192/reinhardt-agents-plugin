@@ -1,7 +1,7 @@
 ---
 name: migration
 description: Use when upgrading reinhardt-web versions or replacing deprecated APIs - analyzes CHANGELOG, detects deprecated API usage, and guides code migration
-versions: ["0.1.2", "0.2.x"]
+versions: ["0.1.x", "0.2.0"]
 ---
 
 # Reinhardt Migration
@@ -60,7 +60,7 @@ For each migration task:
 - ALWAYS present the migration report to the user before making changes
 - NEVER modify code without user confirmation
 - For multi-version hops (e.g., rc.18 → rc.22), review each intermediate version's changes — see `references/upgrade-workflow.md` for the worked rc.18 → rc.22 example covering the rc.19 `urls/` directory move and the rc.22 `form!` `strip_arguments` migration
-- For 0.1.x → 0.2.x upgrades, this is a **major version migration** with extensive breaking changes. Use `references/upgrade-workflow.md` "Major Version Upgrade" section for the full migration path.
+- For 0.1.x → 0.2.0 upgrades, this is a **major version migration** with extensive breaking changes. Use `references/upgrade-workflow.md` "Major Version Upgrade" section and `reinhardt/instructions/MIGRATION_0.2.md` for the full migration path.
 - After all migrations, run `cargo check` and `cargo test` to verify
 - If `cargo check` fails after migration, diagnose and fix before proceeding
 
@@ -80,16 +80,20 @@ If migration fails or user wants to revert:
 
 ## Dynamic References
 
-On each invocation, read from source:
+On each invocation, read from source. If a local `reinhardt-web` checkout is
+available, prefer the current `origin/develop/0.3.0` state for release docs and
+migration guidance before falling back to GitHub:
 
-1. `reinhardt/CHANGELOG.md` and `reinhardt/crates/*/CHANGELOG.md`
-2. `reinhardt/announcements/v0.1.0-rc.N.md` — per-release Highlights, Breaking
+1. `reinhardt/instructions/MIGRATION_0.2.md` for the public 0.1.x → 0.2.0 migration surface
+2. `reinhardt/CHANGELOG.md` and `reinhardt/crates/*/CHANGELOG.md`
+3. GitHub milestone [`v0.2.0-rc`](https://github.com/kent8192/reinhardt-web/milestone/1) for the issue-level source map of 0.2.0 changes
+4. `reinhardt/announcements/v0.1.0-rc.N.md` — per-release Highlights, Breaking
    Changes, and Related PRs (the announcement file is the canonical source for
    migration recipes that go beyond a single CHANGELOG line)
-3. `reinhardt/announcements/v0.2.0-rc.N.md` — per-release announcements for the 0.2.x series
-4. `#[deprecated]` annotations in reinhardt source via Grep
-5. GitHub PR/Issue descriptions via `gh pr view` / `gh issue view`
-6. GitHub discussions linked from announcement Breaking Changes via
+5. `reinhardt/announcements/v0.2.0-rc.N.md` — historical release-candidate announcements when the source or target is an RC
+6. `#[deprecated]` annotations in reinhardt source via Grep
+7. GitHub PR/Issue descriptions via `gh pr view` / `gh issue view`
+8. GitHub discussions linked from announcement Breaking Changes via
    `gh api repos/kent8192/reinhardt-web/discussions/<N>` (the `gh discussion`
    subcommand is unavailable; use the REST API directly)
-7. User's application code via Grep
+9. User's application code via Grep

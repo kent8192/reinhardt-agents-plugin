@@ -44,7 +44,7 @@ reinhardt = { version = "0.1.0-rc.19", features = [...] }
 
 ### Step 1.2 — Resolve target version
 
-- If the user specifies an exact version (e.g., `0.1.2` or `0.2.0-rc.2`), use it directly.
+- If the user specifies an exact version (e.g., `0.1.3` or `0.2.0`), use it directly.
 - If the user says `latest`, resolve via:
 
   ```bash
@@ -110,7 +110,7 @@ Goal: Apply changes incrementally with verification at each step.
 Change the reinhardt version to the target:
 
 ```toml
-reinhardt = { version = "0.1.2", features = [...] }  # or "0.2.0-rc.2"
+reinhardt = { version = "0.1.3", features = [...] }  # or "0.2.0"
 ```
 
 Run `cargo check` immediately after to identify compilation errors. This surfaces
@@ -268,53 +268,94 @@ Migration order:
 
 ---
 
-## Major Version Upgrade: 0.1.x → 0.2.x
+## Major Version Upgrade: 0.1.x → 0.2.0
 
-This section covers the full migration path from the 0.1.x series to 0.2.x.
-Unlike RC-to-RC hops within 0.1.x, this is a **major version migration** with
-extensive breaking changes across multiple subsystems.
+This section covers the public 0.1.x line to final 0.2.0. Treat
+`reinhardt/instructions/MIGRATION_0.2.md` as the canonical detailed guide; this
+section is the short operational checklist for agents.
+
+### Milestone source map
+
+Use GitHub milestone
+[`v0.2.0-rc`](https://github.com/kent8192/reinhardt-web/milestone/1) as the
+issue-level source of truth for 0.2.0 changes. At the 0.2.0 release, the
+milestone was closed with 57 closed issues and 0 open issues.
+
+The migration-relevant issues group into these surfaces:
+
+- **Umbrella removals**: #4520 removes APIs deprecated during the 0.1.x line.
+- **Routing and reverse lookup**: #4784, #4660, #4638, #4637, #4901, #4925.
+- **Pages, forms, hooks, and frontend runtime**: #4410, #4195, #4527, #4528,
+  #4397, #4786, #4867, #4970, #4971, #4972, #4965, #4966, #4967, #4707.
+- **Modeling, ORM, and query APIs**: #3984, #4194, #4401, #4398, #4650, #4876,
+  #4877.
+- **Auth, DI, and settings**: #4757, #4652, #4437, #4645, #4651, #4292, #4978,
+  #4875, #4318, #4056.
+- **Migrations, CLI, templates, and formatter**: #4640, #4439, #4607, #4558,
+  #4363, #4816.
+- **Facade and platform split**: #4362, #4364, #4365, #4366, #4367.
 
 ### Pre-flight
 
-- This is a major version migration with many breaking changes
+- This is a major version migration with many breaking changes.
 - Ensure git working tree is clean (`git status --porcelain` returns empty)
 - Run `cargo check` and `cargo test` on current 0.1.x to establish baseline
 - Commit or stash any pending work before proceeding
+- Read the project's `Cargo.toml` feature set so verification covers the same
+  facade features the application actually uses
 
 ### Migration Order (recommended)
 
 Apply changes in this order to minimize intermediate compilation failures:
 
-1. **Cargo.toml**: `version = "0.1.2"` → `version = "0.2.0-rc.2"`
+1. **Cargo.toml**: update the `reinhardt` dependency to `version = "0.2.0"`.
 
-2. **Modeling layer**: `HasCustomManager` → `type Objects` associated type; add
-   `type Objects = Manager<Self>;` to manual Model impls; adopt `{Model}Info` or
-   opt-out with `#[model(info = false)]`
+2. **Removed API scan** (#4520): search for the removed 0.1.x surface before editing:
+   typed URL helpers (`ResolvedUrls`, `url_prelude`, generated reverse
+   accessors), `#[routes(...)]` flags, `UrlResolverUnprefixed`,
+   `reverse_single_pass`, `reverse_with_aho_corasick`, `SeaRc`, `Injected`,
+   `OptionalInjected`, legacy settings sources, `DefaultUser`, old auth user
+   traits, `OpenApiConfig`, `MockFetch`, `force_authenticate`, and
+   `with_authenticated_user`.
 
-3. **Authentication**: Remove `DefaultUser`/`DefaultUserManager` usage; update to
-   unified `AuthBackend` trait returning `Box<dyn AuthIdentity>`; update permission
-   lookups from username-based to user-ID-based
+3. **URL routing and reverse lookup** (#4784, #4660, #4638, #4637, #4901,
+   #4925): remove typed URL helper usage. Use plain
+   `#[routes]`, kebab-case route names, and explicit fully qualified
+   `reverse("<type>:<app>:<name>", params)` calls through the router or
+   `UrlReverser::from_global()`.
 
-4. **Routing**: Remove all `#[url_patterns]` usage; update `#[routes]` (remove
-   unsupported flags: `standalone`, `server_only`, etc.); update `ClientRouter` to
-   use mandatory `name` first arg; remove `named_route*` calls; remove type-safe URL
-   reversal (`UrlReverser`, `ClientUrlReverser`)
+4. **Pages and forms** (#4410, #4195, #4527, #4528, #4397, #4786, #4707,
+   #4867, #4970, #4971, #4972, #4965, #4966, #4967): update hook/resource/form call sites for explicit
+   dependency arrays, current `use_resource(fetcher, deps)` and `use_form`
+   contracts, automatic reactive wrapping, dynamic radio field behavior, and
+   MSW/server-fn WASM test setup.
 
-5. **Pages/WASM**: Update `use_effect`/`use_memo`/`use_callback` to explicit
-   dependency arrays; remove explicit `Page::reactive` wrapping (now automatic)
+5. **Settings fragments** (#4978, #4875, #4318, #4056): move touched ad-hoc configuration to typed settings
+   fragments built with `SettingsBuilder`; replace legacy `Settings`,
+   `AdvancedSettings`, `JsonFileSource`, and `auto_source` usage.
 
-6. **DI**: Adopt per-context `DependencyRegistry` if needed; remove
-   `#[serial(di_registry)]` from tests
+6. **Auth, DI, and admin** (#4757, #4652, #4437, #4645, #4651, #4292): use final `CurrentUser<U>` / `AuthIdentity` contracts,
+   application-owned user models, and current admin/static route helpers. Audit
+   `default-features = false` users for missing auth/admin facade feature flags.
 
-7. **Configuration**: Replace `SecurityConfig` with `SecurityMiddleware` builder
-   methods (`with_hsts()`, etc.)
+7. **ORM and query changes** (#3984, #4194, #4401, #4398, #4650, #4876, #4877): update custom manager and query call sites, replace
+   `DatabaseConnection::get_database_url_from_env_or_settings()` with
+   `DatabaseConnection::database_url_from(settings, env_override)`, and fix
+   code surfaced by `cargo check`.
 
-8. **Database**: Replace `get_database_url_from_env_or_settings()` with
-   `database_url_from(settings, env_override)`
+8. **Database migrations and CLI** (#4640, #4439, #4607, #4558, #4363): change model definitions first, then regenerate
+   migrations with the project `manage makemigrations` command. Review the
+   generated migration diff; do not hand-edit migrations to hide model drift.
+
+9. **Facade and platform split** (#4362, #4364, #4365, #4366, #4367): audit
+   imports against the new `reinhardt::prelude` and split export/compat layers,
+   especially in cross-target pages code.
 
 ### Verification
 
 - Run `cargo check` after each layer to catch errors early
 - Run `cargo test` after all layers complete
+- Run facade/feature-specific checks for projects using `default-features = false`
+- Regenerate and review migrations before committing
 - Check for `#[deprecated]` warnings — APIs deprecated in late 0.1.x RCs are fully
-  removed in 0.2.x (they will produce hard compilation errors, not warnings)
+  removed in 0.2.0 (they will produce hard compilation errors, not warnings)
