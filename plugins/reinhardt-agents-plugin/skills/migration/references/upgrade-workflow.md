@@ -358,4 +358,44 @@ Apply changes in this order to minimize intermediate compilation failures:
 - Run facade/feature-specific checks for projects using `default-features = false`
 - Regenerate and review migrations before committing
 - Check for `#[deprecated]` warnings — APIs deprecated in late 0.1.x RCs are fully
-  removed in 0.2.0 (they will produce hard compilation errors, not warnings)
+  removed in 0.2.x (they will produce hard compilation errors, not warnings)
+
+---
+
+## Major Version Upgrade: 0.2.x → 0.3.0
+
+Use `0.3-upgrade.md` as the primary bundled checklist. If the local
+`reinhardt-web` checkout has `instructions/MIGRATION_0.3.md`, prefer that file
+because it tracks the current release blocker state and may include later
+clarifications.
+
+### Pre-flight
+
+- Confirm the application already follows the 0.2.x public migration surface.
+- Ensure the working tree is clean before editing.
+- Establish a baseline with `cargo check` and the narrow tests for the app.
+- Locate the local `reinhardt-web` checkout; if unavailable, use the bundled
+  `0.3-upgrade.md` reference and GitHub issue/PR details.
+
+### Migration Order
+
+1. Update Reinhardt dependencies to `0.3.0`.
+2. Replace removed 0.2 compatibility APIs.
+3. Migrate dependency providers that need keyed identity.
+4. Replace raw server-route registration with endpoint metadata.
+5. Review generated model-info relation fields and partial updates.
+6. Update Pages projects to route-backed components and split app-local
+   client/server modules.
+7. Regenerate migrations and review drift-sensitive operations.
+
+### Verification
+
+Run the scan commands from `0.3-upgrade.md`, then run:
+
+```bash
+cargo check --workspace --all-features
+cargo test --doc
+```
+
+Use broader test suites when the application has Pages, DB, auth, or migration
+coverage affected by the upgrade.

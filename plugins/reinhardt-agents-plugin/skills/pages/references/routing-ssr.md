@@ -356,23 +356,24 @@ if is_initialized() {
 
 Compatible with reinhardt's collectstatic system for cache-busted asset URLs.
 
-## --with-pages URL Submodule Layout (rc.29 fix)
+## --with-pages URL Submodule Layout (0.3.x)
 
-`reinhardt-admin startapp --with-pages <app>` (and the workspace variant) now scaffolds the canonical `urls/` submodule layout established in rc.19 instead of a flat `urls.rs` that returned only `ServerRouter::new()`. The generated app gains both a server endpoint surface and a client-side SPA router scaffold out of the box:
+`reinhardt-admin startapp --with-pages <app>` scaffolds app-local router modules
+split by target. The generated app gains both a server endpoint surface and a
+client-side SPA router scaffold out of the box:
 
 ```text
 <app>/
 └── urls.rs                  # aggregator declaring submodules
 └── urls/
-    ├── server_urls.rs       # #[url_patterns(InstalledApp::<App>, mode = server)]
-    └── client_router.rs     # #[url_patterns(InstalledApp::<App>, mode = client)]
+    ├── server_router.rs     # ServerRouter endpoints behind #[cfg(server)]
+    └── client_router.rs     # ClientRouter components behind #[cfg(client)]
 ```
 
-The aggregator uses `#[cfg(server)]` / `#[cfg(client)]` (matching the cfg aliases declared by the scaffold-generated `build.rs`, not `wasm` / `native`). `ws_urls.rs` is intentionally not scaffolded — WebSocket routing remains opt-in.
-
-This fixes rc.19-era drift where the template emitted only the flat `urls.rs` and forced consumers to rewrite the module by hand before they could add a client-side route.
-
-Source: (#4357).
+The aggregator uses `#[cfg(server)]` / `#[cfg(client)]` (matching the cfg
+aliases declared by the scaffold-generated `build.rs`, not `wasm` / `native`).
+Legacy `server_urls.rs` and `client/pages` wrappers should be migrated before
+upgrading generated Pages apps to 0.3.x.
 
 ## cfg_aliases Setup
 

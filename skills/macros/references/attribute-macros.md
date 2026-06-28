@@ -331,18 +331,26 @@ pub struct AppConfig {
 | `#[scope(request)]` | Request scope |
 | `#[scope(transient)]` | Transient scope (new instance each time) |
 
-### `#[injectable_factory]`
+### `#[injectable]` Provider Functions
 
 **Crate:** `reinhardt-di/macros`
 
-Mark an async function as a dependency factory with automatic registration.
+Mark a sync or async function as a dependency provider with automatic registration.
+In 0.3.x, return `FactoryOutput<K, T>` when the produced value type needs an
+explicit provider identity. `#[injectable_factory]` remains only as a deprecated
+0.2 compatibility alias.
 
 ```rust
-#[injectable_factory(scope = "singleton")]
+use reinhardt::di::{FactoryOutput, injectable, injectable_key};
+
+#[injectable_key]
+struct PrimaryDatabase;
+
+#[injectable(scope = "singleton")]
 async fn create_db_pool(
     #[inject] settings: Depends<ProjectSettings>,
-) -> DatabaseConnection {
-    DatabaseConnection::connect(&settings.database_url).await.unwrap()
+) -> FactoryOutput<PrimaryDatabase, DatabaseConnection> {
+    FactoryOutput::new(DatabaseConnection::connect(&settings.database_url).await.unwrap())
 }
 ```
 
@@ -536,7 +544,7 @@ pub async fn create_post(
     title: String,                        // Sent from the client
     body: String,                         // Sent from the client
     Validated(payload): Validated<NewPostPayload>, // Server-side, not in client args
-    AuthUser(user): AuthUser<User>,       // Server-side
+    CurrentUser(user): CurrentUser<User>, // Server-side
 ) -> Result<Post, ServerFnError> {
     // ...
 }

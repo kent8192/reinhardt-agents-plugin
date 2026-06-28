@@ -52,7 +52,7 @@ pub struct SessionConfig {
 use reinhardt::sessions::{SessionConfig, SessionEngine};
 use reinhardt::di::prelude::*;
 
-#[injectable_factory(scope = "singleton")]
+#[injectable(scope = "singleton")]
 async fn session_config(#[inject] settings: Depends<ProjectSettings>) -> SessionConfig {
     SessionConfig {
         engine: SessionEngine::Database,

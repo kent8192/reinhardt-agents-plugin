@@ -90,7 +90,7 @@ let microsoft = ProviderConfig::microsoft(
 use reinhardt::auth::social::SocialAuthBackend;
 use reinhardt::di::prelude::*;
 
-#[injectable_factory(scope = "singleton")]
+#[injectable(scope = "singleton")]
 async fn social_auth(#[inject] settings: Depends<ProjectSettings>) -> SocialAuthBackend {
     SocialAuthBackend::new()
         .with_provider(ProviderConfig::google(

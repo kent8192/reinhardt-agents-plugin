@@ -58,9 +58,9 @@ pub async fn transfer_funds(
 }
 ```
 
-## AuthUser Injection
+## CurrentUser Injection
 
-`AuthUser<T>` extracts the authenticated user from the request. It reads the authentication token (JWT, session, etc.) and resolves the user model.
+`CurrentUser<T>` extracts the authenticated user from the request. It reads the authentication token or session state and resolves the user model.
 
 ```rust
 use reinhardt::auth::prelude::*;
@@ -80,15 +80,15 @@ pub async fn get_profile(
 }
 ```
 
-### Full User Model with AuthUser<T>
+### Full User Model with CurrentUser<T>
 
-`AuthUser<T>` resolves the full user model from the auth token:
+`CurrentUser<T>` resolves the full user model from the auth token or session:
 
 ```rust
 #[delete("/admin/users/{id}/", name = "admin_user_delete")]
 pub async fn delete_user(
     Path(id): Path<i64>,
-    #[inject] reinhardt::AuthUser(admin): reinhardt::AuthUser<User>,
+    #[inject] reinhardt::CurrentUser(admin): reinhardt::CurrentUser<User>,
 ) -> ViewResult<Response> {
     if !admin.is_staff {
         return Err(AppError::Authentication("Admin access required".into()));
@@ -104,17 +104,17 @@ pub async fn delete_user(
 
 ### Optional Authentication
 
-Use `Option<AuthUser<T>>` for endpoints that work for both authenticated and anonymous users:
+Use `Option<CurrentUser<T>>` for endpoints that work for both authenticated and anonymous users:
 
 ```rust
 #[get("/posts/", name = "post_list")]
 pub async fn list_posts(
-    #[inject] auth: Option<reinhardt::AuthUser<User>>,
+    #[inject] auth: Option<reinhardt::CurrentUser<User>>,
 ) -> ViewResult<Response> {
     let mut query = Post::objects().filter(Post::is_published.eq(true));
 
     // Authenticated users see their own drafts too
-    if let Some(reinhardt::AuthUser(user)) = &auth {
+    if let Some(reinhardt::CurrentUser(user)) = &auth {
         query = query.or_filter(Post::author_id.eq(user.id));
     }
 

@@ -9,6 +9,8 @@ reinhardt-di
   ├── Injectable trait          (core injection interface)
   ├── Injected<T>               (Arc-wrapped dependency with metadata)
   ├── Depends<T>                (FastAPI-style Depends wrapper)
+  ├── Depends<K, T>             (0.3 keyed dependency wrapper)
+  ├── FactoryOutput<K, T>       (0.3 keyed provider output)
   ├── OptionalInjected<T>       (= Option<Injected<T>>)
   ├── InjectionContext           (dependency resolution container)
   ├── OverrideRegistry           (test override support)
@@ -16,8 +18,9 @@ reinhardt-di
   └── Scopes: Singleton, Request, Transient
 
 reinhardt-di/macros
-  ├── #[injectable_factory]      (register async factory function)
-  └── #[injectable]              (register struct or function)
+  ├── #[injectable]              (register struct or provider function)
+  ├── #[injectable_key]          (declare explicit provider identity)
+  └── #[injectable_factory]      (deprecated 0.2 compatibility alias)
 
 reinhardt-core/macros
   ├── #[use_inject]              (enable #[inject] in general functions)
@@ -27,24 +30,36 @@ reinhardt-core/macros
 
 ---
 
-## Recommended Approach: `#[injectable_factory]`
+## Recommended Approach: `#[injectable]` + Optional Keys
 
-`#[injectable_factory]` is the recommended way to register dependencies. It registers an async factory function that produces the dependency.
+In 0.3.x, `#[injectable]` is the recommended macro for both injectable structs
+and provider functions. Return a plain `T` when the type itself is the unique
+dependency identity. Return `FactoryOutput<K, T>` when the produced value type
+can have multiple meanings in one application.
 
 ```rust
-use reinhardt::di::prelude::*;
+use reinhardt::di::{Depends, FactoryOutput, injectable, injectable_key};
 
-#[injectable_factory(scope = "singleton")]
-async fn create_database(#[inject] config: Depends<AppConfig>) -> DatabaseConnection {
-    DatabaseConnection::connect(&config.database_url).await.unwrap()
+#[injectable_key]
+struct PrimaryDatabase;
+
+#[injectable(scope = "singleton")]
+async fn create_database(
+    #[inject] config: Depends<AppConfig>,
+) -> FactoryOutput<PrimaryDatabase, DatabaseConnection> {
+    FactoryOutput::new(
+        DatabaseConnection::connect(&config.database_url)
+            .await
+            .unwrap(),
+    )
 }
 
-#[injectable_factory(scope = "singleton")]
+#[injectable(scope = "singleton")]
 async fn create_email_service(#[inject] config: Depends<AppConfig>) -> EmailService {
     EmailService::new(&config.email_api_key)
 }
 
-#[injectable_factory(scope = "transient")]
+#[injectable(scope = "transient")]
 async fn create_request_logger(
     #[inject] config: Depends<AppConfig>,
     #[inject] user_info: AuthInfo,
@@ -53,39 +68,51 @@ async fn create_request_logger(
 }
 ```
 
-### Rules for `#[injectable_factory]`
+### Rules for Provider Functions
 
-- Function **MUST** be `async`
+- Function may be sync or async
 - Function **MUST** have an explicit return type
 - **ALL** parameters **MUST** be marked with `#[inject]`
 - Scope is specified as a string: `"singleton"`, `"request"`, `"transient"`
 - The generated wrapper receives `InjectionContext` and resolves all `#[inject]` dependencies automatically
-- Automatically registers with the global `DependencyRegistry` via `inventory`
+- Return `T` for unique dependency identity, or `FactoryOutput<K, T>` when an
+  explicit key should identify the provider
+- `#[injectable_factory]` is retained only as a deprecated 0.2 compatibility
+  alias; do not use it for new 0.3.x code
 
-### Duplicate Registration Detection
+### Provider Identity and Duplicate Registration
 
-`DependencyRegistry::register()` panics at startup if the same `TypeId` is registered twice. This prevents accidental shadowing of dependencies.
+`DependencyRegistry::register()` panics at startup if the same provider identity
+is registered twice. This prevents accidental shadowing of dependencies.
 
-If you need two registrations for the same underlying type, use the **newtype wrapper pattern**:
+If you need two providers for the same underlying value type, use
+`#[injectable_key]` with `FactoryOutput<K, T>`:
 
 ```rust
-// BAD: registering DatabaseConnection twice panics
-#[injectable_factory(scope = "singleton")]
+use reinhardt::di::{FactoryOutput, injectable, injectable_key};
+
+// BAD: both providers identify as DatabaseConnection
+#[injectable(scope = "singleton")]
 async fn create_read_db() -> DatabaseConnection { /* ... */ }
-#[injectable_factory(scope = "singleton")]
+
+#[injectable(scope = "singleton")]
 async fn create_write_db() -> DatabaseConnection { /* ... */ }  // PANIC: duplicate TypeId
 
-// GOOD: newtype wrappers create distinct TypeIds
-pub struct ReadDb(pub DatabaseConnection);
-pub struct WriteDb(pub DatabaseConnection);
+// GOOD: keys make provider identity explicit
+#[injectable_key]
+struct ReadDb;
 
-#[injectable_factory(scope = "singleton")]
-async fn create_read_db() -> ReadDb {
-    ReadDb(DatabaseConnection::connect(&read_url).await.unwrap())
+#[injectable_key]
+struct WriteDb;
+
+#[injectable(scope = "singleton")]
+async fn create_read_db() -> FactoryOutput<ReadDb, DatabaseConnection> {
+    FactoryOutput::new(DatabaseConnection::connect(&read_url).await.unwrap())
 }
-#[injectable_factory(scope = "singleton")]
-async fn create_write_db() -> WriteDb {
-    WriteDb(DatabaseConnection::connect(&write_url).await.unwrap())
+
+#[injectable(scope = "singleton")]
+async fn create_write_db() -> FactoryOutput<WriteDb, DatabaseConnection> {
+    FactoryOutput::new(DatabaseConnection::connect(&write_url).await.unwrap())
 }
 ```
 
@@ -118,28 +145,31 @@ Users **CANNOT** register `#[injectable_factory]` or `#[injectable]` for types i
 
 The `startproject` and `startapp` commands also reject names starting with `reinhardt_` or `reinhardt-`, because Cargo normalizes hyphens to underscores, placing all types under the reserved `reinhardt_*::*` namespace.
 
-If you need to customize a framework type, wrap it in a newtype:
+If you need to customize a framework type, use an application-owned wrapper or
+explicit key:
 
 ```rust
 // BAD: panics at startup — framework type override
-#[injectable_factory(scope = "singleton")]
+#[injectable(scope = "singleton")]
 async fn custom_auth() -> reinhardt_auth::AuthBackend { /* ... */ }
 
 // GOOD: newtype wrapper
 pub struct CustomAuth(pub reinhardt_auth::AuthBackend);
 
-#[injectable_factory(scope = "singleton")]
+#[injectable(scope = "singleton")]
 async fn custom_auth() -> CustomAuth {
     CustomAuth(reinhardt_auth::AuthBackend::new(/* ... */))
 }
 ```
 
-### `#[inject]` Inside Factories
+### `#[inject]` Inside Providers
 
-Parameters marked with `#[inject]` are resolved from the `InjectionContext` before the factory body executes. Use `Depends<T>` for injected dependencies:
+Parameters marked with `#[inject]` are resolved from the `InjectionContext`
+before the provider body executes. Use `Depends<T>` or `Depends<K, T>` for
+injected dependencies:
 
 ```rust
-#[injectable_factory(scope = "singleton")]
+#[injectable(scope = "singleton")]
 async fn create_user_service(
     #[inject] db: Depends<DatabaseConnection>,  // Resolved via Depends (Arc-wrapped with metadata)
     #[inject] config: AppConfig,                // Resolved as T (cloned from Arc)
@@ -149,6 +179,7 @@ async fn create_user_service(
 ```
 
 - `Depends<T>` parameter: resolves `T` via DI with caching, circular dependency detection, and metadata
+- `Depends<K, T>` parameter: resolves keyed provider output `FactoryOutput<K, T>`
 - `T` parameter: resolves `T`, then clones out of `Arc`
 
 ---
@@ -215,16 +246,20 @@ async fn create_cache(#[inject] config: AppConfig) -> CacheClient {
 }
 ```
 
-### Differences from `#[injectable_factory]`
+### Differences from legacy `#[injectable]`
 
-| Feature | `#[injectable]` (function) | `#[injectable_factory]` |
+| Feature | `#[injectable]` (function) | `#[injectable]` |
 |---------|--------------------------|------------------------|
 | Sync/async | Both supported | Async only |
 | Scope control | Per-parameter `#[inject(scope = ...)]` | Per-function `scope = "..."` |
 | Override support | `ctx.dependency(fn).override_with(value)` | Not supported |
 | Registration | Generates `Injectable` impl for return type | Registers factory in global registry |
 
-**Prefer `#[injectable_factory]`** for most use cases due to explicit scope control and clearer intent.
+For 0.3.x code, **prefer `#[injectable]`** for provider functions. The
+`#[injectable]` macro is retained only as a deprecated compatibility
+alias for older 0.2-era code. When a provider function returns a value type
+that is not a unique dependency identity, use `#[injectable_key]` with
+`FactoryOutput<K, T>` and consume it as `Depends<K, T>`.
 
 ---
 
@@ -281,10 +316,10 @@ All injectable types **MUST** be explicitly registered. There is no auto-injecti
 
 | Method | When |
 |--------|------|
-| `#[injectable_factory]` | Async factory with explicit scope (recommended) |
 | `#[injectable]` on struct | Struct with `#[inject]` / `#[no_inject]` field attributes |
-| `#[injectable]` on function | Function that produces the type |
+| `#[injectable]` on function | Function that produces `T` or `FactoryOutput<K, T>` |
 | `impl Injectable` manually | Custom resolution logic |
+| `#[injectable]` | Deprecated 0.2 compatibility alias for provider functions |
 
 Unregistered types return `DiError::DependencyNotRegistered` at runtime.
 
@@ -437,13 +472,13 @@ Factory parameters and handler injection can receive either `Depends<T>` or `T`:
 
 ```rust
 // Receives Depends<T> — Arc-wrapped with caching and metadata
-#[injectable_factory(scope = "singleton")]
+#[injectable(scope = "singleton")]
 async fn create_user_service(#[inject] config: Depends<AppConfig>) -> UserService {
     UserService::new(config)
 }
 
 // Receives T (non-Depends) — cloned out of Arc automatically
-#[injectable_factory(scope = "transient")]
+#[injectable(scope = "transient")]
 async fn make_handler(#[inject] service: MyService) -> String {
     service.value
 }
@@ -459,7 +494,7 @@ async fn make_handler(#[inject] service: MyService) -> String {
 Prefer `try_unwrap()` when the wrapper is the sole owner (e.g., at the end of a request scope) to avoid requiring `Clone` on `T`:
 
 ```rust
-#[injectable_factory(scope = "request")]
+#[injectable(scope = "request")]
 async fn create_processor(#[inject] lock: Depends<RwLock<State>>) -> Processor {
     // RwLock<State> does not implement Clone
     // try_unwrap() works because the factory is the sole consumer
@@ -525,12 +560,12 @@ Extract shared logic into a third service:
 // BAD: UserService ↔ OrderService (circular)
 
 // GOOD: Both depend on UserRepository (no cycle)
-#[injectable_factory(scope = "singleton")]
+#[injectable(scope = "singleton")]
 async fn create_user_service(#[inject] repo: Depends<UserRepository>) -> UserService {
     UserService::new(repo)
 }
 
-#[injectable_factory(scope = "singleton")]
+#[injectable(scope = "singleton")]
 async fn create_order_service(#[inject] repo: Depends<UserRepository>) -> OrderService {
     OrderService::new(repo)
 }
@@ -630,12 +665,12 @@ ctx.clear_overrides();
 
 ## Accessing DI Context: `get_di_context`
 
-Inside `#[injectable]` or `#[injectable_factory]` execution, use `get_di_context` to access the DI context without requiring `#[inject]`:
+Inside `#[injectable]` execution, use `get_di_context` to access the DI context without requiring `#[inject]`:
 
 ```rust
 use reinhardt::di::{get_di_context, try_get_di_context, ContextLevel};
 
-#[injectable_factory(scope = "transient")]
+#[injectable(scope = "transient")]
 async fn make_router(#[inject] config: Depends<AppConfig>) -> Router {
     // Access the DI context directly
     let di_ctx = get_di_context(ContextLevel::Current);
@@ -679,9 +714,9 @@ DiError::Authentication(String)              // Maps to HTTP 401
 
 | Scenario | Recommended Pattern |
 |----------|-------------------|
-| Complex async initialization | `#[injectable_factory]` |
+| Complex async initialization | `#[injectable]` |
 | Struct with injected fields | `#[injectable]` on struct |
-| Simple type with `Default` | `#[injectable_factory]` with `Default::default()` body |
+| Simple type with `Default` | `#[injectable]` with `Default::default()` body |
 | Custom resolution logic | `impl Injectable` manually |
 | Endpoint DI | `#[inject]` in `#[get]`/`#[post]` etc. |
 | General function DI | `#[use_inject]` + `#[inject]` |
@@ -690,43 +725,55 @@ DiError::Authentication(String)              // Maps to HTTP 401
 
 ---
 
-## Newtype Pattern for DI Uniqueness
+## Provider Identity Patterns
 
-Reinhardt DI uses `TypeId` as the sole registry key — one type maps to exactly one factory. If two factories return the same type, the second silently overwrites the first.
+In 0.3.x, provider identity should be explicit when a value type has more than
+one meaning. Prefer `#[injectable_key]` with `FactoryOutput<K, T>` for provider
+functions. Newtype wrappers are still useful when the wrapper type is part of
+your domain model or makes call sites clearer.
 
-**Always wrap configuration values and generic types in newtype structs:**
+**Use keys for multiple providers that produce the same value type:**
 
 ```rust
-// BAD: Vec<String> is too generic — will conflict if registered elsewhere
-#[injectable_factory(scope = "singleton")]
+use reinhardt::di::{Depends, FactoryOutput, injectable, injectable_key};
+
+// BAD: Vec<String> is too generic and can conflict if registered elsewhere
+#[injectable(scope = "singleton")]
 async fn create_allowed_origins() -> Vec<String> {
     vec!["https://example.com".to_string()]
 }
 
-// GOOD: Newtype gives a unique TypeId
-pub struct AllowedOrigins(pub Vec<String>);
+// GOOD: the key identifies this provider while the value remains Vec<String>
+#[injectable_key]
+struct AllowedOrigins;
 
-#[injectable_factory(scope = "singleton")]
-async fn create_allowed_origins() -> AllowedOrigins {
-    AllowedOrigins(vec!["https://example.com".to_string()])
+#[injectable(scope = "singleton")]
+async fn create_allowed_origins() -> FactoryOutput<AllowedOrigins, Vec<String>> {
+    FactoryOutput::new(vec!["https://example.com".to_string()])
+}
+
+async fn handler(
+    #[inject] origins: Depends<AllowedOrigins, Vec<String>>,
+) {
+    // ...
 }
 ```
 
 ### Why This Matters
 
-| Without newtype | With newtype |
-|-----------------|--------------|
-| Silent overwrite on duplicate registration | Compile-time uniqueness guarantee |
-| `Depends<Vec<String>>` — ambiguous intent | `Depends<AllowedOrigins>` — self-documenting |
-| Errors discovered at runtime | Type misuse caught at compile time |
+| Without explicit identity | With keyed identity |
+|---------------------------|---------------------|
+| Duplicate registration panics at startup | Distinct providers can share `T` safely |
+| `Depends<Vec<String>>` — ambiguous intent | `Depends<AllowedOrigins, Vec<String>>` — self-documenting |
+| Provider meaning hidden in function names | Provider meaning encoded in the DI type |
 
-### When to Use Newtypes
+### When to Use Keys
 
 - **Primitive wrappers**: `String`, `u32`, `bool` used as configuration values
 - **Generic collections**: `Vec<T>`, `HashMap<K, V>` used as shared state
 - **Common library types**: Types from external crates that multiple factories might produce
 
-### When Newtypes Are NOT Needed
+### When Keys Are NOT Needed
 
 - **Domain-specific structs**: `UserService`, `DatabaseConnection` — already unique types
 - **Types with a single factory**: If only one factory ever produces the type, there is no conflict risk

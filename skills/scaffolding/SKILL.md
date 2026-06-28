@@ -1,7 +1,7 @@
 ---
 name: scaffolding
 description: Use when creating a new reinhardt project or adding an app - guides feature flag selection, template type, database backend, and authentication setup
-versions: ["0.1.x", "0.2.0"]
+versions: ["0.1.x", "0.2.x", "0.3.x"]
 ---
 
 # Reinhardt Project Scaffolding
@@ -17,7 +17,7 @@ Guide developers through creating new reinhardt-web projects and adding apps wit
 ## Prerequisites
 
 - Rust toolchain installed (edition 2024, >= 1.94.0)
-- `reinhardt-admin` CLI available — install with `cargo install reinhardt-admin-cli --version "0.2.0"`
+- `reinhardt-admin` CLI available — install the target line, e.g. `cargo install reinhardt-admin-cli --version "0.3.0"`
 - For database features: Docker Desktop running (needed for TestContainers)
 
 ## Workflow
@@ -41,6 +41,9 @@ Guide developers through creating new reinhardt-web projects and adding apps wit
    # Equivalent canonical form
    reinhardt-admin startproject <name> --template rest
    reinhardt-admin startproject <name> --template pages
+
+   # Pin the generated project to the 0.3 line when validating 0.3.x behavior
+   reinhardt-admin startproject <name> --template pages --reinhardt-version "0.3.0"
    ```
 
    Note: the legacy `-t restful|mtv` / `--template-type` flag was removed in rc.18 — use `--with-pages`/`--with-rest` (or `--template rest|pages`) instead.
@@ -71,6 +74,8 @@ Guide developers through creating new reinhardt-web projects and adding apps wit
 - If generated templates contain `mod.rs` files, convert them to the new module system
 - ALL code comments must be in English
 - Use `pub use` for explicit re-exports, NEVER `pub use module::*`
+- In 0.3.x Pages apps, expect app-local split modules (`client/`, `server/`, `services/client.rs`, `services/server.rs`, `urls/client_router.rs`, `urls/server_router.rs`) and preserve generated empty directories with `.gitkeep`
+- Do not keep obsolete app-local `pages.rs`, `client/pages`, `urls/server_urls.rs`, or broad project-level `shared/forms.rs` / `shared/types.rs` unless the project still has hand-written cross-app DTOs there
 
 ## Cross-Domain References
 

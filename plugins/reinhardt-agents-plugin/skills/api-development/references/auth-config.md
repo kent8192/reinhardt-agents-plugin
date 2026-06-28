@@ -23,18 +23,18 @@ JWT is the verified production pattern, confirmed in use by the reinhardt-cloud 
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.2.0", features = ["auth-jwt", "argon2-hasher"] }
+reinhardt = { version = "0.3.0", features = ["auth-jwt", "argon2-hasher"] }
 ```
 
 ### Configuration
 
-Use `#[injectable_factory]` to create `JwtConfig` from `ProjectSettings`:
+Use `#[injectable]` to create `JwtConfig` from `ProjectSettings`:
 
 ```rust
 use reinhardt::auth::jwt::{JwtConfig, Algorithm};
 use reinhardt::di::prelude::*;
 
-#[injectable_factory(scope = "singleton")]
+#[injectable(scope = "singleton")]
 async fn jwt_config(#[inject] settings: Depends<ProjectSettings>) -> JwtConfig {
     JwtConfig {
         secret_key: settings.jwt_secret_key.clone(),
@@ -84,14 +84,14 @@ pub async fn get_profile(
 }
 ```
 
-#### AuthUser<T> (Full User Model)
+#### CurrentUser<T> (Full User Model)
 
-`AuthUser<T>` resolves the full user model from the auth token:
+`CurrentUser<T>` resolves the full user model from the auth token or session:
 
 ```rust
 #[get("/admin/dashboard/", name = "admin_dashboard")]
 pub async fn admin_dashboard(
-    #[inject] reinhardt::AuthUser(user): reinhardt::AuthUser<User>,
+    #[inject] reinhardt::CurrentUser(user): reinhardt::CurrentUser<User>,
 ) -> ViewResult<Response> {
     if !user.is_staff {
         return Err(AppError::Authentication("Admin access required".into()));
@@ -124,18 +124,18 @@ pub async fn login(username: String, password: String) -> Result<AuthResponse, S
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.2.0", features = ["auth-session", "sessions", "argon2-hasher"] }
+reinhardt = { version = "0.3.0", features = ["auth-session", "sessions", "argon2-hasher"] }
 ```
 
 ### Configuration
 
-Use `#[injectable_factory]` to create `SessionConfig` from `ProjectSettings`:
+Use `#[injectable]` to create `SessionConfig` from `ProjectSettings`:
 
 ```rust
 use reinhardt::sessions::{SessionConfig, SessionEngine};
 use reinhardt::di::prelude::*;
 
-#[injectable_factory(scope = "singleton")]
+#[injectable(scope = "singleton")]
 async fn session_config(#[inject] settings: Depends<ProjectSettings>) -> SessionConfig {
     SessionConfig {
         engine: SessionEngine::Database, // or Redis, Cookie
@@ -250,7 +250,7 @@ impl ViewSet for UserViewSet {
 
 // On a function-based view (via middleware)
 #[permission(IsAdminUser)]
-pub async fn admin_dashboard(request: Request, auth: AuthUser) -> Response {
+pub async fn admin_dashboard(request: Request, auth: CurrentUser<User>) -> Response {
     // Only staff users reach here
     Response::json(serde_json::json!({ "status": "ok" }))
 }

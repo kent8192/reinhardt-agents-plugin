@@ -25,7 +25,8 @@ Run through this checklist after implementing a feature to verify all layers are
 ## Service Layer
 
 - [ ] Service struct defined with dependency fields
-- [ ] `#[injectable_factory]` macro applied
+- [ ] `#[injectable]` macro applied
+- [ ] `#[injectable_key]` / `FactoryOutput<K, T>` used when provider output type is not unique
 - [ ] Constructor receives all dependencies via injection
 - [ ] Methods return domain types, not ORM models
 - [ ] Error handling uses domain error types (not HTTP status codes)

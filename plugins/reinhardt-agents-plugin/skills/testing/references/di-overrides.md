@@ -1,16 +1,19 @@
-# DI Mock Fixtures Reference (rc.29+)
+# DI Mock Fixtures Reference
 
-The DI testing kit ships in rc.29 as an additive, feature-gated override API for the
-global `DependencyRegistry`, plus ergonomics on top of it in `reinhardt-testkit` and a
-proc-macro crate `reinhardt-testkit-macros`. (#4297)
+The DI testing kit provides a feature-gated override API for dependency
+factories, plus ergonomics in `reinhardt-testkit` and the
+`reinhardt-testkit-macros` proc-macro crate. It was introduced in the rc.29
+cycle and remains the supported override path for 0.2.x and 0.3.x apps. (#4297)
 
 ## Why
 
-`#[injectable_factory]` and `#[injectable]` register factories into a global
-`OnceLock<DependencyRegistry>`. Before rc.29, tests had no safe way to swap a
-registered factory without writing `unsafe` registry-reset code or pre-seeding
-`SingletonScope` (which only works for Singleton/Request scopes). The DI testing kit
-fixes that with a Drop-guarded override API. (#4297)
+`#[injectable]` provider functions register factories into a global
+`OnceLock<DependencyRegistry>` (`#[injectable_factory]` may still appear in
+0.2-era code, but is a deprecated 0.3 compatibility alias). Older projects had
+no safe way to swap a registered factory without writing `unsafe`
+registry-reset code or pre-seeding `SingletonScope` (which only works for
+Singleton/Request scopes). The DI testing kit fixes that with a Drop-guarded
+override API. (#4297)
 
 ## Feature Flag
 
@@ -18,11 +21,13 @@ The override APIs are gated behind the `testing` feature on `reinhardt-di` and a
 re-exported through `reinhardt-testkit`. Use the `reinhardt` facade with the `test`
 feature in dev-dependencies; do not enable `testing` outside of test builds. (#4297)
 
-## `#[serial(di_registry)]` is MANDATORY
+## `#[serial(di_registry)]` Scope
 
-All tests that touch the override API MUST be annotated with `#[serial(di_registry)]`
-from `serial_test`. The global `DependencyRegistry` is shared process-wide; running
-override tests concurrently produces non-deterministic results. (#4297)
+0.1.x tests that touch the global override API MUST be annotated with
+`#[serial(di_registry)]` from `serial_test`. In 0.2.x and 0.3.x,
+`injection_context_with_di_overrides` creates an isolated per-context registry,
+so DI override tests can run in parallel unless they mutate some other global
+state. (#4297)
 
 This requirement is documented in `instructions/TESTING_STANDARDS.md` (TI-8) and
 `crates/reinhardt-testkit/README.md`. (#4297)
@@ -131,7 +136,7 @@ Compile-time behavior is pinned by trybuild UI tests in
 
 ```toml
 [dev-dependencies]
-reinhardt = { version = "0.2.0", features = ["test"] }
+reinhardt = { version = "0.3.0", features = ["test"] }
 rstest = "0.23"
 serial_test = "3"
 tokio = { version = "1", features = ["full"] }
@@ -142,17 +147,18 @@ via `reinhardt-testkit`; you do NOT need to add it as a direct dev-dependency. (
 
 ## Checklist
 
-- [ ] Test is annotated with `#[serial(di_registry)]` **(0.1.x only — not required in 0.2.x)**
+- [ ] Test is annotated with `#[serial(di_registry)]` only when required by the
+      target line (`0.1.x` DI registry overrides or other global state)
 - [ ] `DiOverrides`/`OverrideGuard` is bound to a `let` binding that outlives the
       assertions (use `_di`, never `_`)
 - [ ] Override kind in the macro is one of `singleton` / `transient`
 - [ ] The `testing` feature is enabled only in dev/test builds
 
-## Version Differences (0.2.x)
+## Version Differences (0.2.x / 0.3.x)
 
 ### #[serial(di_registry)] No Longer Required
 
-In 0.2.x, `injection_context_with_di_overrides` creates an isolated per-context `DependencyRegistry` for each test. This eliminates the need for `#[serial(di_registry)]` — DI override tests can run in parallel without interfering with each other's state.
+In 0.2.x and 0.3.x, `injection_context_with_di_overrides` creates an isolated per-context `DependencyRegistry` for each test. This eliminates the need for `#[serial(di_registry)]` for DI overrides themselves — tests can run in parallel without interfering with each other's DI registrations.
 
 ```rust
 // 0.1.x — serial annotation required
@@ -162,7 +168,7 @@ async fn test_with_mock_service() {
     // ...
 }
 
-// 0.2.x — parallel execution safe
+// 0.2.x / 0.3.x — parallel execution safe
 #[rstest]
 async fn test_with_mock_service() {
     // injection_context_with_di_overrides creates isolated registry

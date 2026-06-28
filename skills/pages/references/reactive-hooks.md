@@ -107,13 +107,11 @@ set_count(5);
 
 | Hook | Signature | Description |
 |------|-----------|-------------|
-| `use_effect` | `use_effect(closure)` | Side effect (async-safe) |
-| `use_layout_effect` | `use_layout_effect(closure)` | Synchronous effect before paint |
-| `use_effect_event` | `use_effect_event(closure) -> Callback<EventArg, ()>` | Event handler that reads latest values |
-| `use_effect_event_with` | `use_effect_event_with(closure) -> Callback<Args, Ret>` | Generic event handler variant |
+| `use_effect` | `use_effect(deps, closure)` | Side effect (async-safe) |
+| `use_layout_effect` | `use_layout_effect(deps, closure)` | Synchronous effect before paint |
 
 ```rust
-use_effect(move || {
+use_effect([count], move || {
     // Runs when dependencies change
     log!("Count is: {}", count.get());
 });
@@ -126,9 +124,9 @@ use_effect(move || {
 
 | Hook | Signature | Description |
 |------|-----------|-------------|
-| `use_memo` | `use_memo(closure) -> Memo<T>` | Cached computation |
-| `use_callback` | `use_callback(closure) -> Callback<EventArg, ()>` | Stable event callback |
-| `use_callback_with` | `use_callback_with(closure) -> Callback<Args, Ret>` | Generic stable callback |
+| `use_memo` | `use_memo(deps, closure) -> Memo<T>` | Cached computation |
+| `use_callback` | `use_callback(deps, closure) -> Callback<EventArg, ()>` | Stable event callback |
+| `use_callback_with` | `use_callback_with(deps, closure) -> Callback<Args, Ret>` | Generic stable callback |
 | `use_deferred_value` | `use_deferred_value(signal) -> Signal<T>` | Deferred update for low-priority UI |
 
 ### Ref and Identity Hooks
@@ -186,15 +184,10 @@ Async data loading with reactive dependencies.
 #[cfg(wasm)]
 {
     let user_id = Signal::new(1);
-    let user = create_resource(move || async move {
-        get_user(user_id.get()).await
-    });
+    let user = use_resource(fetch_user, (user_id,));
 
-    // With dependencies
-    let user = create_resource_with_deps(
-        move || user_id.get(),
-        |id| async move { get_user(id).await },
-    );
+    // Mount-only loading
+    let current_user = use_resource(fetch_current_user, ());
 
     // Check state
     match user.state().get() {
@@ -399,3 +392,10 @@ In 0.2.x, `{expr}`, `if`, and `for` inside `page!` are unconditionally wrapped i
 ### Reactive and ReactiveIf Clone
 
 `Reactive` and `ReactiveIf` now implement `Clone` via `Arc<dyn Fn()>` in 0.2.x (previously they were not cloneable). This enables passing reactive nodes through more component composition patterns.
+
+## Version Differences (0.3.x)
+
+- `create_resource(fetcher)` is removed; use `use_resource(fetcher, ())`.
+- `create_resource_with_deps(fetcher, deps)` is removed; use `use_resource(fetcher, deps)`.
+- `use_effect_event` and `use_effect_event_with` are removed; use `use_callback` / `use_callback_with` or read non-dependency values with `.get_untracked()` inside the effect.
+- Shared Pages modules should rely on documented inert native/WASM stubs instead of broad call-site `#[cfg]` workarounds.

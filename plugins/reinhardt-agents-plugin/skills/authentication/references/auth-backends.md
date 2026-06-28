@@ -133,7 +133,7 @@ pub enum JwtError {
 use reinhardt::auth::jwt::{JwtConfig, Algorithm};
 use reinhardt::di::prelude::*;
 
-#[injectable_factory(scope = "singleton")]
+#[injectable(scope = "singleton")]
 async fn jwt_config(#[inject] settings: Depends<ProjectSettings>) -> JwtConfig {
     JwtConfig {
         secret_key: settings.jwt_secret_key.clone(),
@@ -245,7 +245,7 @@ pub struct SessionConfig {
 use reinhardt::sessions::{SessionConfig, SessionEngine};
 use reinhardt::di::prelude::*;
 
-#[injectable_factory(scope = "singleton")]
+#[injectable(scope = "singleton")]
 async fn session_config(#[inject] settings: Depends<ProjectSettings>) -> SessionConfig {
     SessionConfig {
         engine: SessionEngine::Database,

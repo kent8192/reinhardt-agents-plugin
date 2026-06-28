@@ -47,7 +47,7 @@ use reinhardt::auth::prelude::*;
 #[get("/admin/", name = "admin_panel")]
 pub async fn admin_panel(
     _guard: guard!(IsAdminUser & IsActiveUser),
-    #[inject] AuthUser(user): AuthUser<User>,
+    #[inject] CurrentUser(user): CurrentUser<User>,
 ) -> ViewResult<Response> {
     // Only active admins reach here
 }

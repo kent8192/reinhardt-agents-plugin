@@ -1,7 +1,7 @@
 ---
 name: admin
 description: Use when setting up or customizing the reinhardt admin panel - covers AdminSite configuration, ModelAdmin registration, and the #[admin] macro
-versions: ["0.1.x", "0.2.0"]
+versions: ["0.1.x", "0.2.x", "0.3.x"]
 ---
 
 # Reinhardt Admin Panel
@@ -38,6 +38,9 @@ Guide developers through setting up and customizing the reinhardt admin panel fo
 - Use `admin_routes_with_di` for DI-compatible admin routing
 - Mount admin at `/admin/` and static files at `/static/admin/`
 - Feature flag: `admin` must be enabled in Cargo.toml
+- In 0.3.x apps, mount admin only from the server-side router/module path and keep Pages client modules cfg-clean
+- If admin auth touches the full current user, use `CurrentUser<T>`; legacy `AuthUser<T>` is removed in 0.3.x
+- When admin setup depends on injected services, follow the DI skill's 0.3 keyed provider rules instead of registering duplicate value-type providers
 
 ## Dynamic References
 

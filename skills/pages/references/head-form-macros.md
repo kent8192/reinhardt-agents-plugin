@@ -288,10 +288,10 @@ pub async fn login(
     Ok(AuthResponse { success: true, user: Some(user.into()) })
 }
 
-// AuthUser extractor via DI
+// CurrentUser extractor via DI
 #[server_fn]
 pub async fn me(
-    #[inject] reinhardt::AuthUser(user): reinhardt::AuthUser<User>,
+    #[inject] reinhardt::CurrentUser(user): reinhardt::CurrentUser<User>,
 ) -> Result<UserInfo, ServerFnError> {
     Ok(UserInfo::from(&user))
 }
