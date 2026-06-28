@@ -131,10 +131,8 @@ pub enum JwtError {
 // reinhardt = { version = "...", features = ["auth-jwt", "argon2-hasher"] }
 
 use reinhardt::auth::jwt::{JwtConfig, Algorithm};
-use reinhardt::di::prelude::*;
 
-#[injectable_factory(scope = "singleton")]
-async fn jwt_config(#[inject] settings: Depends<ProjectSettings>) -> JwtConfig {
+fn jwt_config(settings: &ProjectSettings) -> JwtConfig {
     JwtConfig {
         secret_key: settings.jwt_secret_key.clone(),
         algorithm: Algorithm::HS256,
@@ -208,13 +206,12 @@ pub struct SessionAuthConfig {
     pub enforce_csrf: bool,
 }
 
-pub struct SessionConfig {
-    pub engine: SessionEngine,
+pub struct SessionSettings {
     pub cookie_name: String,
-    pub cookie_age: Duration,
+    pub cookie_age_secs: Option<u64>,
     pub cookie_secure: bool,
     pub cookie_httponly: bool,
-    pub cookie_samesite: SameSite,
+    pub cookie_samesite: String,
 }
 ```
 
@@ -242,19 +239,10 @@ pub struct SessionConfig {
 // Cargo.toml
 // reinhardt = { version = "...", features = ["auth-session", "sessions", "argon2-hasher"] }
 
-use reinhardt::sessions::{SessionConfig, SessionEngine};
-use reinhardt::di::prelude::*;
+use reinhardt_auth::{sessions::config::SessionConfig, SessionSettings};
 
-#[injectable_factory(scope = "singleton")]
-async fn session_config(#[inject] settings: Depends<ProjectSettings>) -> SessionConfig {
-    SessionConfig {
-        engine: SessionEngine::Database,
-        cookie_name: "sessionid".to_string(),
-        cookie_age: Duration::from_secs(60 * 60 * 24 * 14), // 2 weeks
-        cookie_secure: settings.is_production(),
-        cookie_httponly: true,
-        cookie_samesite: SameSite::Lax,
-    }
+fn session_config(settings: &ProjectSettings) -> SessionConfig {
+    settings.auth_session.to_config()
 }
 ```
 

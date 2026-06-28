@@ -20,8 +20,10 @@ Called by the migration skill with:
 Before analysis, determine the version families involved:
 
 - **0.1.x family**: `0.1.0-rc.*`, `0.1.0`, `0.1.1`, `0.1.2`, `0.1.3` — legacy stable series
-- **0.2.x family**: `0.2.0-rc.*`, `0.2.0` — stable 0.2 line with breaking changes from 0.1.x
-- **Cross-family upgrade** (0.1.x → 0.2.0): Flag as a **major version migration** with extensive breaking changes. Use the migration skill's "Major Version Upgrade: 0.1.x → 0.2.0" section and milestone #1 for the comprehensive migration path.
+- **0.2.x family**: `0.2.0-rc.*`, `0.2.0`, and later `0.2.*` patches — stable 0.2 line with breaking changes from 0.1.x
+- **0.3.x family**: `0.3.0-alpha.*`, `0.3.0-rc.*`, `0.3.0`, and later `0.3.*` patches — current major stable line
+- **Cross-family upgrade** (0.1.x → 0.2.x): Flag as a **major version migration** with extensive breaking changes. Use the migration skill's "Major Version Upgrade: 0.1.x → 0.2.x" section and `reinhardt/instructions/MIGRATION_0.2.md` for the comprehensive migration path.
+- **Cross-family upgrade** (0.2.x → 0.3.x): Flag as a **major version migration**. Use `../skills/migration/references/0.3-upgrade.md` and prefer `reinhardt/instructions/MIGRATION_0.3.md` when the local source checkout is available.
 
 ## Analysis Steps
 
@@ -36,6 +38,12 @@ Execute these steps in order:
 5. Also note **Added** (informational)
 
 Reference: `../skills/migration/references/changelog-format.md`
+
+For 0.2.x → 0.3.0 upgrades, read `reinhardt/instructions/MIGRATION_0.3.md`
+before CHANGELOG extraction when it exists. If it is unavailable, read
+`../skills/migration/references/0.3-upgrade.md` and treat it as the fallback
+source map for removed APIs, Pages layout changes, DI identity changes, routing
+changes, model-info relation shape changes, and migration verification.
 
 ### Step 2: GitHub Context Enrichment
 
@@ -132,3 +140,5 @@ Return a structured report in this format:
 - If `gh` CLI fails, note the error and continue with CHANGELOG-only analysis
 - For 0.1.x → 0.2.x upgrades, include ALL breaking changes from the "Major Version Upgrade" reference in the report, even if the user's code doesn't directly use the affected APIs (they may use them transitively)
 - For 0.1.x → 0.2.x upgrades, also check `reinhardt/announcements/v0.2.0-rc.N.md` for 0.2.x-series release notes
+- For 0.2.x → 0.3.0 upgrades, include ALL removed APIs and layout migrations from `MIGRATION_0.3.md` or `0.3-upgrade.md`, even when the app scan only finds a subset
+- For 0.2.x → 0.3.0 upgrades, explicitly scan for `AuthUser`, `create_resource*`, `use_effect_event*`, raw `ServerRouter` function/route registration, `FunctionHandler`, `DependsResult`, `DependsOption`, `pages.rs`, `server_urls`, `client/pages`, and broad `src/shared/forms.rs` / `src/shared/types.rs` usage

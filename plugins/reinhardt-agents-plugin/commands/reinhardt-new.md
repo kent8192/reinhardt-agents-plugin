@@ -54,4 +54,4 @@ After collecting all preferences, invoke the scaffolding skill to execute the pr
 
 - Do NOT execute any commands before collecting all preferences
 - Always confirm the full configuration with the user before executing
-- If `reinhardt-admin` is not installed, guide the user to install the current stable CLI: `cargo install reinhardt-admin-cli --version "0.2.0"`
+- If `reinhardt-admin` is not installed, guide the user to install the current stable CLI: `cargo install reinhardt-admin-cli`

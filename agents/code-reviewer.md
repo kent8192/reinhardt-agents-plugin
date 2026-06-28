@@ -52,9 +52,10 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] Appropriate scoping (request-scoped vs singleton)
 - [ ] No circular dependency risk
 - [ ] `#[inject]` used correctly in handlers
-- [ ] No duplicate `TypeId` registrations (use newtype wrappers for same-type multiple registrations)
-- [ ] No `#[injectable]` or `#[injectable_factory]` for framework-managed types (`reinhardt::*`) — use newtype wrapper
-- [ ] Prefer `try_unwrap()` over `into_inner()` for non-Clone types in `Depends<T>` / `Injected<T>`
+- [ ] No duplicate provider identities; use `#[injectable_key]` + `FactoryOutput<K, T>` when multiple providers return the same value type
+- [ ] No `#[injectable]` or `#[injectable_factory]` for framework-managed types (`reinhardt::*`) — use application-owned wrapper/key types
+- [ ] Prefer `try_unwrap()` over `into_inner()` for non-Clone values wrapped in `Depends<K, T>`
+- [ ] **(0.3.x)** No new `#[injectable_factory]`, `DependsResult`, or `DependsOption` usage — use `#[injectable]`, `FactoryOutput<K, T>`, and `Depends<K, T>`
 - [ ] `cargo run --bin check-di -- --validate` passes
 
 ### API Design
@@ -68,6 +69,8 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] **(0.2.x)** No usage of removed `#[url_patterns]` macro — use `#[routes]` instead
 - [ ] **(0.2.x)** No usage of removed `named_route*` methods on `ClientRouter` — use `route()` with mandatory `name` first arg
 - [ ] **(0.2.x)** No usage of removed `SecurityConfig` — use `SecurityMiddleware` builder methods
+- [ ] **(0.3.x)** No raw `ServerRouter::function`, `.route`, or `.handler_with_method` registration — use endpoint macros plus `.endpoint(...)`
+- [ ] **(0.3.x)** No legacy `AuthUser<T>` extraction — use `CurrentUser<T>`
 - [ ] OIDC providers other than the bundled four (Google, GitHub, Apple, Microsoft) are wired via `GenericOidcProvider` (rc.23+) — flag any from-scratch `impl OAuthProvider` for OIDC-compliant IdPs
 - [ ] REST versioning configured via the `[rest_versioning]` settings fragment (rc.29+); flag any remaining `REINHARDT_VERSIONING_*` env-var reads or calls to `VersioningConfig::from_env`
 
@@ -78,7 +81,7 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] Assertions are strict (`assert_eq!` preferred)
 - [ ] Fixtures used for shared setup
 - [ ] `#[serial]` used for global state tests
-- [ ] DI override tests (`with_di_overrides!`, `register_override`) carry `#[serial(di_registry)]` **(0.1.x)** and depend on the `testing` feature (rc.29+) — in 0.2.x `#[serial(di_registry)]` is no longer required due to per-context registry isolation
+- [ ] DI override tests (`with_di_overrides!`, `register_override`) depend on the `testing` feature; keep `#[serial(di_registry)]` only for 0.1.x registry overrides or other global state because 0.2.x / 0.3.x use per-context registry isolation
 
 ### Documentation & Style
 

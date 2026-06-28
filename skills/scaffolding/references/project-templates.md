@@ -137,14 +137,16 @@ src/apps/<name>/
 ├── views.rs                 # #[cfg(native)]
 ├── serializers.rs           # #[cfg(native)]
 ├── admin.rs                 # #[cfg(native)]
-├── urls.rs                  # Mounts the unified urls/ submodule tree
-└── urls/                    # rc.19: server/client/ws routing modes are symmetric here
-    ├── server_urls.rs       # ServerRouter + #[get]/#[post]/etc. handlers
-    ├── client_urls.rs       # Client-side route table
-    └── ws_urls.rs           # WebSocketRouter (returns WebSocketRouter — rc.19 fix)
+├── urls.rs                  # Mounts target-specific router modules
+└── urls/
+    ├── server_router.rs     # ServerRouter + endpoint macros behind #[cfg(server)]
+    └── client_router.rs     # Client-side route table behind #[cfg(client)]
 ```
 
-> **Breaking change (rc.19):** `ws_url_resolvers` moved from `crate::apps::<app>::ws_urls::*` to `crate::apps::<app>::urls::ws_urls::*`. Existing apps with a top-level `src/apps/<app>/ws_urls.rs` must move it under `src/apps/<app>/urls/`. See the migration skill for the per-app `git mv` recipe.
+> **0.3.x migration:** legacy `server_urls.rs`, `client_urls.rs`, app-local
+> `pages.rs`, and `client/pages` wrappers should be migrated to
+> `server_router.rs`, `client_router.rs`, and route-backed components under
+> `client/components/`.
 
 ## Generated App Structure
 

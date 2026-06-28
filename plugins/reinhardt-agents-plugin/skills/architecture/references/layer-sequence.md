@@ -99,23 +99,23 @@ Implement business logic as an injectable service.
 1. Create service file: `src/<app>/services/<entity>.rs`
 2. Define service struct with dependencies as fields
 3. Implement business methods
-4. Register with DI using `#[injectable_factory]`
+4. Register with DI using `#[injectable]`
 
 **Example:**
 
 ```rust
 use reinhardt::prelude::*;
 
+#[injectable_key]
+struct PrimaryDatabase;
+
+#[injectable(scope = "request")]
 pub struct ProductService {
-    db: Arc<DatabasePool>,
+    #[inject]
+    db: Depends<PrimaryDatabase, DatabaseConnection>,
 }
 
-#[injectable_factory]
 impl ProductService {
-    pub fn new(db: Arc<DatabasePool>) -> Self {
-        Self { db }
-    }
-
     pub async fn create(&self, input: ProductCreateInput) -> Result<ProductSerializer, AppError> {
         let product = Product {
             id: None,
@@ -123,13 +123,13 @@ impl ProductService {
             description: input.description,
             created_at: None,
         };
-        let saved = Product::objects(&self.db).create(product).await?;
+        let saved = Product::objects().create(product).await?;
         Ok(ProductSerializer::from_model(&saved))
     }
 
     pub async fn get_by_id(&self, id: Uuid) -> Result<ProductSerializer, AppError> {
-        let product = Product::objects(&self.db)
-            .get(id)
+        let product = Product::objects()
+            .get(id, &*self.db)
             .await
             .map_err(|_| AppError::NotFound("Product not found".into()))?;
         Ok(ProductSerializer::from_model(&product))
@@ -140,7 +140,8 @@ impl ProductService {
 **Checklist:**
 
 - [ ] Service struct defined with injected dependencies
-- [ ] `#[injectable_factory]` applied
+- [ ] `#[injectable]` applied
+- [ ] `#[injectable_key]` / `FactoryOutput<K, T>` used if the provider output type is not unique
 - [ ] Returns domain types / serializers, not raw models
 - [ ] Error handling uses domain error types
 - [ ] No HTTP concerns (status codes, headers) in service

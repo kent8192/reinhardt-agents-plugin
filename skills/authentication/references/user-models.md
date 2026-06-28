@@ -276,7 +276,7 @@ pub trait PermissionsMixin {
 
 | Feature | Default | Purpose |
 |---------|---------|---------|
-| `params` | enabled | `AuthUser<U>`, `AuthInfo`, `Guard<P>` extractors |
+| `params` | enabled | `CurrentUser<U>`, `AuthInfo`, `Guard<P>` extractors |
 | `argon2-hasher` | disabled | Argon2id password hashing, `DefaultUser` |
 | `database` | disabled | Database-backed user/group storage |
 

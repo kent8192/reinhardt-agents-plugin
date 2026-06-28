@@ -2,17 +2,25 @@
 
 ## DatabaseConnection Injection
 
-`DatabaseConnection` is automatically available as an injectable type when the database feature is enabled. It provides a connection from the pool for the current request.
+`DatabaseConnection` is available from the DI registry when the database feature
+is enabled. In 0.3.x, examples that consume it through `Depends` assume a keyed
+provider such as `PrimaryDatabase`:
+
+```rust
+#[injectable_key]
+struct PrimaryDatabase;
+```
 
 ```rust
 use reinhardt::db::prelude::*;
 use reinhardt::di::prelude::*;
+use reinhardt::CurrentUser;
 use reinhardt::views::prelude::*;
 
 #[get("/users/{id}/", name = "user_retrieve")]
 pub async fn get_user(
     Path(id): Path<i64>,
-    #[inject] db: Depends<DatabaseConnection>,
+    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
 ) -> ViewResult<Response> {
     let user = User::objects()
         .filter(User::id.eq(id))
@@ -32,7 +40,7 @@ pub async fn get_user(
 #[post("/transfers/", name = "transfer_create")]
 pub async fn transfer_funds(
     Json(data): Json<TransferRequest>,
-    #[inject] db: Depends<DatabaseConnection>,
+    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
 ) -> ViewResult<Response> {
 
     // Begin a transaction
@@ -58,9 +66,9 @@ pub async fn transfer_funds(
 }
 ```
 
-## AuthUser Injection
+## CurrentUser Injection
 
-`AuthUser<T>` extracts the authenticated user from the request. It reads the authentication token (JWT, session, etc.) and resolves the user model.
+`CurrentUser<T>` extracts the authenticated user from the request. It reads the authentication token or session state and resolves the user model.
 
 ```rust
 use reinhardt::auth::prelude::*;
@@ -80,15 +88,15 @@ pub async fn get_profile(
 }
 ```
 
-### Full User Model with AuthUser<T>
+### Full User Model with CurrentUser<T>
 
-`AuthUser<T>` resolves the full user model from the auth token:
+`CurrentUser<T>` resolves the full user model from the auth token or session:
 
 ```rust
 #[delete("/admin/users/{id}/", name = "admin_user_delete")]
 pub async fn delete_user(
     Path(id): Path<i64>,
-    #[inject] reinhardt::AuthUser(admin): reinhardt::AuthUser<User>,
+    #[inject] CurrentUser(admin): CurrentUser<User>,
 ) -> ViewResult<Response> {
     if !admin.is_staff {
         return Err(AppError::Authentication("Admin access required".into()));
@@ -104,17 +112,17 @@ pub async fn delete_user(
 
 ### Optional Authentication
 
-Use `Option<AuthUser<T>>` for endpoints that work for both authenticated and anonymous users:
+Use `Option<CurrentUser<T>>` for endpoints that work for both authenticated and anonymous users:
 
 ```rust
 #[get("/posts/", name = "post_list")]
 pub async fn list_posts(
-    #[inject] auth: Option<reinhardt::AuthUser<User>>,
+    #[inject] auth: Option<CurrentUser<User>>,
 ) -> ViewResult<Response> {
     let mut query = Post::objects().filter(Post::is_published.eq(true));
 
     // Authenticated users see their own drafts too
-    if let Some(reinhardt::AuthUser(user)) = &auth {
+    if let Some(CurrentUser(user)) = &auth {
         query = query.or_filter(Post::author_id.eq(user.id));
     }
 
@@ -138,7 +146,7 @@ use reinhardt::views::prelude::*;
 
 #[get("/cart/", name = "cart_get")]
 pub async fn get_cart(
-    #[inject] session: Depends<Session>,
+    #[inject] session: Session,
 ) -> ViewResult<Response> {
     let cart: Option<Cart> = session.get("cart").await?;
     let body = match cart {
@@ -153,7 +161,7 @@ pub async fn get_cart(
 #[post("/cart/items/", name = "cart_add_item")]
 pub async fn add_to_cart(
     Json(item): Json<CartItem>,
-    #[inject] session: Depends<Session>,
+    #[inject] session: Session,
 ) -> ViewResult<Response> {
     let mut cart: Cart = session
         .get("cart")
@@ -177,9 +185,9 @@ Handlers can receive any combination of injectable types:
 #[post("/orders/", name = "order_create")]
 pub async fn create_order(
     #[inject] AuthInfo(state): AuthInfo,
-    #[inject] db: Depends<DatabaseConnection>,
-    #[inject] email_service: Depends<EmailService>,
-    #[inject] session: Depends<Session>,
+    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
+    #[inject] email_service: EmailService,
+    #[inject] session: Session,
 ) -> ViewResult<Response> {
     let cart: Cart = session
         .get("cart")
@@ -217,7 +225,7 @@ use std::sync::Arc;
 #[injectable(scope = Singleton)]
 pub struct UserRepository {
     #[inject]
-    pool: Depends<DatabaseConnection>,
+    pool: Depends<PrimaryDatabase, DatabaseConnection>,
 }
 
 impl UserRepository {
@@ -262,7 +270,7 @@ impl UserRepository {
 ```rust
 #[get("/users/", name = "user_list")]
 pub async fn list_users(
-    #[inject] user_repo: Depends<UserRepository>,
+    #[inject] user_repo: UserRepository,
 ) -> ViewResult<Response> {
     let users = user_repo.find_active().await?;
     Ok(Response::new(StatusCode::OK)
@@ -273,7 +281,7 @@ pub async fn list_users(
 #[get("/users/by-email/{email}/", name = "user_by_email")]
 pub async fn find_by_email(
     Path(email): Path<String>,
-    #[inject] user_repo: Depends<UserRepository>,
+    #[inject] user_repo: UserRepository,
 ) -> ViewResult<Response> {
     let user = user_repo
         .find_by_email(&email)
@@ -293,9 +301,9 @@ pub async fn find_by_email(
 #[injectable(scope = Singleton)]
 pub struct UserService {
     #[inject]
-    repo: Depends<UserRepository>,
+    repo: UserRepository,
     #[inject]
-    email: Depends<EmailService>,
+    email: EmailService,
 }
 
 impl UserService {
