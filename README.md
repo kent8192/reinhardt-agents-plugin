@@ -28,6 +28,16 @@ This repository ships a Codex marketplace manifest at `.agents/plugins/marketpla
 The marketplace entry points at the installable package under
 `plugins/reinhardt-agents-plugin/`.
 
+The repository root is the source of truth for skills, agents, commands, hooks,
+README/CHANGELOG, and Codex plugin metadata. The installable package under
+`plugins/reinhardt-agents-plugin/` is a synchronized copy kept for marketplace
+installation. Edit the root files first, then run:
+
+```bash
+scripts/sync-packaged-plugin.sh
+scripts/sync-packaged-plugin.sh --check
+```
+
 Enable Codex plugin hooks in `~/.codex/config.toml` before relying on the hook
 integration:
 

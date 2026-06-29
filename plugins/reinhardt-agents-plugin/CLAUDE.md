@@ -39,6 +39,14 @@ guidelines specific to this plugin repo.
 - **MUST**: After editing, run `diff CLAUDE.md AGENTS.md` and confirm only the documented substitutions remain
 - **NEVER**: Commit a change that touches only one of the two files
 
+**Root ↔ Packaged Plugin Sync Policy:**
+
+- The repository root is the source of truth for `skills/`, `agents/`, `commands/`, `hooks/`, `.codex-plugin/`, `README.md`, `CHANGELOG.md`, `CLAUDE.md`, `AGENTS.md`, and `LICENSE`
+- `plugins/reinhardt-agents-plugin/` is the installable Codex package copy used by the marketplace manifest
+- **MUST**: Edit root files first, then run `scripts/sync-packaged-plugin.sh`
+- **MUST**: Before reporting completion, run `scripts/sync-packaged-plugin.sh --check`
+- **NEVER**: Hand-edit only the packaged copy when the same file exists at the repository root
+
 ### Git Workflow
 
 **Commit Policy:**
