@@ -81,11 +81,11 @@ my_project/
 │   └── apps/
 │       └── <app>/
 │           ├── lib.rs           # NO top-level `pub mod ws_urls` (rc.21 fix)
-│           ├── services.rs      # DI service surface entry
+│           ├── services.rs      # Cross-target DI service surface entry
 │           ├── services/
-│           │   └── server.rs    # Keys, FactoryOutput providers, service structs/functions
-│           ├── server.rs        # Server implementation-detail module entry
-│           ├── server/
+│           │   └── server.rs    # Key-visible service APIs plus server-gated providers
+│           ├── server.rs        # Server-only implementation-detail module entry
+│           ├── server/          # Server-only implementation details
 │           │   ├── providers/   # Provider adapters and clients
 │           │   ├── prompts/     # Prompt construction
 │           │   └── repositories/ # Database/repository helpers
@@ -284,9 +284,9 @@ pub mod client;          // WASM client components
 pub mod models;
 #[cfg(native)]
 pub mod serializers;
-#[cfg(native)]
-pub mod services;        // DI surface only: keys, providers, service structs/functions
-pub mod server;          // Server-side helpers (available on both native and WASM)
+pub mod services;        // Cross-target DI surface: keys, stubs, service APIs
+#[cfg(server)]
+pub mod server;          // Server-only implementation details
 pub mod shared;          // Shared types (available on both)
 #[cfg(native)]
 pub mod urls;            // Mounts urls/server_urls.rs, urls/client_urls.rs, urls/ws_urls.rs
@@ -320,6 +320,10 @@ operations there with Reinhardt 0.3 DI shape:
 `#[injectable(scope = "...")] -> FactoryOutput<Key, Service>`, then inject them
 from `#[server_fn]` as `Depends<Key, Service>`.
 
+Keep `services` visible on native and WASM targets so `#[server_fn]` stubs can
+import service keys and service types. Gate only native/server-only provider
+implementations or submodules inside `services/`.
+
 Prefer this DI service surface over composing application behavior from
 utility-function clusters. Use utility functions only for small pure
 transformations that do not need settings, providers, repositories, external
@@ -328,7 +332,9 @@ I/O, lifecycle scoping, or test overrides.
 Keep implementation details outside `services/`. Put provider adapters, prompt
 builders, parsing/conversion helpers, repository/database internals, and pure
 state-transition helpers in app-local `server/` modules such as
-`server/providers`, `server/prompts`, and `server/repositories`.
+`server/providers`, `server/prompts`, and `server/repositories`. Gate these
+implementation-detail modules with `#[cfg(server)]` or `#[cfg(native)]`; leave
+unconditional `server` modules only for cross-target stubs.
 
 **Migration from pre-rc.19 layout:**
 

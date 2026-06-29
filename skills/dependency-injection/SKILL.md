@@ -35,7 +35,7 @@ Guide developers through DI configuration using reinhardt-di, including service 
 ### Integrating with Database/Auth
 
 1. Read `references/di-with-db.md` for database pool and auth injection
-2. Use built-in types: `DatabaseConnection`, `AuthUser<T>`, `Session`
+2. Use built-in types: `DatabaseConnection`, `CurrentUser<T>` on 0.3 (`AuthUser<T>` on older lines), `Session`
 3. These are already injectable — just use `#[inject]` in handlers
 
 ## Important Rules

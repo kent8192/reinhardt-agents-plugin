@@ -175,8 +175,8 @@ pub async fn admin_list_users(
 |------|-------------|
 | `AuthInfo` | Lightweight JWT auth state with `state.user_id()` |
 | `AuthUser<T>` | Full user model resolution from auth token |
-| `Depends<Key, T>` | Keyed shared service from the DI container |
-| `Depends<DatabaseKey, DatabaseConnection>` | Keyed database connection from the pool |
+| `Depends<Key, T>` | Project-local keyed service from the DI container |
+| `Depends<DatabaseConnection>` | Framework-managed database connection from the pool |
 
 ## Generic Views
 
@@ -299,7 +299,7 @@ pub async fn login(
     password: String,
     #[inject] auth: Depends<AuthServiceKey, AuthService>,
 ) -> Result<AuthResponse, ServerFnError> {
-    auth.login(username, password).await.map_err(ServerFnError::from)
+    (*auth).login(username, password).await.map_err(ServerFnError::from)
 }
 
 #[server_fn]
@@ -307,7 +307,7 @@ pub async fn get_user_profile(
     user_id: i64,
     #[inject] profiles: Depends<UserProfileServiceKey, UserProfileService>,
 ) -> Result<UserProfile, ServerFnError> {
-    profiles.get(user_id).await.map_err(ServerFnError::from)
+    (*profiles).get(user_id).await.map_err(ServerFnError::from)
 }
 ```
 
@@ -324,7 +324,7 @@ pub struct AuthServiceKey;
 async fn auth_service(
     #[inject] settings: Depends<AppSettingsKey, AppSettings>,
 ) -> FactoryOutput<AuthServiceKey, AuthService> {
-    FactoryOutput::new(AuthService::from_settings(&settings))
+    FactoryOutput::new(AuthService::from_settings(&*settings))
 }
 ```
 

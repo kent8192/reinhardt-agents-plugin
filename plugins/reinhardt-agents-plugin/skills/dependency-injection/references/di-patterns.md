@@ -58,7 +58,7 @@ async fn novel_generation_service(
     #[inject] settings: Depends<AppSettingsKey, AppSettings>,
 ) -> FactoryOutput<NovelGenerationServiceKey, NovelGenerationService> {
     FactoryOutput::new(NovelGenerationService {
-        provider: LlmProvider::from_settings(&settings),
+        provider: LlmProvider::from_settings(&*settings),
     })
 }
 
@@ -67,7 +67,7 @@ pub async fn generate_novel(
     input: GenerateNovelInput,
     #[inject] service: Depends<NovelGenerationServiceKey, NovelGenerationService>,
 ) -> Result<NovelDraft, ServerFnError> {
-    service.generate(input).await.map_err(ServerFnError::from)
+    (*service).generate(input).await.map_err(ServerFnError::from)
 }
 ```
 
@@ -221,7 +221,7 @@ async fn create_user_service(
     #[inject] repo: Depends<UserRepositoryKey, UserRepository>,
     #[inject] config: AppConfig, // Direct Injectable value when the type itself is the identity.
 ) -> FactoryOutput<UserServiceKey, UserService> {
-    FactoryOutput::new(UserService::new(repo, config))
+    FactoryOutput::new(UserService::from_parts(&*repo, config))
 }
 ```
 
@@ -432,7 +432,7 @@ use reinhardt::views::prelude::*;
 pub async fn list_users(
     #[inject] user_service: Depends<UserServiceKey, UserService>,
 ) -> ViewResult<Response> {
-    let users = user_service.list_active().await?;
+    let users = (*user_service).list_active().await?;
     Ok(Response::new(StatusCode::OK)
         .with_body(json::to_vec(&users)?))
 }
@@ -443,8 +443,8 @@ pub async fn create_user(
     #[inject] user_service: Depends<UserServiceKey, UserService>,
     #[inject] email_service: Depends<EmailServiceKey, EmailService>,
 ) -> ViewResult<Response> {
-    let user = user_service.create(&body).await?;
-    email_service.send_welcome(&user).await?;
+    let user = (*user_service).create(&body).await?;
+    (*email_service).send_welcome(&user).await?;
     Ok(Response::new(StatusCode::CREATED)
         .with_body(json::to_vec(&UserResponse::from(user))?))
 }
@@ -465,8 +465,8 @@ pub async fn process_order(
     #[inject] order_service: Depends<OrderServiceKey, OrderService>,      // Injected from DI context
     #[inject] notification: Depends<NotificationServiceKey, NotificationService>,
 ) -> ViewResult<Response> {
-    let order = order_service.process(&request).await?;
-    notification.send_order_confirmation(&order).await?;
+    let order = (*order_service).process(&request).await?;
+    (*notification).send_order_confirmation(&order).await?;
     Ok(Response::new(StatusCode::OK))
 }
 ```
@@ -530,7 +530,7 @@ pub struct UserServiceKey;
 async fn create_user_service(
     #[inject] config: Depends<AppConfigKey, AppConfig>,
 ) -> FactoryOutput<UserServiceKey, UserService> {
-    FactoryOutput::new(UserService::new(config))
+    FactoryOutput::new(UserService::from_config(&*config))
 }
 
 // Receives T directly when T has its own unique Injectable identity.
@@ -637,14 +637,14 @@ pub struct OrderServiceKey;
 async fn create_user_service(
     #[inject] repo: Depends<UserRepositoryKey, UserRepository>,
 ) -> FactoryOutput<UserServiceKey, UserService> {
-    FactoryOutput::new(UserService::new(repo))
+    FactoryOutput::new(UserService::from_repository(&*repo))
 }
 
 #[injectable(scope = "singleton")]
 async fn create_order_service(
     #[inject] repo: Depends<UserRepositoryKey, UserRepository>,
 ) -> FactoryOutput<OrderServiceKey, OrderService> {
-    FactoryOutput::new(OrderService::new(repo))
+    FactoryOutput::new(OrderService::from_repository(&*repo))
 }
 ```
 
