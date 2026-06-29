@@ -134,6 +134,19 @@ async fn custom_auth() -> CustomAuth {
 }
 ```
 
+### Stateful Provider Registries
+
+If a provider stores state that later operations must observe, register it as a
+singleton or put the state behind shared storage such as `Arc<Mutex<_>>`,
+database rows, Redis, or the real external backend. This applies to fake vector
+stores, fake search indexes, in-memory queues, and provider registries used by
+both indexing and search.
+
+Do not call `ProviderRegistry::from_settings` or an equivalent constructor in
+each service method if that constructor creates a fresh in-memory provider.
+Indexing and lookup paths must share the same backing state in tests and in
+fake mode.
+
 ### `#[inject]` Inside Factories
 
 Parameters marked with `#[inject]` are resolved from the `InjectionContext` before the factory body executes. Use `Depends<T>` for injected dependencies:

@@ -30,6 +30,9 @@ Run through this checklist after implementing a feature to verify all layers are
 - [ ] Methods return domain types, not ORM models
 - [ ] Error handling uses domain error types (not HTTP status codes)
 - [ ] No direct HTTP concerns in service code
+- [ ] Scoped operations apply the same scope to every branch and fallback path
+- [ ] Regeneration/re-indexing paths are idempotent or explicitly reject duplicates
+- [ ] Stateful fake providers share storage across the operations being tested
 
 ## API Layer
 
@@ -58,6 +61,7 @@ Run through this checklist after implementing a feature to verify all layers are
 - [ ] AAA pattern with standard labels
 - [ ] Strict assertions (`assert_eq!`, not `assert!(x.contains(...))`)
 - [ ] Edge cases covered (not found, validation failure, duplicate)
+- [ ] Review-driven regressions cover stale scopes, duplicate generation, split/merge acceptance, reorder validation, streaming formatting, and external-service contracts when those behaviors exist
 
 ## Signal Layer (if applicable)
 

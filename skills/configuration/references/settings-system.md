@@ -174,6 +174,20 @@ let db_config = settings.core.databases.get("default").unwrap();
 let lang = &settings.i18n.language_code;
 ```
 
+## Runtime-Selectable Settings
+
+When configuration changes product behavior, model it as typed settings and
+decide whether users need a UI surface for it. Examples include provider
+selection, model names, callback domains, research scope defaults, and language
+selection.
+
+Guidelines:
+
+- TOML should define defaults and environment overrides.
+- UI state should select among allowed settings when operators or users need to switch behavior at runtime.
+- Cross-process services should receive the selected value in the request or over gRPC/HTTP metadata; do not copy backend constants into the worker.
+- Language-specific prompts or copy should route through `I18nSettings` and message catalogs so Japanese and English paths stay testable.
+
 ## Profile Selection
 
 The `Profile` enum determines which environment-specific TOML file to load:

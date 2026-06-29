@@ -144,6 +144,7 @@ impl ProductService {
 - [ ] Returns domain types / serializers, not raw models
 - [ ] Error handling uses domain error types
 - [ ] No HTTP concerns (status codes, headers) in service
+- [ ] Mutable operations enforce domain invariants before writing: accepted/current version uniqueness, exact sibling reorder lists, scoped searches, and idempotent re-index/regenerate behavior where applicable
 
 ---
 

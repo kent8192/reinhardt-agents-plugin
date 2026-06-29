@@ -68,6 +68,20 @@ let login_form = form! {
 let form_view: Page = login_form.into_page();
 ```
 
+### Dynamic Form State
+
+When a component has user-editable inputs, construct the form with `form!` and
+bind dynamic behavior through `use_form`. Avoid hand-rolling parallel Signals
+for field values, validation status, and submit state unless the form macro
+cannot represent the interaction.
+
+Keep dynamic concerns in the form boundary:
+
+- Field values, validation, disabled state, and submit phase belong to form state.
+- Derived display around the form can use `watch {}` or memoized values.
+- Server submission should target the configured `server_fn` or `action`; do not
+  manually duplicate the request payload in an unrelated event handler.
+
 ### Form-Level Attributes
 
 | Attribute | Type | Required | Description |

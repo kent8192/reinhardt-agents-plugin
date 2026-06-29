@@ -49,6 +49,7 @@ Guide developers through writing high-quality tests using rstest, AAA pattern, r
 - **ALWAYS** clean up test artifacts
 - Use `#[serial(group_name)]` for tests with global state
 - Every test MUST use at least one reinhardt component
+- Add focused regression tests for review-found bugs before broad happy-path expansion
 
 ## Cross-Domain References
 

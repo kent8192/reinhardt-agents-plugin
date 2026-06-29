@@ -29,7 +29,12 @@ Guide developers through building REST API endpoints using reinhardt-rest, reinh
 
 - Every endpoint MUST have appropriate authentication/authorization
 - Use `ModelSerializer` for standard CRUD operations
+- For model-backed DTOs in 0.2.x, prefer the generated `{Model}Info` type plus `Validate`/`#[validate(...)]` over hand-maintained duplicate field shapes
 - Use `reinhardt-query` for custom queries, NEVER raw SQL
+- Scoped endpoints must apply the same target scope to every backend path, including fallback filename, filesystem, and hybrid-search branches
+- `#[server_fn]` is for Pages client RPC; external workers and agent services should use explicit HTTP or gRPC endpoints with configured domains
+- Preserve streamed text exactly unless normalization is part of the product requirement; do not collapse prose with `split_whitespace()`
+- Do not serialize absent typed identifiers as empty strings; drop the item or return an explicit optional/error shape
 - ALL code comments must be in English
 - `#[url_patterns]` is removed in 0.2.x -- use `#[routes]` for all URL registration
 

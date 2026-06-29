@@ -150,6 +150,9 @@ async fn main() {
 - **NEVER** use glob re-exports (`pub use module::*`) except `use super::*` in test modules
 - Maximum nesting depth: 4 levels
 - Use `pub use` in module entry points to control the public API surface
+- Do not keep generated placeholder views or demo components once a real app surface exists.
+- Do not hardcode full route paths in generated links/forms when named route reverse helpers are available.
+- Use descriptive component/module names in templates so generated code is production-shaped from the first edit.
 
 ## App Configuration
 

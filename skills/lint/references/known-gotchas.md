@@ -32,6 +32,29 @@ fn helper() {}
 fn helper() {}
 ```
 
+### Redundant Raw Identifiers
+
+Do not keep `r#ident` syntax unless the raw identifier is actually required for
+a keyword or generated API. If normal `ident` compiles, prefer the normal form.
+
+### Long Fully Qualified Paths
+
+Inside handlers, components, and server functions, import framework/app types at
+the module top instead of repeating long fully qualified paths in signatures and
+expressions. This keeps generated code readable and makes review comments
+target the real API boundary instead of path noise.
+
+---
+
+## TypeScript Agent Services
+
+For TypeScript services that interoperate with Reinhardt Rust clients:
+
+- Prefer named function declarations for exported handlers, fake providers, and gRPC implementations. Avoid exported module-top lambdas when stack traces, gRPC registration, or tests need stable function names.
+- Use extensionless relative imports in Reinhardt agent services unless the local `tsconfig.json` explicitly requires NodeNext `.js` specifiers.
+- Register `@grpc/grpc-js` handlers with the generated lower-camel method names, such as `healthCheck` and `researchForOutline`, not proto PascalCase names.
+- Keep optional numeric/string identifiers optional or omit invalid evidence; do not serialize missing IDs as empty strings when the Rust client parses them as typed IDs.
+
 ---
 
 ## Rustdoc

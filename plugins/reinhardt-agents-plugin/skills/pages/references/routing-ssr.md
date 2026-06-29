@@ -122,6 +122,10 @@ router::with_router(|r| {
 let url = router.reverse("user_detail", &[("id", "42")]).unwrap();
 ```
 
+Use reverse lookup when generating `href`, `action`, and `formaction` values
+for named routes. Hardcoded paths drift when route prefixes or path parameters
+change.
+
 ### Route Parameters
 
 Use `PathParams<T>` as an extractor with destructuring:

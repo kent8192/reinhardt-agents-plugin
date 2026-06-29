@@ -50,6 +50,8 @@ Read `references/error-mapping.md` for the standard mapping from service-layer e
 - Every feature MUST have tests at minimum two layers: unit (service) and integration (API)
 - Services MUST return domain types, not ORM models directly
 - Error types from services are mapped centrally — do not handle HTTP concerns in services
+- Cross-layer operations must preserve their domain invariants: scope filters, idempotency, accepted/current version uniqueness, and ordered sibling integrity
+- Research/agent services should return evidence and diagnostics only unless the feature explicitly assigns them authoring or mutation ownership
 - ALL code comments must be in English
 - Use `reinhardt-query` for custom queries, NEVER raw SQL
 
