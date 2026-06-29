@@ -88,7 +88,7 @@ Extractors pull typed data from the incoming request:
 | `Json(body): Json<T>` | JSON request body (requires `T: Deserialize`) | `#[post("/users/")]` |
 | `Query(params): Query<T>` | Query string parameters (requires `T: Deserialize`) | `?page=1&per_page=20` |
 | `#[inject] AuthInfo(state): AuthInfo` | Lightweight auth state (JWT-based) | `state.user_id()` |
-| `#[inject] AuthUser(user): AuthUser<User>` | Full user model resolution | `user.username` |
+| `#[inject] CurrentUser(user): CurrentUser<User>` | Full user model resolution | `user.username` |
 
 ```rust
 #[get("/users/", name = "user_list")]
@@ -139,6 +139,7 @@ Use `#[inject]` to receive services and auth context from the DI container:
 
 ```rust
 use reinhardt::di::prelude::*;
+use reinhardt::CurrentUser;
 use reinhardt::views::prelude::*;
 
 #[get("/profile/", name = "user_profile")]
@@ -155,7 +156,7 @@ pub async fn get_profile(
 
 #[get("/admin/users/", name = "admin_user_list")]
 pub async fn admin_list_users(
-    #[inject] reinhardt::AuthUser(user): reinhardt::AuthUser<User>,
+    #[inject] CurrentUser(user): CurrentUser<User>,
     Query(params): Query<PaginationParams>,
 ) -> ViewResult<Response> {
     if !user.is_staff {
@@ -174,9 +175,10 @@ pub async fn admin_list_users(
 | Type | Description |
 |------|-------------|
 | `AuthInfo` | Lightweight JWT auth state with `state.user_id()` |
-| `AuthUser<T>` | Full user model resolution from auth token |
-| `Depends<T>` | Shared service from the DI container |
-| `Depends<DatabaseConnection>` | Database connection from the pool |
+| `CurrentUser<T>` | Full user model resolution from auth token or session |
+| `T` | Direct injectable service/configuration value from the DI container |
+| `Depends<K, T>` | Keyed provider output from the DI container |
+| `Depends<PrimaryDatabase, DatabaseConnection>` | Keyed database connection from the pool |
 
 ## Generic Views
 
@@ -268,9 +270,11 @@ impl ViewSet for UserViewSet {
         User::objects().all()
     }
 
-    fn get_permissions(&self) -> Vec<Box<dyn Permission>> {
-        vec![Box::new(IsAuthenticated)]
-    }
+}
+
+fn user_handler() -> ModelViewSetHandler<User> {
+    ModelViewSetHandler::<User>::new()
+        .add_permission(std::sync::Arc::new(IsAuthenticated))
 }
 ```
 
@@ -302,7 +306,7 @@ pub async fn get_user_profile(user_id: i64) -> Result<UserProfile, ServerFnError
 
 Since rc.18, `#[server_fn]` accepts `FromRequest`-based extractors
 (`Validated`, `Json`, `Form`, `Header`, `Cookie`, `Path`, `Query`, `Body`,
-`AuthUser<U>`, etc.) as first-class parameters. They are resolved on the
+`CurrentUser<U>`, etc.) as first-class parameters. They are resolved on the
 server via `FromRequest::from_request` and **excluded from the WASM client's
 argument struct**, so the client call site only passes the
 data-shaped parameters.
@@ -312,7 +316,7 @@ data-shaped parameters.
 pub async fn submit_vote(
     poll_id: i64,                            // Sent from the client
     choice_id: i64,                          // Sent from the client
-    AuthUser(user): AuthUser<User>,          // Server-side only
+    CurrentUser(user): CurrentUser<User>,    // Server-side only
     Validated(meta): Validated<VoteMetadata>, // Server-side only
 ) -> Result<(), ServerFnError> {
     Vote::record(user.id, poll_id, choice_id, meta).await?;

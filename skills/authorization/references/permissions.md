@@ -41,21 +41,15 @@ pub struct PermissionContext<'a> {
 
 All implement `Clone`, `Copy`, `Default`.
 
-### Usage in ViewSet
+### Usage with ViewSet Handlers
 
 ```rust
-impl ViewSet for UserViewSet {
-    fn get_permissions(&self) -> Vec<Box<dyn Permission>> {
-        vec![Box::new(IsAuthenticated)]
-    }
+use std::sync::Arc;
+use reinhardt::auth::IsAuthenticated;
 
-    // Per-action permissions
-    fn get_permissions_for_action(&self, action: &Action) -> Vec<Box<dyn Permission>> {
-        match action {
-            Action::List | Action::Retrieve => vec![Box::new(AllowAny)],
-            _ => vec![Box::new(IsAuthenticated)],
-        }
-    }
+fn user_handler() -> ModelViewSetHandler<User> {
+    ModelViewSetHandler::<User>::new()
+        .add_permission(Arc::new(IsAuthenticated))
 }
 ```
 

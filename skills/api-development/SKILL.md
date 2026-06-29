@@ -1,7 +1,7 @@
 ---
 name: api-development
 description: Use when building REST API endpoints with reinhardt-web - covers serializers, views, URL routing, authentication, and pagination
-versions: ["0.1.x", "0.2.0"]
+versions: ["0.1.x", "0.2.x", "0.3.x"]
 ---
 
 # Reinhardt REST API Development
@@ -37,6 +37,9 @@ Guide developers through building REST API endpoints using reinhardt-rest, reinh
 - Do not serialize absent typed identifiers as empty strings; drop the item or return an explicit optional/error shape
 - ALL code comments must be in English
 - `#[url_patterns]` is removed in 0.2.x -- use `#[routes]` for all URL registration
+- In 0.3.x, raw server-route registration (`ServerRouter::function`, `.route`, `.handler_with_method`, and named variants) is removed from the public migration surface — use `#[get]` / `#[post]` / endpoint macros plus `.endpoint(factory)`
+- `FunctionHandler` is not a public app-facing registration type in 0.3.x; keep `.view(...)` / `.view_named(...)` only for intentional class-style `Handler` implementations
+- Use `CurrentUser<T>` for full authenticated-user extraction; migrate legacy `AuthUser<T>` before upgrading to 0.3.x
 
 ## Cross-Domain References
 

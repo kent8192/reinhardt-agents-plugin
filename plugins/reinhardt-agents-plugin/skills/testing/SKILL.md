@@ -1,7 +1,7 @@
 ---
 name: testing
 description: Use when writing tests for reinhardt-web applications - provides rstest/AAA patterns, TestContainers setup, and API testing utilities
-versions: ["0.1.x", "0.2.0"]
+versions: ["0.1.x", "0.2.x", "0.3.x"]
 ---
 
 # Reinhardt Testing
@@ -39,6 +39,13 @@ Guide developers through writing high-quality tests using rstest, AAA pattern, r
 3. Ensure Docker Desktop is running
 4. Use `#[serial(db)]` if tests share global database state
 
+### 0.3 Migration Regression Tests
+
+1. Run the migration skill's 0.3 scan commands before writing tests
+2. Add focused regression tests for replaced APIs (`CurrentUser<T>`, keyed DI providers, endpoint registration, `use_resource`)
+3. For Pages apps, verify both native and `wasm32-unknown-unknown` surfaces when shared modules rely on 0.3 inert stubs
+4. For generated projects, scaffold a fresh 0.3 Pages app and compare app-local layout expectations before changing fixtures
+
 ## Important Rules
 
 - **NEVER** use `#[test]` — always use `#[rstest]`
@@ -50,11 +57,14 @@ Guide developers through writing high-quality tests using rstest, AAA pattern, r
 - Use `#[serial(group_name)]` for tests with global state
 - Every test MUST use at least one reinhardt component
 - Add focused regression tests for review-found bugs before broad happy-path expansion
+- In 0.3.x migrations, update stale fixtures that use `AuthUser`, `create_resource*`, `use_effect_event*`, raw `ServerRouter` registration, `DependsResult`, `DependsOption`, `pages.rs`, or `server_urls`
+- When generated `{Model}Info` relation fields change shape, update serializer/browser-test expectations intentionally rather than broadening assertions
 
 ## Cross-Domain References
 
 - Model patterns: `../modeling/references/model-patterns.md`
 - API patterns: `../api-development/references/view-patterns.md`
+- 0.3 migration checklist: `../migration/references/0.3-upgrade.md`
 
 ## Dynamic References
 

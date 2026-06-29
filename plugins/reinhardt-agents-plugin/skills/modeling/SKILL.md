@@ -1,7 +1,7 @@
 ---
 name: modeling
 description: Use when defining database models, working with QuerySets, or managing migrations in reinhardt-web applications
-versions: ["0.1.x", "0.2.0"]
+versions: ["0.1.x", "0.2.x", "0.3.x"]
 ---
 
 # Reinhardt Data Modeling
@@ -69,6 +69,10 @@ Guide developers through model definition, database operations, and migration ma
 - Scope unique or stable keys by their owning record (project, tenant, document, etc.) when data can be duplicated across parents
 - For ordered sibling records, validate reorder inputs contain every sibling exactly once before updating positions
 - For versioned models, enforce one accepted/current version per target by clearing the previous accepted marker or using an equivalent invariant
+- In 0.3.x, generated `{Model}Info` relation fields expose relation-shaped payloads: `RelationInfo<T>` for one-to-one / foreign-key fields and `ManyToManyInfo<Source, Target>` for many-to-many fields
+- Review serializers, API DTOs, browser tests, and fixtures that expected flattened `*_id` scalar fields after regenerating 0.3.x model info
+- Use `QuerySet::update_fields([...])` for atomic conditional partial updates; empty assignments and predicate-less partial updates are rejected at the API boundary
+- Regenerate and review migrations after relation metadata, field renames, or unique constraints change; 0.3.x migration generation is stricter about `RenameColumn` and replay drift
 
 ## Cross-Domain References
 

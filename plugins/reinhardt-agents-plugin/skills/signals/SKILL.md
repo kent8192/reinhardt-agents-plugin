@@ -1,7 +1,7 @@
 ---
 name: signals
 description: Use when working with reinhardt signals and background tasks - covers model signals, transaction-aware signals, reliable async side-effects, and task queue integration
-versions: ["0.1.x", "0.2.0"]
+versions: ["0.1.x", "0.2.x", "0.3.x"]
 ---
 
 # Reinhardt Signals & Async Side-Effects
@@ -52,6 +52,9 @@ For standalone background jobs (not signal-triggered):
 - Use transaction-aware signals (`on_commit`) for post-commit side-effects, not `post_save` directly
 - Test receivers in isolation with mocked dependencies
 - ALL code comments must be in English
+- For 0.3.x task/signal services registered through DI, use `#[injectable]` provider functions and keyed `FactoryOutput<K, T>` when the output type is not a unique dependency identity
+- Keep shared signal/task modules cfg-clean when used by Pages apps; rely on documented 0.3 inert provider stubs rather than broad call-site `#[cfg]`
+- Signal payloads should remain stable IDs or explicit DTOs; do not accidentally expose 0.3 `{Model}Info` relation-shaped payload changes as signal contracts
 
 ## Cross-Domain References
 

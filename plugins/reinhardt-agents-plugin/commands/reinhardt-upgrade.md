@@ -19,12 +19,11 @@ If no reinhardt dependency is found, inform the user this command is for reinhar
 
 Ask the user which version they want to upgrade to:
 
-- Accept specific versions (e.g., `0.1.3`, `0.2.0`, `0.2.2`, `0.3.0`)
+- Accept specific versions (e.g., `0.1.3`, `0.2.0`, `0.3.0`)
 - Accept `latest` — resolve via `gh release list -R kent8192/reinhardt-web --limit 1` or by reading `reinhardt/Cargo.toml` if the repo is available locally
 - If the target is the same as current, inform the user and exit
-- If upgrading from 0.1.x to 0.2.0 or later 0.2.x, warn the user this is a **major version upgrade** with extensive breaking changes, and recommend reviewing the migration skill's "Major Version Upgrade: 0.1.x → 0.2.0" section before proceeding
-- If upgrading directly from 0.1.x to 0.3.0, warn the user this is a **combined major version upgrade** and recommend reviewing both the "Major Version Upgrade: 0.1.x → 0.2.0" section and the 0.3 guide before proceeding
-- If upgrading from 0.2.x to 0.3.0, warn the user this is a **major version upgrade** and recommend reviewing `skills/migration/references/0.3-upgrade.md` or the local `reinhardt/instructions/MIGRATION_0.3.md` guide before proceeding
+- If upgrading from 0.1.x to 0.2.x, warn the user this is a **major version upgrade** with extensive breaking changes, and recommend reviewing the migration skill's "Major Version Upgrade: 0.1.x → 0.2.x" section before proceeding
+- If upgrading from 0.2.x to 0.3.x, warn the user this is a **major version upgrade** and recommend reviewing `skills/migration/references/0.3-upgrade.md` or the local `reinhardt/instructions/MIGRATION_0.3.md` guide before proceeding
 
 ## Step 3: Confirm
 

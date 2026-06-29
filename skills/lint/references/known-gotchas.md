@@ -8,7 +8,7 @@ Common issues and their solutions when running the static analysis suite on rein
 
 ### Macro-Generated Code False Positives
 
-Reinhardt's proc macros (`#[model]`, `#[admin]`, `#[injectable_factory]`) generate code that may trigger clippy warnings. If a clippy warning originates from macro-generated code:
+Reinhardt's proc macros (`#[model]`, `#[admin]`, `#[injectable]`) generate code that may trigger clippy warnings. If a clippy warning originates from macro-generated code:
 
 1. Verify the warning is genuinely from macro expansion (not your code)
 2. Add `#[allow(clippy::rule_name)]` with a comment explaining it's macro-generated
