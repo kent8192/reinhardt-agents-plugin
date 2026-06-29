@@ -70,10 +70,11 @@ let form_view: Page = login_form.into_page();
 
 ### Dynamic Form State
 
-When a component has user-editable inputs, construct the form with `form!` and
-bind dynamic behavior through `use_form`. Avoid hand-rolling parallel Signals
-for field values, validation status, and submit state unless the form macro
-cannot represent the interaction.
+When a component has user-editable inputs, represent the static form expression
+with `form!`: field declarations, labels, validation rules, action/server_fn,
+method, classes, and submit button shape. Represent dynamic form state with
+`use_form`: current values, dirty/touched state, validation state, submit phase,
+and reset/submit actions.
 
 Keep dynamic concerns in the form boundary:
 

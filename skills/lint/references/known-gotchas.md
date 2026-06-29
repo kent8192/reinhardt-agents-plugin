@@ -46,17 +46,6 @@ target the real API boundary instead of path noise.
 
 ---
 
-## TypeScript Agent Services
-
-For TypeScript services that interoperate with Reinhardt Rust clients:
-
-- Prefer named function declarations for exported handlers, fake providers, and gRPC implementations. Avoid exported module-top lambdas when stack traces, gRPC registration, or tests need stable function names.
-- Use extensionless relative imports in Reinhardt agent services unless the local `tsconfig.json` explicitly requires NodeNext `.js` specifiers.
-- Register `@grpc/grpc-js` handlers with the generated lower-camel method names, such as `healthCheck` and `researchForOutline`, not proto PascalCase names.
-- Keep optional numeric/string identifiers optional or omit invalid evidence; do not serialize missing IDs as empty strings when the Rust client parses them as typed IDs.
-
----
-
 ## Rustdoc
 
 ### Generic Types Rendered as HTML

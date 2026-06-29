@@ -59,7 +59,6 @@ semgrep scan --config .semgrep/ --baseline-commit origin/main --error --metrics 
 - NEVER silence semgrep findings without understanding the security implication
 - Rustdoc warnings with `-D warnings` will fail CI — fix locally before pushing
 - Prefer named functions for exported service handlers/fakes over exported lambda expressions when interop or test discovery relies on stable names
-- In TypeScript agent/service code, use the repo's configured import style; Reinhardt agent services use extensionless relative imports unless local config explicitly says otherwise
 - Remove redundant raw identifiers (`r#name`) when the identifier is not a Rust keyword in that position
 - Run `cargo doc --no-deps` locally before pushing doc-related changes
 - Known gotchas: read `references/known-gotchas.md` before investigating unfamiliar warnings
