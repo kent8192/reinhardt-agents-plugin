@@ -81,6 +81,14 @@ my_project/
 │   └── apps/
 │       └── <app>/
 │           ├── lib.rs           # NO top-level `pub mod ws_urls` (rc.21 fix)
+│           ├── services.rs      # DI service surface entry
+│           ├── services/
+│           │   └── server.rs    # Keys, FactoryOutput providers, service structs/functions
+│           ├── server.rs        # Server implementation-detail module entry
+│           ├── server/
+│           │   ├── providers/   # Provider adapters and clients
+│           │   ├── prompts/     # Prompt construction
+│           │   └── repositories/ # Database/repository helpers
 │           ├── urls.rs          # Mounts the urls/ submodule tree
 │           └── urls/            # rc.19: server/client/ws routing symmetric here
 │               ├── server_urls.rs
@@ -276,6 +284,8 @@ pub mod client;          // WASM client components
 pub mod models;
 #[cfg(native)]
 pub mod serializers;
+#[cfg(native)]
+pub mod services;        // DI surface only: keys, providers, service structs/functions
 pub mod server;          // Server-side helpers (available on both native and WASM)
 pub mod shared;          // Shared types (available on both)
 #[cfg(native)]
@@ -301,6 +311,19 @@ pub mod client_urls;      // available on native + wasm for client-side routing
 - `#[cfg(wasm)]` — WASM-only modules (client components)
 - `#[cfg(server)]` — Server-mode-only routing (mode-gated, not platform-gated)
 - No annotation — Available on both platforms (server functions, shared types)
+
+### Pages Service and Server Boundaries
+
+For Pages apps, `services/` is reserved for injectable service keys, provider
+functions, and service structs/functions. Register application business
+operations there with Reinhardt 0.3 DI shape:
+`#[injectable(scope = "...")] -> FactoryOutput<Key, Service>`, then inject them
+from `#[server_fn]` as `Depends<Key, Service>`.
+
+Keep implementation details outside `services/`. Put provider adapters, prompt
+builders, parsing/conversion helpers, repository/database internals, and pure
+state-transition helpers in app-local `server/` modules such as
+`server/providers`, `server/prompts`, and `server/repositories`.
 
 **Migration from pre-rc.19 layout:**
 
