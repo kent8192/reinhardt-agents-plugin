@@ -44,6 +44,7 @@ Guide developers through DI configuration using reinhardt-di, including service 
 - Avoid thick facades such as `OutlineService`, `ManuscriptService`, or `DocumentService` when they only hide one endpoint-specific flow
 - Do not "improve" a `#[server_fn]` by only moving the same control flow into `server/`, `service/`, or `services/`; extraction must create a narrower contract, reusable dependency, or independently testable invariant
 - If the extracted code still owns the endpoint request shape, response DTO, persistence order, and provider sequence, it is still the endpoint workflow and should stay visible near the `#[server_fn]`
+- Inline and delete single-use delegated helpers when they only forward one endpoint/section's request, dependencies, and control flow
 - Reinhardt DI checks: global registry → scope cache → pre-seeded values → `DependencyNotRegistered` error
 - Circular dependencies are detected at runtime and return `Err(DiError::CircularDependency)` — they do NOT panic
 - `#[use_inject]` enables `#[inject]` in general async functions (not just handlers)

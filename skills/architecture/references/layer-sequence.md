@@ -106,6 +106,11 @@ extracted function still takes the endpoint input and returns the endpoint
 response after running the same persistence/provider sequence, it is still the
 endpoint workflow.
 
+Inline and delete single-use delegated helpers when they only pass through one
+endpoint or one section's request, dependencies, persistence order, and provider
+sequence. Keep a private helper only when it names a smaller contract, reusable
+domain value, shared caller, or independently testable invariant.
+
 **Steps:**
 
 1. Decide whether the logic is reused by multiple endpoints
@@ -145,6 +150,7 @@ impl ProductCatalog {
 - [ ] Service exists only when the capability or dependency bundle is reused across endpoints
 - [ ] Endpoint-specific flows remain in the endpoint or a private helper beside it
 - [ ] No file-only extraction from `#[server_fn]`; each extracted helper/service has a narrower contract, shared consumer, or independently testable invariant
+- [ ] Single-use helpers that only delegate the same endpoint flow are inlined and deleted
 - [ ] Service struct defined with injected common dependencies
 - [ ] `#[injectable]` applied when a service is justified
 - [ ] `#[injectable_key]` / `FactoryOutput<K, T>` used if the provider output type is not unique
@@ -216,6 +222,7 @@ pub fn product_routes(cfg: &mut ServiceConfig) {
 
 - [ ] View functions defined with correct HTTP method decorators
 - [ ] URL routes configured and mounted
+- [ ] Endpoint decorators use app-local paths; app/API prefixes are composed in route modules or `*_urls.rs`
 - [ ] Authentication applied (if required)
 - [ ] Permission guards applied (if required)
 - [ ] Error mapping works (service errors → HTTP responses)

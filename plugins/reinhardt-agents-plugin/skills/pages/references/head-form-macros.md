@@ -329,6 +329,11 @@ only because the `#[server_fn]` is long. Extract only when the helper has a
 smaller contract, isolates a domain invariant, or is reused by another server
 function.
 
+Inline and delete a helper that is called only by this `#[server_fn]` and only
+forwards the same request data, injected dependencies, persistence order, and
+provider sequence. Keep a private helper when it returns a narrower value or
+isolates a named invariant, as in the draft-building example below.
+
 ```rust
 #[server_fn]
 pub async fn generate_scene(

@@ -38,7 +38,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 ## Important Rules
 
 - Prefer explicit imports over prelude (e.g., `use reinhardt::pages::component::Page;`) — see reinhardt-cloud dashboard for the canonical import style
-- Import app/framework types at the top of the module instead of repeating long fully qualified paths in components or server function signatures
+- Import app/framework types at the top of the module instead of repeating long fully qualified paths in components or server function signatures/bodies
 - Build static form structure with `form!` and dynamic form state with `use_form`
 - Configure `cfg_aliases` in `build.rs` for `wasm`/`native` aliases
 - Event handlers in `page!` are auto-handled across platforms (no manual `#[cfg(wasm)]` needed)
@@ -57,6 +57,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - In 0.3.x, replace `use_effect_event*` with `use_callback*` or `.get_untracked()` inside the effect
 - Put route-backed `#[component]` wrappers under `src/apps/<app>/client/components/`, not in app-local `pages.rs` or `client/pages`
 - For `#[server_fn]`, keep endpoint-specific request flows visible; do not move the same logic into `server/`, `service/`, or `services/` unless the extraction creates a narrower contract, shared dependency, or independently testable invariant
+- Inline and delete single-use helpers that only delegate one `#[server_fn]` section's request, dependencies, and persistence/provider sequence
 - Use 0.3 Pages primitives directly where relevant: `#[wasm_server_api]`, `Portal` / `mount_portal`, `ActivityBoundary`, `ViewTransitionBoundary`, and `FieldArray`
 - Keep shared app code cfg-clean across native and `wasm32-unknown-unknown`; rely on documented inert stubs instead of broad call-site `#[cfg]` workarounds
 

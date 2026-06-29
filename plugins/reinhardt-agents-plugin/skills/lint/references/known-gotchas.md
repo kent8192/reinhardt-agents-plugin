@@ -44,6 +44,10 @@ the module top instead of repeating long fully qualified paths in signatures and
 expressions. This keeps generated code readable and makes review comments
 target the real API boundary instead of path noise.
 
+This applies inside function bodies too: avoid constructing calls around
+`crate::apps::<app>::...` request/DTO paths when a local import can name the API
+surface directly.
+
 ---
 
 ## Rustdoc

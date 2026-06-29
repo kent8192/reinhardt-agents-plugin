@@ -74,6 +74,11 @@ pub async fn delete_user(Path(id): Path<i64>) -> ViewResult<Response> {
 | `name = "..."` | Named route for reverse URL lookup | `#[get("/users/", name = "user_list")]` |
 | `pre_validate = true` | Run validation before handler body | `#[post("/users/", name = "user_create", pre_validate = true)]` |
 
+Decorator paths should stay local to the app/router, such as
+`"/search/sources/"`. Compose app and API prefixes such as `"/api/writing"` in
+the route aggregate or `*_urls.rs` module with `mount`/`with_prefix`, and use
+reverse helpers at call sites instead of rebuilding full paths in handlers.
+
 ### Return Type
 
 All handlers return `ViewResult<Response>`. This is an alias for `Result<Response, AppError>` where errors are automatically converted to HTTP error responses.
@@ -193,6 +198,11 @@ only to shorten the endpoint. Extraction should expose a smaller helper contract
 a reusable dependency, or a focused test target. If the helper still owns the
 request DTO, response DTO, persistence order, and provider sequence, it is still
 endpoint-local workflow.
+
+Inline and delete a helper that is used only by one endpoint section and only
+delegates the same request data, dependencies, persistence order, and provider
+sequence. Keep a helper when it returns a narrower domain value, isolates a
+named invariant, or has another caller.
 
 ```rust
 use reinhardt::di::Depends;

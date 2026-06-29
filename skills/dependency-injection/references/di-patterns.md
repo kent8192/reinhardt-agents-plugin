@@ -218,6 +218,12 @@ Before extracting, name the dependency that became injectable, the invariant
 that became independently testable, or the other endpoint that will reuse it; if
 the only answer is "the `server_fn` got shorter", keep the workflow visible.
 
+Inline and delete delegated helpers that are used by exactly one endpoint or
+one section when they still pass through the same endpoint DTOs, dependencies,
+persistence order, and provider sequence. A private helper is justified when it
+has a smaller contract, returns a reusable domain value, isolates a named
+invariant, or is called by more than one workflow.
+
 ### Preferred: inject shared dependencies, keep the workflow visible
 
 ```rust
@@ -794,6 +800,7 @@ DiError::Authentication(String)              // Maps to HTTP 401
 | Custom resolution logic | `impl Injectable` manually |
 | Endpoint DI | `#[inject]` in `#[get]`/`#[post]` etc. |
 | Endpoint-specific workflow | Endpoint body or private helper next to that endpoint |
+| Single-use helper that only delegates the same endpoint flow | Inline into the caller and delete the helper |
 | General function DI | `#[use_inject]` + `#[inject]` |
 | Test mocking (factory) | `ctx.dependency(fn).override_with(value)` |
 | Test mocking (unit) | Construct direct values or use `Depends::<K, T>::from_value()` for keyed wrappers |

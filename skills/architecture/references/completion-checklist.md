@@ -27,6 +27,7 @@ Run through this checklist after implementing a feature to verify all layers are
 - [ ] Service exists only when a capability or dependency bundle is shared across multiple endpoints
 - [ ] Endpoint-specific validation, DTO assembly, persistence ordering, generation, and edit flows remain in the endpoint or adjacent private helper
 - [ ] No file-only extraction from `#[server_fn]`; moving the same control flow into `server/`, `service/`, or `services/` has a narrower contract, shared consumer, or independently testable invariant
+- [ ] Single-use helpers that only delegate one endpoint/section's request, dependencies, and persistence/provider sequence are inlined and deleted
 - [ ] Service struct defined with common dependency fields when a service is justified
 - [ ] `#[injectable]` macro applied when a service is justified
 - [ ] `#[injectable_key]` / `FactoryOutput<K, T>` used when provider output type is not unique
@@ -43,6 +44,7 @@ Run through this checklist after implementing a feature to verify all layers are
 
 - [ ] View functions defined with HTTP method decorators
 - [ ] URL routes configured and mounted in app config
+- [ ] Endpoint decorator paths are app-local; app/API prefixes are composed in route modules or `*_urls.rs`
 - [ ] Authentication configured (if required)
 - [ ] Permission guards applied (if required)
 - [ ] Error mapping verified (service errors → HTTP responses)
