@@ -1,6 +1,6 @@
 {
   "name": "reinhardt-agents-plugin",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Claude Code and Codex plugin for reinhardt-web application development and deployment via reinhardt-cloud",
   "author": {
     "name": "kent8192",

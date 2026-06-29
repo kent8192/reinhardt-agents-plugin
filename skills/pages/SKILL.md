@@ -38,9 +38,13 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 ## Important Rules
 
 - Prefer explicit imports over prelude (e.g., `use reinhardt::pages::component::Page;`) — see reinhardt-cloud dashboard for the canonical import style
+- Import app/framework types at the top of the module instead of repeating long fully qualified paths in components or server function signatures
+- Build static form structure with `form!` and dynamic form state with `use_form`
 - Configure `cfg_aliases` in `build.rs` for `wasm`/`native` aliases
 - Event handlers in `page!` are auto-handled across platforms (no manual `#[cfg(wasm)]` needed)
 - Use `watch {}` for reactive conditionals (not static `if` with extracted Signal values)
+- Use route reverse helpers for `href`, `action`, and `formaction` when named routes exist; avoid hardcoded paths
+- Use `reinhardt-i18n` for language-specific UI text and prompts, including Japanese output
 - Boolean attributes require expressions, not literals (`disabled: is_disabled`, NOT `disabled: true`)
 - `img` elements require both `src` and `alt` (compile-time enforcement)
 - `button` elements require text content or `aria-label`/`aria-labelledby`

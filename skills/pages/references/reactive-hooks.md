@@ -294,6 +294,12 @@ The `page!` macro's `watch` block provides **reactive rendering** that automatic
 | State management | `use_state`, `use_reducer` |
 | DOM refs and measurements | `use_ref`, `use_layout_effect` |
 
+For forms, use `form!` for static expressions such as fields, labels, validation
+rules, action/server_fn, and submit button shape. Use `use_form` for dynamic
+states such as current values, dirty/touched markers, validation results, submit
+phase, and reset/submit actions. Use Signals, hooks, and `watch {}` for the
+surrounding display state, not as a second implementation of the form runtime.
+
 ### Example: watch Replaces Manual Effect Rendering
 
 ```rust

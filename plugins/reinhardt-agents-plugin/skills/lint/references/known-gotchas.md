@@ -32,6 +32,18 @@ fn helper() {}
 fn helper() {}
 ```
 
+### Redundant Raw Identifiers
+
+Do not keep `r#ident` syntax unless the raw identifier is actually required for
+a keyword or generated API. If normal `ident` compiles, prefer the normal form.
+
+### Long Fully Qualified Paths
+
+Inside handlers, components, and server functions, import framework/app types at
+the module top instead of repeating long fully qualified paths in signatures and
+expressions. This keeps generated code readable and makes review comments
+target the real API boundary instead of path noise.
+
 ---
 
 ## Rustdoc

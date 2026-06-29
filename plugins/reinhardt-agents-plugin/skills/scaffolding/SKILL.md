@@ -72,6 +72,8 @@ Guide developers through creating new reinhardt-web projects and adding apps wit
 - Project and app names MUST NOT start with `reinhardt_` or `reinhardt-` — these are reserved for the framework namespace (DI pseudo orphan rule). Cargo normalizes hyphens to underscores, so `reinhardt-myapp` becomes `reinhardt_myapp::*` which overlaps with the reserved `reinhardt_*` namespace
 - ALWAYS use Rust 2024 Edition module system: `module.rs` + `module/` directory, NEVER `mod.rs`
 - If generated templates contain `mod.rs` files, convert them to the new module system
+- Generated app templates must not ship stale placeholder views, full absolute paths, or app-specific demo names that users are expected to rename later
+- Generated Pages templates should use named imports, route reverse helpers, `form!`, and `use_form` in any interactive example
 - ALL code comments must be in English
 - Use `pub use` for explicit re-exports, NEVER `pub use module::*`
 - In 0.3.x Pages apps, expect app-local split modules (`client/`, `server/`, `services/client.rs`, `services/server.rs`, `urls/client_router.rs`, `urls/server_router.rs`) and preserve generated empty directories with `.gitkeep`

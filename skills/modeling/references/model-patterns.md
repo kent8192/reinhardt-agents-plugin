@@ -53,6 +53,16 @@ The `#[field]` attribute accepts these options to configure column behavior:
 | `verbose_name` | `&str` | Human-readable name for the field, used in admin and error messages. |
 | `skip_info` | `bool` | **(0.2.x)** Excludes this field from the auto-generated `{Model}Info` companion struct. Use for sensitive data (e.g., password hashes). |
 
+### Field Annotation Rule
+
+Every scalar model field should carry `#[field(...)]`. Use bare `#[field]`
+when no constraint or default is needed. This keeps macro-generated metadata,
+migrations, validators, and `{Model}Info` output aligned across the whole model.
+
+Relation fields use `#[rel(...)]` instead. Do not mix relationship marker types
+with plain unmanaged foreign-key IDs unless the scalar ID is an intentional
+denormalized/cache field and is named accordingly.
+
 ## Rust Type to Database Type Mapping
 
 | Rust Type | Database Type | Notes |
@@ -226,9 +236,14 @@ In 0.2.x, every `#[model]` automatically generates a `{Model}Info` companion str
 pub struct User {
     #[field(primary_key = true)]
     pub id: i64,
+
+    #[field(max_length = 150)]
     pub username: String,
+
     #[field(skip_info = true)]  // excluded from UserInfo
     pub password_hash: String,
+
+    #[field(null = true)]
     pub email: Option<String>,
 }
 // The macro generates:
@@ -236,6 +251,19 @@ pub struct User {
 // impl From<User> for UserInfo { ... }
 // impl From<UserInfo> for User { ... } (requires defaults for skipped fields)
 ```
+
+## Scoped Keys, Versions, and Ordering
+
+Model-level uniqueness must include the owning scope whenever rows can repeat
+across parents. For example, a content chunk key should include the project or
+document identity, not only the relative path, sequence number, and content hash.
+
+For versioned authoring models, keep the database state consistent with the
+domain concept of "accepted" or "current":
+
+- Accepting a new version must clear the previous accepted marker for the same target, or an equivalent unique constraint must enforce the invariant.
+- Operation payloads such as split, merge, and retake candidates must be applied to the target graph, not merely marked accepted.
+- Reorder commands must contain the exact sibling ID set once each. Reject partial lists, duplicate IDs, unknown IDs, and cross-parent IDs before updating positions.
 
 ## Custom Manager Attribute (rc.23+)
 
@@ -269,6 +297,7 @@ pub struct Document {
     #[field(max_length = 200)]
     pub title: String,
 
+    #[field]
     pub body: String,
 }
 ```
@@ -294,7 +323,10 @@ impl CustomManager<Project> for TenantScopedManager {
 pub struct Project {
     #[field(primary_key = true)]
     pub id: Option<Uuid>,
+
+    #[field]
     pub tenant_id: Uuid,
+
     #[field(max_length = 200)]
     pub name: String,
 }

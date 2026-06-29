@@ -71,6 +71,27 @@ let request: LoginRequest = serializer.deserialize(&json_str)?;
 
 ---
 
+## ModelInfo and Validate for Model-Backed DTOs (0.2.x)
+
+For model-backed request/response shapes, start from the generated
+`{Model}Info` companion type instead of duplicating every model field in custom
+serializer structs. Layer `Validate` / `#[validate(...)]` on explicit input
+types when the API needs request-only constraints.
+
+Use custom serializer structs only when the API boundary intentionally differs
+from the model shape, such as redacting fields, flattening nested data, or
+combining multiple models. In that case, document the boundary in the type name
+and keep conversions centralized.
+
+Checklist:
+
+- Use `{Model}Info` for read DTOs when the public shape matches the model.
+- Use `#[field(skip_info = true)]` on model fields that must not appear in info DTOs.
+- Use `Validate` / `#[validate(...)]` on write DTOs for request-level constraints.
+- Avoid hand-written serializers that merely mirror every model field.
+
+---
+
 ## ModelSerializer
 
 `ModelSerializer<M>` automatically generates serialization logic from ORM models using a builder pattern. It is the recommended approach for standard CRUD endpoints.

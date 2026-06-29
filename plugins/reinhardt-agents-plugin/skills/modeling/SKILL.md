@@ -63,7 +63,12 @@ Guide developers through model definition, database operations, and migration ma
 - Migration files use declarative `Operation` variants — there are NO `up`/`down` methods
 - Migration names are auto-generated from detected changes (`--name` is optional)
 - Field types map to Rust types (String, i32, i64, bool, Option<T>, DateTime<Utc>)
+- Put `#[field(...)]` on every scalar model field, even when no options are required
+- Use `#[rel(...)]` for model relationships; do not represent foreign keys as unmanaged scalar IDs unless the scalar is intentionally denormalized
 - ALL model struct fields that can be NULL must use `Option<T>`
+- Scope unique or stable keys by their owning record (project, tenant, document, etc.) when data can be duplicated across parents
+- For ordered sibling records, validate reorder inputs contain every sibling exactly once before updating positions
+- For versioned models, enforce one accepted/current version per target by clearing the previous accepted marker or using an equivalent invariant
 - In 0.3.x, generated `{Model}Info` relation fields expose relation-shaped payloads: `RelationInfo<T>` for one-to-one / foreign-key fields and `ManyToManyInfo<Source, Target>` for many-to-many fields
 - Review serializers, API DTOs, browser tests, and fixtures that expected flattened `*_id` scalar fields after regenerating 0.3.x model info
 - Use `QuerySet::update_fields([...])` for atomic conditional partial updates; empty assignments and predicate-less partial updates are rejected at the API boundary

@@ -35,6 +35,9 @@ Guide developers through reinhardt-web's composable settings system using fragme
 
 - Use `#[settings]` macro for both ProjectSettings and individual fragments
 - NEVER hardcode configuration values — use TOML files or environment variables
+- Provider/model/domain selections that affect runtime behavior must be represented in typed settings and, when user-facing, exposed through UI rather than only TOML comments
+- External service calls must receive needed runtime configuration through settings, request payloads, HTTP, or gRPC; do not duplicate backend constants in a worker process
+- Configure language and locale behavior through `I18nSettings` / `reinhardt-i18n`, not hardcoded language-specific strings
 - Use `LowPriorityEnvSource` for env vars, `TomlFileSource` for TOML files
 - Priority order (highest to lowest): env-specific TOML > base TOML > env vars > defaults
 - In 0.3.x shared app/config modules should compile cfg-clean across native and WASM; avoid broad call-site `#[cfg]` workarounds around settings types

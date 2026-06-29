@@ -333,6 +333,15 @@ auto-injection path remains for backward compatibility but is deprecated;
 new code should follow the explicit pattern documented in the `form!`
 reference (`../../macros/references/proc-macros.md`).
 
+### Server functions vs service endpoints
+
+Use `#[server_fn]` for browser-to-server RPC from Reinhardt Pages clients. If a
+separate worker, agent service, TypeScript process, or third-party client needs
+to call the backend, expose an explicit HTTP or gRPC endpoint instead. Pass
+runtime details such as callback domain, model/provider selection, and request
+scope through typed settings or request fields; do not hardcode them in the
+worker or hide them behind a Pages-only server function.
+
 ## Response Building
 
 Build responses using `Response::new(StatusCode)` with builder methods:
@@ -379,6 +388,10 @@ pub async fn get_user(Path(id): Path<i64>) -> ViewResult<Response> {
         .with_body(json::to_vec(&UserResponse::from(user))?))
 }
 ```
+
+For ORM reads and counts, use `Model::objects()` or the app's service layer.
+Do not bypass the model manager with ad hoc low-level builders when the standard
+manager API expresses the query.
 
 ## ModelViewSet / ReadOnlyModelViewSet (rc.23+)
 

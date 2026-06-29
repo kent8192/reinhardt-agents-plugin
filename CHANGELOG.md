@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-06-29
+
+### Changed
+
+- Carry the 0.3.0 skill alignment into the Codex PR feedback branch and keep
+  root and packaged plugin copies synchronized.
+- Incorporate review-derived guidance for model field metadata, scoped
+  invariants, Pages form state, provider storage, and regression testing on
+  the 0.3.x skill line.
+- Set Claude Code and Codex plugin manifest versions to `0.3.1`.
+
 ## [0.3.0] - 2026-06-28
 
 ### Changed

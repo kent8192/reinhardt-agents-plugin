@@ -21,10 +21,19 @@ pub struct Post {
     #[field(unique)]
     pub slug: String,
 
+    #[field]
     pub title: String,
+
+    #[field]
     pub content: String,
+
+    #[field]
     pub is_published: bool,
+
+    #[field(auto_now_add = true)]
     pub created_at: DateTime<Utc>,
+
+    #[field(null = true)]
     pub updated_at: Option<DateTime<Utc>>,
 }
 ```
@@ -56,6 +65,10 @@ pub struct Post {
 | `min` | number | Minimum value (numeric) |
 | `max` | number | Maximum value (numeric) |
 | `skip_info` | `bool` | **(0.2.x)** Exclude this field from the auto-generated `{Model}Info` struct. Set `skip_info = true` to omit. |
+
+Use `#[field]` even when a scalar field has no options. This keeps field
+metadata complete for migrations, validation, serializers, admin, and generated
+`{Model}Info` structs.
 
 ### Relationship Attributes (`#[rel(...)]`)
 

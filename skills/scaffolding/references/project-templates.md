@@ -195,7 +195,11 @@ After running `reinhardt-admin startproject <name>`, complete these steps:
    cargo fmt --all
    ```
 
-5. **Initialize Git** (if not already):
+5. **Remove placeholder surface area** — delete unused demo views/components,
+   rename generated placeholder modules to domain names, and replace hardcoded
+   links with route reverse helpers before building feature code on top.
+
+6. **Initialize Git** (if not already):
 
    ```bash
    git init

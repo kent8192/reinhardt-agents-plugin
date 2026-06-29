@@ -92,6 +92,7 @@ Skills use inline version markers — `**(0.1.x)**` / `**(0.2.x)**` / `**(0.3.x)
 | `test-generator` | Generates reinhardt-compliant tests using rstest, AAA pattern, and reinhardt-test fixtures. Specialized in TestContainers integration and API testing. |
 | `code-reviewer` | Reviews Rust code for reinhardt-specific anti-patterns, convention violations, and best practice adherence across module system, DI, ORM, API design, testing, and documentation. |
 | `migration-analyzer` | Analyzes reinhardt version upgrade impact by cross-referencing CHANGELOG entries, GitHub PR/Issue descriptions, deprecated API annotations, and application code usage. |
+| `main-range-pr-merger` | Forwards every first-parent PR merge from a main-branch version range into a target branch with conflict resolution, PR completeness auditing, and PR publication steps. |
 
 Codex primarily consumes the `skills/` and hook manifest from this plugin.
 The `agents/` and `commands/` directories remain Claude Code components, but

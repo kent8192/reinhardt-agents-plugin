@@ -44,6 +44,7 @@ Guide developers through DI configuration using reinhardt-di, including service 
 - Test overrides use `ctx.dependency(factory_fn).override_with(value)` for `#[injectable]` functions
 - `#[injectable]` auto-derives `Clone` on structs — no need to manually add `#[derive(Clone)]`
 - Direct type-based injection is fine only when the type is the unique dependency identity; otherwise use explicit keys instead of relying on duplicate value `TypeId`s
+- Stateful providers and fakes that must survive across operations should be singleton-scoped or backed by shared storage; do not rebuild an empty provider registry for each request
 - Users CANNOT register injectables for framework-managed types (`reinhardt::*`, `reinhardt_*::*` namespaces) — wrap in newtypes (pseudo orphan rule)
 - In 0.3.x, `#[injectable]` emits inert WASM stubs for shared app modules; avoid broad call-site `#[cfg]` workarounds around provider symbols
 - Run `cargo run --bin check-di -- --validate` to verify missing deps, scope violations, circular deps, and orphan rule compliance

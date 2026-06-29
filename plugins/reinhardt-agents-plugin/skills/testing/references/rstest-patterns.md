@@ -318,6 +318,20 @@ assert!(user.created_at() <= now);
 assert!(user.created_at() >= now - chrono::Duration::seconds(1));
 ```
 
+## Review-Driven Regression Targets
+
+When a review finds a behavioral bug, add a narrow regression at the smallest
+layer that can prove the failure. Good targets include:
+
+- Scoped searches: create two parent records with overlapping names/content and assert a document-scoped request cannot return the other parent's evidence.
+- Stable keys: insert identical paths/content under different parents and assert both can coexist.
+- Re-indexing: index the same document twice and assert persisted index records do not duplicate.
+- Stateful fakes: perform write then read through the public service boundary and assert fake storage is shared across registry resolution.
+- Version acceptance: accept a retake and assert only one version is accepted/current for the same target.
+- Split/merge/reorder: assert operation payloads actually mutate the tree, duplicate reorder IDs are rejected, and omitted siblings are rejected.
+- Streaming text: preserve paragraph breaks and Markdown spacing in the saved output.
+- External services: assert gRPC/HTTP handler names, request payload fields, and optional IDs match the Rust client contract.
+
 ## Test Module Organization
 
 ```rust

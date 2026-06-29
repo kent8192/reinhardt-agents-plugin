@@ -25,7 +25,7 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 ### Model Definition
 
 1. Use `#[model(app_label = "...")]` to define a database model
-2. Use `#[field(...)]` attributes on fields for constraints
+2. Use `#[field(...)]` attributes on every scalar field, including unconstrained fields
 3. Use `#[rel(...)]` attributes for relationships
 4. Optionally use `#[user(...)]` for user model with auth traits
 
@@ -40,6 +40,12 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 5. Use `#[component]` for 0.3 route-backed Pages components
 
 > **0.2.x note:** `#[url_patterns]` is removed in 0.2.x — use `#[routes]` for all URL registration.
+
+### Validation DTOs
+
+1. Use `#[derive(Validate)]` with `#[validate(...)]` attributes for request DTOs
+2. Prefer generated `{Model}Info` types for model-shaped response DTOs
+3. Only hand-write serializer structs when the API shape intentionally differs from the model
 
 ### DI Integration
 
@@ -59,6 +65,8 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 
 - ALL macros are re-exported through the `reinhardt` facade crate
 - `#[model]` auto-derives `Model`, `Serialize`, `Deserialize`, `Clone`, `Debug`
+- Every scalar field inside `#[model]` should have `#[field]` or `#[field(...)]`; relationship fields should have `#[rel(...)]`
+- Use `#[derive(Validate)]` / `#[validate(...)]` for request validation instead of duplicating validation logic in services
 - `#[user]` auto-implements `BaseUser` and `AuthIdentity` traits on native targets and is inert on WASM in 0.3.x
 - HTTP decorators (`#[get]`, etc.) accept `name` and `use_inject` options
 - Register 0.3 endpoint-macro handlers with `ServerRouter::endpoint(...)`; do not use removed raw `ServerRouter::function` / `.route` registration

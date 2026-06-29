@@ -68,6 +68,21 @@ let login_form = form! {
 let form_view: Page = login_form.into_page();
 ```
 
+### Dynamic Form State
+
+When a component has user-editable inputs, represent the static form expression
+with `form!`: field declarations, labels, validation rules, action/server_fn,
+method, classes, and submit button shape. Represent dynamic form state with
+`use_form`: current values, dirty/touched state, validation state, submit phase,
+and reset/submit actions.
+
+Keep dynamic concerns in the form boundary:
+
+- Field values, validation, disabled state, and submit phase belong to form state.
+- Derived display around the form can use `watch {}` or memoized values.
+- Server submission should target the configured `server_fn` or `action`; do not
+  manually duplicate the request payload in an unrelated event handler.
+
 ### Form-Level Attributes
 
 | Attribute | Type | Required | Description |

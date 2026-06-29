@@ -56,6 +56,7 @@ Guide developers through writing high-quality tests using rstest, AAA pattern, r
 - **ALWAYS** clean up test artifacts
 - Use `#[serial(group_name)]` for tests with global state
 - Every test MUST use at least one reinhardt component
+- Add focused regression tests for review-found bugs before broad happy-path expansion
 - In 0.3.x migrations, update stale fixtures that use `AuthUser`, `create_resource*`, `use_effect_event*`, raw `ServerRouter` registration, `DependsResult`, `DependsOption`, `pages.rs`, or `server_urls`
 - When generated `{Model}Info` relation fields change shape, update serializer/browser-test expectations intentionally rather than broadening assertions
 

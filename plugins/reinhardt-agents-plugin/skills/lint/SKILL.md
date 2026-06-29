@@ -70,6 +70,8 @@ rg --files src examples | rg '(^|/)(pages\.rs|server_urls\.rs|client/pages(/|\.r
 - ALL `#[allow(...)]` attributes MUST have an explanatory comment
 - NEVER silence semgrep findings without understanding the security implication
 - Rustdoc warnings with `-D warnings` will fail CI — fix locally before pushing
+- Prefer named functions for exported service handlers/fakes over exported lambda expressions when interop or test discovery relies on stable names
+- Remove redundant raw identifiers (`r#name`) when the identifier is not a Rust keyword in that position
 - Run `cargo doc --no-deps` locally before pushing doc-related changes
 - For 0.3.x upgrades, treat matches from the 0.3 migration scans as migration work, not ordinary lint noise
 - Known gotchas: read `references/known-gotchas.md` before investigating unfamiliar warnings
