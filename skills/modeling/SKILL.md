@@ -59,6 +59,7 @@ Guide developers through model definition, database operations, and migration ma
 - Use `reinhardt-query` ONLY for migrations and schema DDL, NOT for application queries
 - Migration commands are in the project-specific `manage` binary, NOT in `reinhardt-admin`
 - `reinhardt-admin` is only for: `startproject`, `startapp`, `plugin`, `fmt`
+- Build application filters from generated model field helpers such as `<Model>::field_name().eq(value)` / `<Model>::field_project().eq(value)` instead of untyped `Filter::new(...)` calls
 - There is NO `sqlmigrate` or `showmigrations` command
 - Migration files use declarative `Operation` variants — there are NO `up`/`down` methods
 - Migration names are auto-generated from detected changes (`--name` is optional)

@@ -21,6 +21,7 @@ Run through this checklist after implementing a feature to verify all layers are
 - [ ] Write serializer / input type defined (API request)
 - [ ] Field validation applied where needed
 - [ ] Nested serializers for related models (if applicable)
+- [ ] Custom DTOs use centralized `From`/`Into` conversions instead of repeated literal field mapping
 
 ## Service Layer
 
@@ -34,6 +35,8 @@ Run through this checklist after implementing a feature to verify all layers are
 - [ ] Scoped operations apply the same scope to every branch and fallback path
 - [ ] Regeneration/re-indexing paths are idempotent or explicitly reject duplicates
 - [ ] Stateful fake providers share storage across the operations being tested
+- [ ] Single-use helper logic is inlined; reusable or long workflow steps are service methods or injected services
+- [ ] Language-specific prompts and generated text use i18n/settings
 
 ## API Layer
 

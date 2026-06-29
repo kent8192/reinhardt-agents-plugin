@@ -33,7 +33,9 @@ Guide developers through building REST API endpoints using reinhardt-rest, reinh
 - Use `reinhardt-query` for custom queries, NEVER raw SQL
 - Scoped endpoints must apply the same target scope to every backend path, including fallback filename, filesystem, and hybrid-search branches
 - `#[server_fn]` is for Pages client RPC; external workers and agent services should use explicit HTTP or gRPC endpoints with configured domains
+- Server-side prompt endpoints and generated text APIs must use `reinhardt-i18n` / locale-aware settings for language-specific output
 - Preserve streamed text exactly unless normalization is part of the product requirement; do not collapse prose with `split_whitespace()`
+- Implement `From` for custom response DTOs and call `.into()` at mapping sites instead of repeating manual field-by-field conversions
 - Do not serialize absent typed identifiers as empty strings; drop the item or return an explicit optional/error shape
 - ALL code comments must be in English
 - `#[url_patterns]` is removed in 0.2.x -- use `#[routes]` for all URL registration

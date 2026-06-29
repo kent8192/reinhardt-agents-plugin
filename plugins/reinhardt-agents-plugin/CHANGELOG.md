@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add a root-to-packaged-plugin sync script and document that root plugin files
+  are the source of truth for the marketplace package copy.
+- Incorporate the latest `cocrea` PR review lessons into skills: i18n-backed
+  server prompts, DI service-method boundaries, centralized `From`/`Into` DTO
+  conversion, generated model field filters, and i18n regression targets.
+
 ## [0.3.1] - 2026-06-29
 
 ### Changed
