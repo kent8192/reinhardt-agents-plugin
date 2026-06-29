@@ -324,6 +324,11 @@ server-only types or providers, keep it in a server-only module or mark it
 `#[cfg(native)]`; only the `#[server_fn]` body is replaced by the WASM client
 stub.
 
+Do not extract the same request flow into `server/`, `service/`, or `services/`
+only because the `#[server_fn]` is long. Extract only when the helper has a
+smaller contract, isolates a domain invariant, or is reused by another server
+function.
+
 ```rust
 #[server_fn]
 pub async fn generate_scene(

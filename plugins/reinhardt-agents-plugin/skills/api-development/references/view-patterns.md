@@ -188,6 +188,12 @@ steps, and response shaping in the handler or in a private helper beside it.
 Do not create `OutlineService`, `ManuscriptService`, or `DocumentService`
 facades that merely hide a single endpoint flow.
 
+Do not move the same handler script into `server/`, `service/`, or `services/`
+only to shorten the endpoint. Extraction should expose a smaller helper contract,
+a reusable dependency, or a focused test target. If the helper still owns the
+request DTO, response DTO, persistence order, and provider sequence, it is still
+endpoint-local workflow.
+
 ```rust
 use reinhardt::di::Depends;
 use reinhardt::views::prelude::*;

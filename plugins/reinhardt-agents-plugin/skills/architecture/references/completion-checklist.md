@@ -26,6 +26,7 @@ Run through this checklist after implementing a feature to verify all layers are
 
 - [ ] Service exists only when a capability or dependency bundle is shared across multiple endpoints
 - [ ] Endpoint-specific validation, DTO assembly, persistence ordering, generation, and edit flows remain in the endpoint or adjacent private helper
+- [ ] No file-only extraction from `#[server_fn]`; moving the same control flow into `server/`, `service/`, or `services/` has a narrower contract, shared consumer, or independently testable invariant
 - [ ] Service struct defined with common dependency fields when a service is justified
 - [ ] `#[injectable]` macro applied when a service is justified
 - [ ] `#[injectable_key]` / `FactoryOutput<K, T>` used when provider output type is not unique

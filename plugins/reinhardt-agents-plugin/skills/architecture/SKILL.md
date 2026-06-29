@@ -50,6 +50,7 @@ Read `references/error-mapping.md` for the standard mapping from service-layer e
 - Every feature MUST have tests at minimum two layers: unit (service) and integration (API)
 - Services return reusable domain results when a shared service is justified; endpoint-specific DTO and response assembly stays outside the service
 - Do not create a service facade just because an endpoint has a use-case flow; keep endpoint-specific validation, DTO assembly, persistence, generation, and edit flows in the endpoint or a nearby private helper
+- Do not count moving a `#[server_fn]` body into `server/`, `service/`, or `services/` as architectural separation unless the extracted code has a narrower contract, reusable consumer, or independently testable invariant
 - Error types from services are mapped centrally — do not handle HTTP concerns in services
 - Cross-layer operations must preserve their domain invariants: scope filters, idempotency, accepted/current version uniqueness, and ordered sibling integrity
 - Research/agent services should return evidence and diagnostics only unless the feature explicitly assigns them authoring or mutation ownership

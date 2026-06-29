@@ -42,6 +42,8 @@ Guide developers through DI configuration using reinhardt-di, including service 
 - DI-ify dependencies reused across multiple endpoints: settings, provider factories/registries, shared DB accessors, job queues, event publishers, storage adapters, and external provider adapters
 - Keep endpoint-specific validation, DTO assembly, persistence flows, generation flows, and outline/edit workflows in the `server_fn` / HTTP endpoint or a small private helper beside it
 - Avoid thick facades such as `OutlineService`, `ManuscriptService`, or `DocumentService` when they only hide one endpoint-specific flow
+- Do not "improve" a `#[server_fn]` by only moving the same control flow into `server/`, `service/`, or `services/`; extraction must create a narrower contract, reusable dependency, or independently testable invariant
+- If the extracted code still owns the endpoint request shape, response DTO, persistence order, and provider sequence, it is still the endpoint workflow and should stay visible near the `#[server_fn]`
 - Reinhardt DI checks: global registry → scope cache → pre-seeded values → `DependencyNotRegistered` error
 - Circular dependencies are detected at runtime and return `Err(DiError::CircularDependency)` — they do NOT panic
 - `#[use_inject]` enables `#[inject]` in general async functions (not just handlers)

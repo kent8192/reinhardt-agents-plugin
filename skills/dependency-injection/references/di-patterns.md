@@ -208,6 +208,16 @@ function or in a small private helper next to that endpoint. Avoid facades such
 as `OutlineService`, `ManuscriptService`, or `DocumentService` when they only
 hide a single endpoint's control flow.
 
+Moving the same script from `#[server_fn]` into `server/`, `service/`, or
+`services/` is not a cleanup by itself. Extract only when the new function or
+module owns a narrower concern, such as prompt rendering, provider adaptation,
+repository lookup, shared policy, or a domain operation reused by more than one
+endpoint. If the extracted item still knows the endpoint DTO, response shape,
+persistence order, and provider sequence, it is still the endpoint workflow.
+Before extracting, name the dependency that became injectable, the invariant
+that became independently testable, or the other endpoint that will reuse it; if
+the only answer is "the `server_fn` got shorter", keep the workflow visible.
+
 ### Preferred: inject shared dependencies, keep the workflow visible
 
 ```rust
@@ -267,6 +277,8 @@ body is replaced by the WASM client stub.
 
 ```rust
 // Avoid this when the service only wraps generate_chapter's unique flow.
+// Moving this body to server/generation.rs would be the same problem if the
+// helper still owns the endpoint request, response, and persistence order.
 #[injectable(scope = "request")]
 pub struct ManuscriptService {
     #[inject]

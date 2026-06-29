@@ -56,6 +56,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - In 0.3.x, use `use_resource(fetcher, deps)` for both mount-only and dependency-driven resources; replace `create_resource*`
 - In 0.3.x, replace `use_effect_event*` with `use_callback*` or `.get_untracked()` inside the effect
 - Put route-backed `#[component]` wrappers under `src/apps/<app>/client/components/`, not in app-local `pages.rs` or `client/pages`
+- For `#[server_fn]`, keep endpoint-specific request flows visible; do not move the same logic into `server/`, `service/`, or `services/` unless the extraction creates a narrower contract, shared dependency, or independently testable invariant
 - Use 0.3 Pages primitives directly where relevant: `#[wasm_server_api]`, `Portal` / `mount_portal`, `ActivityBoundary`, `ViewTransitionBoundary`, and `FieldArray`
 - Keep shared app code cfg-clean across native and `wasm32-unknown-unknown`; rely on documented inert stubs instead of broad call-site `#[cfg]` workarounds
 

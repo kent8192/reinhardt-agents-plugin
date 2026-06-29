@@ -99,13 +99,21 @@ keep the code in the `server_fn` / HTTP endpoint or a small private helper
 beside it. DI is for common dependency injection and swappability, not a
 mandatory abstraction layer for every use case.
 
+Do not split a `#[server_fn]` only to move lines into `server/`, `service/`, or
+`services/`. A new file is justified when it owns a smaller contract, isolates a
+domain invariant for focused tests, or serves more than one endpoint. If the
+extracted function still takes the endpoint input and returns the endpoint
+response after running the same persistence/provider sequence, it is still the
+endpoint workflow.
+
 **Steps:**
 
 1. Decide whether the logic is reused by multiple endpoints
-2. If yes, create a service file: `src/<app>/services/<capability>.rs`
-3. Define service struct with only common dependencies as fields
-4. Register with DI using `#[injectable]`
-5. If no, keep the flow in the endpoint or a nearby private helper
+2. Name the smaller contract, shared dependency, or invariant that extraction would isolate
+3. If yes, create a service file: `src/<app>/services/<capability>.rs`
+4. Define service struct with only common dependencies as fields
+5. Register with DI using `#[injectable]`
+6. If no, keep the flow in the endpoint or a nearby private helper
 
 **Example:**
 
@@ -136,6 +144,7 @@ impl ProductCatalog {
 
 - [ ] Service exists only when the capability or dependency bundle is reused across endpoints
 - [ ] Endpoint-specific flows remain in the endpoint or a private helper beside it
+- [ ] No file-only extraction from `#[server_fn]`; each extracted helper/service has a narrower contract, shared consumer, or independently testable invariant
 - [ ] Service struct defined with injected common dependencies
 - [ ] `#[injectable]` applied when a service is justified
 - [ ] `#[injectable_key]` / `FactoryOutput<K, T>` used if the provider output type is not unique

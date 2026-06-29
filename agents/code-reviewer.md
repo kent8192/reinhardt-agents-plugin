@@ -58,6 +58,7 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] **(0.3.x)** No new `#[injectable_factory]`, `DependsResult`, or `DependsOption` usage — use `#[injectable]`, `FactoryOutput<K, T>`, and `Depends<K, T>`
 - [ ] DI contains common dependencies and shared capabilities only; endpoint-specific validation, DTO assembly, persistence ordering, generation, and edit flows stay in the endpoint or adjacent private helper
 - [ ] No thick service facades such as `OutlineService`, `ManuscriptService`, or `DocumentService` when they only hide one `server_fn` / HTTP endpoint workflow
+- [ ] No file-only extraction from `#[server_fn]` into `server/`, `service/`, or `services/`; extracted code has a narrower contract, shared consumer, or independently testable invariant
 - [ ] `cargo run --bin check-di -- --validate` passes
 
 ### API Design
