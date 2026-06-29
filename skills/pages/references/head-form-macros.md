@@ -314,6 +314,41 @@ pub async fn me(
 }
 ```
 
+Inject shared dependencies, but keep the endpoint's unique workflow visible in
+the `#[server_fn]` or a nearby private helper. Use DI for settings, provider
+registries, database access, queues, storage, and external adapters shared by
+multiple server functions. Do not introduce thick facades such as
+`ManuscriptService` when they only hide one server function's validation,
+DTO assembly, persistence sequence, or generation flow.
+
+```rust
+#[server_fn]
+pub async fn generate_scene(
+    chapter_id: Uuid,
+    input: GenerateSceneRequest,
+    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
+    #[inject] providers: Depends<AiProviderRegistryKey, ProviderRegistry>,
+) -> Result<SceneInfo, ServerFnError> {
+    input.validate()?;
+
+    let chapter = Chapter::objects().get(chapter_id, &*db).await?;
+    let draft = generate_scene_draft(&providers, &chapter, &input).await?;
+    let saved = Scene::objects()
+        .create(Scene::from_draft(chapter_id, draft), &*db)
+        .await?;
+
+    Ok(SceneInfo::from_model(&saved))
+}
+
+async fn generate_scene_draft(
+    providers: &ProviderRegistry,
+    chapter: &Chapter,
+    input: &GenerateSceneRequest,
+) -> Result<SceneDraft, ServerFnError> {
+    providers.writer(input.provider).generate_scene(chapter, input).await
+}
+```
+
 ### Options
 
 | Option | Type | Default | Description |

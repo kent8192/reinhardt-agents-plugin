@@ -24,13 +24,16 @@ Run through this checklist after implementing a feature to verify all layers are
 
 ## Service Layer
 
-- [ ] Service struct defined with dependency fields
-- [ ] `#[injectable]` macro applied
+- [ ] Service exists only when a capability or dependency bundle is shared across multiple endpoints
+- [ ] Endpoint-specific validation, DTO assembly, persistence ordering, generation, and edit flows remain in the endpoint or adjacent private helper
+- [ ] Service struct defined with common dependency fields when a service is justified
+- [ ] `#[injectable]` macro applied when a service is justified
 - [ ] `#[injectable_key]` / `FactoryOutput<K, T>` used when provider output type is not unique
 - [ ] Constructor receives all dependencies via injection
-- [ ] Methods return domain types, not ORM models
+- [ ] Methods return reusable domain results; endpoint-specific DTO and response assembly stays outside service code
 - [ ] Error handling uses domain error types (not HTTP status codes)
 - [ ] No direct HTTP concerns in service code
+- [ ] No thick `OutlineService`, `ManuscriptService`, or `DocumentService` facade hiding one endpoint-specific workflow
 - [ ] Scoped operations apply the same scope to every branch and fallback path
 - [ ] Regeneration/re-indexing paths are idempotent or explicitly reject duplicates
 - [ ] Stateful fake providers share storage across the operations being tested

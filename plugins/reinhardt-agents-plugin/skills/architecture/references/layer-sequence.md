@@ -90,16 +90,22 @@ pub struct ProductCreateInput {
 
 ---
 
-## Layer 3: Service
+## Layer 3: Shared Service or Endpoint-Local Flow
 
-Implement business logic as an injectable service.
+Create an injectable service only for stable capabilities or dependency bundles
+shared by multiple endpoints. For endpoint-specific validation, DTO assembly,
+persistence ordering, generation flows, outline edits, and response shaping,
+keep the code in the `server_fn` / HTTP endpoint or a small private helper
+beside it. DI is for common dependency injection and swappability, not a
+mandatory abstraction layer for every use case.
 
 **Steps:**
 
-1. Create service file: `src/<app>/services/<entity>.rs`
-2. Define service struct with dependencies as fields
-3. Implement business methods
+1. Decide whether the logic is reused by multiple endpoints
+2. If yes, create a service file: `src/<app>/services/<capability>.rs`
+3. Define service struct with only common dependencies as fields
 4. Register with DI using `#[injectable]`
+5. If no, keep the flow in the endpoint or a nearby private helper
 
 **Example:**
 
@@ -110,41 +116,34 @@ use reinhardt::prelude::*;
 struct PrimaryDatabase;
 
 #[injectable(scope = "request")]
-pub struct ProductService {
+pub struct ProductCatalog {
     #[inject]
     db: Depends<PrimaryDatabase, DatabaseConnection>,
 }
 
-impl ProductService {
-    pub async fn create(&self, input: ProductCreateInput) -> Result<ProductSerializer, AppError> {
-        let product = Product {
-            id: None,
-            name: input.name,
-            description: input.description,
-            created_at: None,
-        };
-        let saved = Product::objects().create(product).await?;
-        Ok(ProductSerializer::from_model(&saved))
-    }
-
-    pub async fn get_by_id(&self, id: Uuid) -> Result<ProductSerializer, AppError> {
+impl ProductCatalog {
+    pub async fn get_visible(&self, id: Uuid, user: &User) -> Result<Product, AppError> {
         let product = Product::objects()
+            .filter(Product::owner_id.eq(user.id))
             .get(id, &*self.db)
             .await
             .map_err(|_| AppError::NotFound("Product not found".into()))?;
-        Ok(ProductSerializer::from_model(&product))
+        Ok(product)
     }
 }
 ```
 
 **Checklist:**
 
-- [ ] Service struct defined with injected dependencies
-- [ ] `#[injectable]` applied
+- [ ] Service exists only when the capability or dependency bundle is reused across endpoints
+- [ ] Endpoint-specific flows remain in the endpoint or a private helper beside it
+- [ ] Service struct defined with injected common dependencies
+- [ ] `#[injectable]` applied when a service is justified
 - [ ] `#[injectable_key]` / `FactoryOutput<K, T>` used if the provider output type is not unique
-- [ ] Returns domain types / serializers, not raw models
+- [ ] Returns reusable domain results; endpoint-specific DTO and response assembly stays outside the service
 - [ ] Error handling uses domain error types
 - [ ] No HTTP concerns (status codes, headers) in service
+- [ ] No thick `OutlineService` / `ManuscriptService` / `DocumentService` facade that only hides one endpoint workflow
 - [ ] Mutable operations enforce domain invariants before writing: accepted/current version uniqueness, exact sibling reorder lists, scoped searches, and idempotent re-index/regenerate behavior where applicable
 
 ---
@@ -168,19 +167,31 @@ use reinhardt::rest::prelude::*;
 #[get("/{id}")]
 async fn get_product(
     path: Path<Uuid>,
-    service: Inject<ProductService>,
+    #[inject] catalog: ProductCatalog,
+    #[inject] CurrentUser(user): CurrentUser<User>,
 ) -> Result<Json<ProductSerializer>, AppError> {
-    let product = service.get_by_id(path.into_inner()).await?;
-    Ok(Json(product))
+    let product = catalog.get_visible(path.into_inner(), &user).await?;
+    Ok(Json(ProductSerializer::from_model(&product)))
 }
 
 #[post("/")]
 async fn create_product(
-    body: Json<ProductCreateInput>,
-    service: Inject<ProductService>,
+    Json(input): Json<ProductCreateInput>,
+    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
 ) -> Result<Json<ProductSerializer>, AppError> {
-    let product = service.create(body.into_inner()).await?;
-    Ok(Json(product))
+    input.validate()?;
+    let product = build_product(input)?;
+    let saved = Product::objects().create(product, &*db).await?;
+    Ok(Json(ProductSerializer::from_model(&saved)))
+}
+
+fn build_product(input: ProductCreateInput) -> Result<Product, AppError> {
+    Ok(Product {
+        id: None,
+        name: input.name,
+        description: input.description,
+        created_at: None,
+    })
 }
 
 pub fn product_routes(cfg: &mut ServiceConfig) {

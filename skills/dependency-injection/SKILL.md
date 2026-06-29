@@ -38,6 +38,10 @@ Guide developers through DI configuration using reinhardt-di, including service 
 - Use `#[injectable_key]` plus `FactoryOutput<K, T>` when a provider function returns a value type that is not a unique dependency identity
 - Consume keyed provider outputs with `Depends<K, T>`; remove old `DependsResult` / `DependsOption` sugar aliases
 - In 0.3.x, inject direct `T` values for normal dependencies and use `Depends<K, T>` only for keyed `FactoryOutput<K, T>` provider output
+- Treat DI as common dependency injection for readability and swappability, not as an abstraction layer for every use case
+- DI-ify dependencies reused across multiple endpoints: settings, provider factories/registries, shared DB accessors, job queues, event publishers, storage adapters, and external provider adapters
+- Keep endpoint-specific validation, DTO assembly, persistence flows, generation flows, and outline/edit workflows in the `server_fn` / HTTP endpoint or a small private helper beside it
+- Avoid thick facades such as `OutlineService`, `ManuscriptService`, or `DocumentService` when they only hide one endpoint-specific flow
 - Reinhardt DI checks: global registry → scope cache → pre-seeded values → `DependencyNotRegistered` error
 - Circular dependencies are detected at runtime and return `Err(DiError::CircularDependency)` — they do NOT panic
 - `#[use_inject]` enables `#[inject]` in general async functions (not just handlers)

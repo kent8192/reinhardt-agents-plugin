@@ -194,6 +194,101 @@ async fn create_user_service(
 
 ---
 
+## Endpoint Boundary: Shared Dependencies, Local Flows
+
+DI is common dependency injection for readability and swappability. It is not
+an abstraction layer for every use case. Put dependencies in DI when multiple
+`server_fn` / HTTP endpoints share them: settings, provider factories or
+registries, shared database accessors, job queue helpers, event publishers,
+storage adapters, and external provider adapters.
+
+Keep endpoint-specific validation, DTO assembly, persistence sequences,
+generation flows, outline edits, and other one-off workflows in the endpoint
+function or in a small private helper next to that endpoint. Avoid facades such
+as `OutlineService`, `ManuscriptService`, or `DocumentService` when they only
+hide a single endpoint's control flow.
+
+### Preferred: inject shared dependencies, keep the workflow visible
+
+```rust
+use reinhardt::di::{Depends, FactoryOutput, injectable, injectable_key};
+use reinhardt::pages::prelude::*;
+
+#[injectable_key]
+pub struct AiProviderRegistryKey;
+
+#[injectable(scope = "singleton")]
+async fn create_ai_provider_registry(
+    #[inject] settings: AiSettings,
+) -> FactoryOutput<AiProviderRegistryKey, ProviderRegistry> {
+    FactoryOutput::new(ProviderRegistry::from_settings(&settings))
+}
+
+#[server_fn]
+pub async fn generate_chapter(
+    project_id: Uuid,
+    input: GenerateChapterRequest,
+    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
+    #[inject] providers: Depends<AiProviderRegistryKey, ProviderRegistry>,
+) -> Result<ChapterResponse, ServerFnError> {
+    input.validate()?;
+
+    let outline = Outline::objects()
+        .filter(Outline::project_id.eq(project_id))
+        .get(&*db)
+        .await?;
+    let draft = build_chapter_draft(&providers, &outline, &input).await?;
+    let saved = Chapter::objects()
+        .create(Chapter::from_draft(project_id, draft), &*db)
+        .await?;
+
+    Ok(ChapterResponse::from_model(&saved))
+}
+
+async fn build_chapter_draft(
+    providers: &ProviderRegistry,
+    outline: &Outline,
+    input: &GenerateChapterRequest,
+) -> Result<ChapterDraft, ServerFnError> {
+    providers
+        .writer(input.provider)
+        .generate_chapter(outline, input)
+        .await
+}
+```
+
+### Avoid: hiding an endpoint workflow behind a thick facade
+
+```rust
+// Avoid this when the service only wraps generate_chapter's unique flow.
+#[injectable(scope = "request")]
+pub struct ManuscriptService {
+    #[inject]
+    db: Depends<PrimaryDatabase, DatabaseConnection>,
+    #[inject]
+    providers: Depends<AiProviderRegistryKey, ProviderRegistry>,
+}
+
+impl ManuscriptService {
+    pub async fn generate_chapter(
+        &self,
+        project_id: Uuid,
+        input: GenerateChapterRequest,
+    ) -> Result<ChapterResponse, ServerFnError> {
+        // Validation, DTO assembly, persistence, and generation are now hidden
+        // from the endpoint even though no other endpoint reuses this flow.
+        run_hidden_generation_pipeline(&self.db, &self.providers, project_id, input).await
+    }
+}
+```
+
+Use a service when it represents a stable shared capability, such as a common
+job queue client, provider registry, storage adapter, policy engine, or domain
+operation reused by several endpoints. For one endpoint's use-case script,
+prefer endpoint-local code.
+
+---
+
 ## `#[injectable]` for Structs
 
 Mark a struct as injectable with automatic field injection:
@@ -680,6 +775,7 @@ DiError::Authentication(String)              // Maps to HTTP 401
 | Simple type with `Default` | `#[injectable]` with `Default::default()` body |
 | Custom resolution logic | `impl Injectable` manually |
 | Endpoint DI | `#[inject]` in `#[get]`/`#[post]` etc. |
+| Endpoint-specific workflow | Endpoint body or private helper next to that endpoint |
 | General function DI | `#[use_inject]` + `#[inject]` |
 | Test mocking (factory) | `ctx.dependency(fn).override_with(value)` |
 | Test mocking (unit) | Construct direct values or use `Depends::<K, T>::from_value()` for keyed wrappers |

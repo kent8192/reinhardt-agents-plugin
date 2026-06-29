@@ -25,7 +25,7 @@ Follow the 7-layer sequence. Each step references the appropriate skill for deta
    - Use the modeling skill: `../modeling/references/model-patterns.md`
 2. **Define Serializer** — read `references/layer-sequence.md` § Serializer Layer
    - Use the API skill: `../api-development/references/serializer-patterns.md`
-3. **Implement Service** — read `references/layer-sequence.md` § Service Layer
+3. **Choose Endpoint or Shared Service Boundary** — read `references/layer-sequence.md` § Service Layer
    - Use the DI skill: `../dependency-injection/references/di-patterns.md`
 4. **Create API Routes** — read `references/layer-sequence.md` § API Layer
    - Use the API skill: `../api-development/references/view-patterns.md`
@@ -48,7 +48,8 @@ Read `references/error-mapping.md` for the standard mapping from service-layer e
 
 - Follow the layer sequence — earlier layers are dependencies for later ones
 - Every feature MUST have tests at minimum two layers: unit (service) and integration (API)
-- Services MUST return domain types, not ORM models directly
+- Services return reusable domain results when a shared service is justified; endpoint-specific DTO and response assembly stays outside the service
+- Do not create a service facade just because an endpoint has a use-case flow; keep endpoint-specific validation, DTO assembly, persistence, generation, and edit flows in the endpoint or a nearby private helper
 - Error types from services are mapped centrally — do not handle HTTP concerns in services
 - Cross-layer operations must preserve their domain invariants: scope filters, idempotency, accepted/current version uniqueness, and ordered sibling integrity
 - Research/agent services should return evidence and diagnostics only unless the feature explicitly assigns them authoring or mutation ownership

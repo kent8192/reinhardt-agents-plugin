@@ -180,6 +180,47 @@ pub async fn admin_list_users(
 | `Depends<K, T>` | Keyed provider output from the DI container |
 | `Depends<PrimaryDatabase, DatabaseConnection>` | Keyed database connection from the pool |
 
+### Endpoint-local workflows with shared DI dependencies
+
+Use DI for common dependencies that several endpoints share. Keep
+endpoint-specific validation, DTO assembly, persistence ordering, generation
+steps, and response shaping in the handler or in a private helper beside it.
+Do not create `OutlineService`, `ManuscriptService`, or `DocumentService`
+facades that merely hide a single endpoint flow.
+
+```rust
+use reinhardt::di::Depends;
+use reinhardt::views::prelude::*;
+
+#[post("/outlines/{id}/regenerate/", name = "outline_regenerate")]
+pub async fn regenerate_outline(
+    Path(id): Path<Uuid>,
+    Json(input): Json<RegenerateOutlineRequest>,
+    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
+    #[inject] providers: Depends<AiProviderRegistryKey, ProviderRegistry>,
+) -> ViewResult<Response> {
+    input.validate()?;
+
+    let current = Outline::objects().get(id, &*db).await?;
+    let draft = build_outline_revision(&providers, &current, &input).await?;
+    let saved = OutlineRevision::objects()
+        .create(OutlineRevision::from_draft(id, draft), &*db)
+        .await?;
+
+    Ok(Response::new(StatusCode::CREATED)
+        .with_header("Content-Type", "application/json")
+        .with_body(json::to_vec(&OutlineRevisionResponse::from_model(&saved))?))
+}
+
+async fn build_outline_revision(
+    providers: &ProviderRegistry,
+    current: &Outline,
+    input: &RegenerateOutlineRequest,
+) -> Result<OutlineDraft, AppError> {
+    providers.outliner(input.provider).regenerate(current, input).await
+}
+```
+
 ## Generic Views
 
 Generic views provide pre-built CRUD behavior. Override methods for customization.
