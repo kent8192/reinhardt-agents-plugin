@@ -74,7 +74,7 @@ pub struct ProductSerializer {
     pub created_at: NaiveDateTime,
 }
 
-#[derive(Deserialize, Schema)]
+#[derive(Deserialize, Validate, Schema)]
 pub struct ProductCreateInput {
     pub name: String,
     pub description: Option<String>,
@@ -122,9 +122,8 @@ pub struct ProductCatalog {
 }
 
 impl ProductCatalog {
-    pub async fn get_visible(&self, id: Uuid, user: &User) -> Result<Product, AppError> {
+    pub async fn get_by_id(&self, id: Uuid) -> Result<Product, AppError> {
         let product = Product::objects()
-            .filter(Product::owner_id.eq(user.id))
             .get(id, &*self.db)
             .await
             .map_err(|_| AppError::NotFound("Product not found".into()))?;
@@ -168,9 +167,8 @@ use reinhardt::rest::prelude::*;
 async fn get_product(
     path: Path<Uuid>,
     #[inject] catalog: ProductCatalog,
-    #[inject] CurrentUser(user): CurrentUser<User>,
 ) -> Result<Json<ProductSerializer>, AppError> {
-    let product = catalog.get_visible(path.into_inner(), &user).await?;
+    let product = catalog.get_by_id(path.into_inner()).await?;
     Ok(Json(ProductSerializer::from_model(&product)))
 }
 
@@ -181,7 +179,9 @@ async fn create_product(
 ) -> Result<Json<ProductSerializer>, AppError> {
     input.validate()?;
     let product = build_product(input)?;
-    let saved = Product::objects().create(product, &*db).await?;
+    let saved = Product::objects()
+        .create_with_conn(&*db, &product)
+        .await?;
     Ok(Json(ProductSerializer::from_model(&saved)))
 }
 
@@ -254,26 +254,23 @@ Write tests at three levels: unit, integration, and API.
 
 **Steps:**
 
-1. **Unit tests** — test service logic with mocked dependencies
+1. **Unit tests** — test shared service logic or endpoint-local helpers
 2. **Integration tests** — test with real database via TestContainers
 3. **API tests** — test HTTP endpoints end-to-end
 
-**Unit test example (service):**
+**Unit test example (endpoint-local helper):**
 
 ```rust
 #[rstest]
-async fn test_create_product_success(
-    #[future] mock_db: Arc<MockDatabasePool>,
-) {
+fn test_build_product_success() {
     // Arrange
-    let service = ProductService::new(mock_db.await);
     let input = ProductCreateInput {
         name: "Test Product".into(),
         description: None,
     };
 
     // Act
-    let result = service.create(input).await;
+    let result = build_product(input);
 
     // Assert
     assert!(result.is_ok());
@@ -337,7 +334,7 @@ async fn test_create_product_api(
 
 **Checklist:**
 
-- [ ] Unit tests for service business logic
+- [ ] Unit tests for shared service business logic or endpoint-local helpers
 - [ ] Integration tests with TestContainers for DB operations
 - [ ] API tests for HTTP endpoint behavior
 - [ ] All tests use `#[rstest]`, not `#[test]`

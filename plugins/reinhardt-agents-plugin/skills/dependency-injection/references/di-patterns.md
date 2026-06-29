@@ -238,13 +238,15 @@ pub async fn generate_chapter(
         .get(&*db)
         .await?;
     let draft = build_chapter_draft(&providers, &outline, &input).await?;
+    let chapter = Chapter::from_draft(project_id, draft);
     let saved = Chapter::objects()
-        .create(Chapter::from_draft(project_id, draft), &*db)
+        .create_with_conn(&*db, &chapter)
         .await?;
 
     Ok(ChapterResponse::from_model(&saved))
 }
 
+#[cfg(native)]
 async fn build_chapter_draft(
     providers: &ProviderRegistry,
     outline: &Outline,
@@ -256,6 +258,10 @@ async fn build_chapter_draft(
         .await
 }
 ```
+
+When a nearby helper mentions server-only types or providers, keep it in a
+server-only module or gate it with `#[cfg(native)]`; only the `#[server_fn]`
+body is replaced by the WASM client stub.
 
 ### Avoid: hiding an endpoint workflow behind a thick facade
 

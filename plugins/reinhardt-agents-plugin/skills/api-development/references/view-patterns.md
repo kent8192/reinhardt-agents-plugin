@@ -203,8 +203,9 @@ pub async fn regenerate_outline(
 
     let current = Outline::objects().get(id, &*db).await?;
     let draft = build_outline_revision(&providers, &current, &input).await?;
+    let revision = OutlineRevision::from_draft(id, draft);
     let saved = OutlineRevision::objects()
-        .create(OutlineRevision::from_draft(id, draft), &*db)
+        .create_with_conn(&*db, &revision)
         .await?;
 
     Ok(Response::new(StatusCode::CREATED)

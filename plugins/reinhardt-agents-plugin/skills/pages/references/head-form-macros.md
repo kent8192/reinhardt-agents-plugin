@@ -319,7 +319,10 @@ the `#[server_fn]` or a nearby private helper. Use DI for settings, provider
 registries, database access, queues, storage, and external adapters shared by
 multiple server functions. Do not introduce thick facades such as
 `ManuscriptService` when they only hide one server function's validation,
-DTO assembly, persistence sequence, or generation flow.
+DTO assembly, persistence sequence, or generation flow. When a helper mentions
+server-only types or providers, keep it in a server-only module or mark it
+`#[cfg(native)]`; only the `#[server_fn]` body is replaced by the WASM client
+stub.
 
 ```rust
 #[server_fn]
@@ -333,13 +336,15 @@ pub async fn generate_scene(
 
     let chapter = Chapter::objects().get(chapter_id, &*db).await?;
     let draft = generate_scene_draft(&providers, &chapter, &input).await?;
+    let scene = Scene::from_draft(chapter_id, draft);
     let saved = Scene::objects()
-        .create(Scene::from_draft(chapter_id, draft), &*db)
+        .create_with_conn(&*db, &scene)
         .await?;
 
     Ok(SceneInfo::from_model(&saved))
 }
 
+#[cfg(native)]
 async fn generate_scene_draft(
     providers: &ProviderRegistry,
     chapter: &Chapter,
