@@ -89,6 +89,12 @@ For full-stack Pages apps, `services/` is the DI surface. Keep it limited to
 injectable service keys, provider functions, service structs, and methods that
 represent application business operations.
 
+Prefer keyed injectable services over clusters of utility functions whenever
+the behavior is application business logic, depends on settings/providers,
+touches repositories or external I/O, needs lifecycle scoping, or should be
+overridable in tests. Utility functions are still appropriate for small pure
+transformations that do not need DI or a business-operation boundary.
+
 Do **not** use `services/` as a general server-side utility bucket. Put pure
 helpers, prompt builders, parsing/conversion logic, provider implementation
 details, repository/database internals, and state-transition helpers in
@@ -114,7 +120,7 @@ boundary, then call a keyed service such as
 `Depends<NovelGenerationServiceKey, NovelGenerationService>`. Avoid constructing
 settings directly or calling free functions for business operations inside
 `#[server_fn]`; that hides dependencies from DI, makes tests harder to override,
-and encourages mixed-purpose `services/` modules.
+and encourages mixed-purpose utility-function clusters.
 
 ### Duplicate Registration Detection
 

@@ -332,7 +332,10 @@ Keep provider adapters, prompt construction, parsing/conversion helpers, and
 repository/database internals outside `services/`, for example under app-local
 `server/providers`, `server/prompts`, and `server/repositories` modules. The
 `services/` module should expose the DI surface only: keys, provider functions,
-and service structs/functions.
+and service structs/functions. Prefer that DI service surface over composing
+business workflows from utility-function clusters; keep utility functions for
+small pure transformations that do not need settings, providers, lifecycle
+scope, or test overrides.
 
 ### `FromRequest` extractors in server functions (rc.18+)
 

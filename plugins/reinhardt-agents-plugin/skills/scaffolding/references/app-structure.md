@@ -320,6 +320,11 @@ operations there with Reinhardt 0.3 DI shape:
 `#[injectable(scope = "...")] -> FactoryOutput<Key, Service>`, then inject them
 from `#[server_fn]` as `Depends<Key, Service>`.
 
+Prefer this DI service surface over composing application behavior from
+utility-function clusters. Use utility functions only for small pure
+transformations that do not need settings, providers, repositories, external
+I/O, lifecycle scoping, or test overrides.
+
 Keep implementation details outside `services/`. Put provider adapters, prompt
 builders, parsing/conversion helpers, repository/database internals, and pure
 state-transition helpers in app-local `server/` modules such as

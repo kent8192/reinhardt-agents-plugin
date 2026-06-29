@@ -50,6 +50,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - ALL code comments must be in English
 - Use `reinhardt-query` for any SQL construction, NEVER raw SQL
 - `#[server_fn]` functions should inject keyed services for application business logic (`Depends<Key, Service>`) instead of constructing settings directly and calling free functions
+- Prefer DI services over utility-function clusters for business operations; reserve utility functions for small pure transformations that do not need settings, providers, lifecycle scoping, or test overrides
 - Keep Pages app `services/` modules focused on injectable keys, provider functions, and service structs/functions; put prompt builders, provider adapters, parsers, converters, repository/database helpers, and pure helpers under app-local `server/` modules
 - In 0.2.x, reactive expressions in `page!` are auto-wrapped — explicit `Page::reactive(...)` is no longer needed
 - In 0.2.x, `use_effect`/`use_memo`/`use_callback` take explicit dependency arrays

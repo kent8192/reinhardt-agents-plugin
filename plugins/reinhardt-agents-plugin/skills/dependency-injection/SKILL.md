@@ -27,9 +27,10 @@ Guide developers through DI configuration using reinhardt-di, including service 
 ### Designing a Pages Service Layer
 
 1. Keep app-local `services/` focused on the DI surface: injectable keys, provider functions, service structs, and service functions
-2. Move pure helpers, prompt builders, parsing/conversion logic, provider implementations, and repository/database internals into app-local `server/` modules
-3. Expose business operations called by `#[server_fn]` through keyed injectable services
-4. Avoid direct settings construction plus free-function calls inside `#[server_fn]` when the behavior is application business logic
+2. Prefer a keyed injectable service over a cluster of utility functions when behavior represents application business logic
+3. Move pure helpers, prompt builders, parsing/conversion logic, provider implementations, and repository/database internals into app-local `server/` modules
+4. Expose business operations called by `#[server_fn]` through keyed injectable services
+5. Avoid direct settings construction plus free-function calls inside `#[server_fn]` when the behavior is application business logic
 
 ### Integrating with Database/Auth
 
@@ -50,6 +51,7 @@ Guide developers through DI configuration using reinhardt-di, including service 
 - Test overrides use `ctx.dependency(factory_fn).override_with(value)` for `#[injectable]` functions
 - `#[injectable]` auto-derives `Clone` on structs — no need to manually add `#[derive(Clone)]`
 - `Depends<Key, T>` requires only `T: Send + Sync + 'static` (NOT `T: Clone`); `into_inner()` requires Clone, but `try_unwrap()` does not
+- Prefer DI services over utility-function clusters for business operations, especially when the logic needs settings, providers, repositories, external I/O, lifecycle scoping, or test overrides
 - In Pages apps, `services/` is the DI surface only; keep provider adapters, prompt builders, parsers, converters, repository/database helpers, and pure state-transition functions outside it
 - `#[server_fn]` functions should inject keyed services for application business logic instead of constructing settings directly and calling free functions
 - `DependencyRegistry::register()` panics on duplicate `TypeId` — use distinct provider keys (`FactoryOutput<Key, T>`) or newtype wrappers for multiple registrations of the same value type
