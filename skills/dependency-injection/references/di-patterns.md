@@ -526,7 +526,7 @@ use reinhardt::views::prelude::*;
 
 #[get("/users/", name = "user_list")]
 pub async fn list_users(
-    #[inject] user_service: UserService,
+    #[inject] user_service: Depends<UserServiceKey, UserService>,
 ) -> ViewResult<Response> {
     let users = user_service.list_active().await?;
     Ok(Response::new(StatusCode::OK)
@@ -536,7 +536,7 @@ pub async fn list_users(
 #[post("/users/", name = "user_create")]
 pub async fn create_user(
     Json(body): Json<CreateUserRequest>,
-    #[inject] user_service: UserService,
+    #[inject] user_service: Depends<UserServiceKey, UserService>,
     #[inject] email_service: EmailService,
 ) -> ViewResult<Response> {
     let user = user_service.create(&body).await?;

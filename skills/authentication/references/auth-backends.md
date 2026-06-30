@@ -235,7 +235,7 @@ pub struct SessionSettings {
 // Cargo.toml
 // reinhardt = { version = "...", features = ["auth-session", "sessions", "argon2-hasher"] }
 
-use reinhardt_auth::{sessions::config::SessionConfig, settings::SessionSettings};
+use reinhardt::auth::{sessions::config::SessionConfig, SessionSettings};
 
 fn session_config(auth_session: &SessionSettings) -> SessionConfig {
     auth_session.to_config()

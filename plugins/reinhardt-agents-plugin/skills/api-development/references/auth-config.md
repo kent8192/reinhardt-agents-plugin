@@ -144,7 +144,7 @@ Use the `SessionSettings` fragment and convert it to the compatibility
 `SessionConfig` value when wiring session middleware:
 
 ```rust
-use reinhardt_auth::{sessions::config::SessionConfig, settings::SessionSettings};
+use reinhardt::auth::{sessions::config::SessionConfig, SessionSettings};
 
 fn session_config(auth_session: &SessionSettings) -> SessionConfig {
     auth_session.to_config()

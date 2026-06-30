@@ -39,7 +39,7 @@ Execute these steps in order:
 
 Reference: `../skills/migration/references/changelog-format.md`
 
-For 0.2.x → 0.3.0 upgrades, read `reinhardt/instructions/MIGRATION_0.3.md`
+For 0.2.x → 0.3.x upgrades, read `reinhardt/instructions/MIGRATION_0.3.md`
 before CHANGELOG extraction when it exists. If it is unavailable, read
 `../skills/migration/references/0.3-upgrade.md` and treat it as the fallback
 source map for removed APIs, Pages layout changes, DI identity changes, routing
@@ -143,5 +143,5 @@ Return a structured report in this format:
 - If `gh` CLI fails, note the error and continue with CHANGELOG-only analysis
 - For 0.1.x → 0.2.x upgrades, include ALL breaking changes from the "Major Version Upgrade" reference in the report, even if the user's code doesn't directly use the affected APIs (they may use them transitively)
 - For 0.1.x → 0.2.x upgrades, also check `reinhardt/announcements/v0.2.0-rc.N.md` for 0.2.x-series release notes
-- For 0.2.x → 0.3.0 upgrades, include ALL removed APIs and layout migrations from `MIGRATION_0.3.md` or `0.3-upgrade.md`, even when the app scan only finds a subset
-- For 0.2.x → 0.3.0 upgrades, explicitly scan for `AuthUser`, `create_resource*`, `use_effect_event*`, raw `ServerRouter` function/route registration, `FunctionHandler`, `DependsResult`, `DependsOption`, `pages.rs`, `server_urls`, `client/pages`, and broad `src/shared/forms.rs` / `src/shared/types.rs` usage
+- For 0.2.x → 0.3.x upgrades, include ALL removed APIs and layout migrations from `MIGRATION_0.3.md` or `0.3-upgrade.md`, even when the app scan only finds a subset
+- For 0.2.x → 0.3.x upgrades, explicitly scan for `AuthUser`, `create_resource*`, `use_effect_event*`, raw `ServerRouter` function/route registration, `FunctionHandler`, `DependsResult`, `DependsOption`, `pages.rs`, `server_urls`, `client/pages`, and broad `src/shared/forms.rs` / `src/shared/types.rs` usage
