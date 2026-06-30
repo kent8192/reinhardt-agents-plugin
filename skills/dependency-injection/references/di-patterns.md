@@ -27,55 +27,91 @@ reinhardt-core/macros
 
 ---
 
-## Recommended Approach: `#[injectable]` + Optional Keys
+## Recommended Approach: `#[injectable]` + Keyed Providers
 
-In 0.3.x, `#[injectable]` is the recommended macro for both injectable structs
-and provider functions. Return a plain `T` when the type itself is the unique
-dependency identity. Return `FactoryOutput<K, T>` when the produced value type
-can have multiple meanings in one application.
+In 0.3.x, `#[injectable]` is the recommended macro for provider functions.
+Provider functions return `FactoryOutput<K, T>`, where `K` is the dependency
+identity and callers consume the value as `Depends<K, T>`.
 
 ```rust
 use reinhardt::di::{Depends, FactoryOutput, injectable, injectable_key};
 
 #[injectable_key]
-struct PrimaryDatabase;
+pub struct NovelGenerationServiceKey;
 
-#[injectable(scope = "singleton")]
-async fn create_database(
-    #[inject] config: AppConfig,
-) -> FactoryOutput<PrimaryDatabase, DatabaseConnection> {
-    FactoryOutput::new(
-        DatabaseConnection::connect(&config.database_url)
-            .await
-            .unwrap(),
-    )
+pub struct NovelGenerationService {
+    provider: LlmProvider,
 }
 
-#[injectable(scope = "singleton")]
-async fn create_email_service(#[inject] config: AppConfig) -> EmailService {
-    EmailService::new(&config.email_api_key)
+impl NovelGenerationService {
+    pub async fn generate(&self, input: GenerateNovelInput) -> Result<NovelDraft, AppError> {
+        let prompt = build_generation_prompt(&input);
+        self.provider.generate(prompt).await
+    }
 }
 
-#[injectable(scope = "transient")]
-async fn create_request_logger(
-    #[inject] config: AppConfig,
-    #[inject] user_info: AuthInfo,
-) -> RequestLogger {
-    RequestLogger::new(config.log_level, user_info.user_id())
+#[injectable(scope = "request")]
+async fn novel_generation_service(
+    #[inject] settings: Depends<AppSettingsKey, AppSettings>,
+) -> FactoryOutput<NovelGenerationServiceKey, NovelGenerationService> {
+    FactoryOutput::new(NovelGenerationService {
+        provider: LlmProvider::from_settings(&*settings),
+    })
+}
+
+#[server_fn]
+pub async fn generate_novel(
+    input: GenerateNovelInput,
+    #[inject] service: Depends<NovelGenerationServiceKey, NovelGenerationService>,
+) -> Result<NovelDraft, ServerFnError> {
+    (*service).generate(input).await.map_err(ServerFnError::from)
 }
 ```
 
 ### Rules for Provider Functions
 
-- Function may be sync or async
-- Function **MUST** have an explicit return type
+- Function **MUST** be async
+- Function **MUST** have an explicit `FactoryOutput<K, T>` return type
+- Key type should use `#[injectable_key]` or implement `InjectableKey`
 - **ALL** parameters **MUST** be marked with `#[inject]`
+- Inject other provider outputs as `Depends<K, T>`
 - Scope is specified as a string: `"singleton"`, `"request"`, `"transient"`
 - The generated wrapper receives `InjectionContext` and resolves all `#[inject]` dependencies automatically
-- Return `T` for unique dependency identity, or `FactoryOutput<K, T>` when an
-  explicit key should identify the provider
 - `#[injectable_factory]` is retained only as a deprecated 0.2 compatibility
   alias; do not use it for new 0.3.x code
+
+### Pages Service-Layer Boundary
+
+For full-stack Pages apps, `services/` is the DI surface. Keep it limited to
+injectable keys, provider functions, service structs/functions, and stable
+application business operations that need settings, providers, repositories,
+external I/O, lifecycle scoping, or test overrides.
+
+Do **not** use `services/` as a general server-side utility bucket. Put pure
+helpers, prompt builders, parsing/conversion logic, provider implementation
+details, repository/database internals, and state-transition helpers in
+app-local `server/` modules instead.
+
+Recommended layout for an app such as `cocrea`:
+
+```text
+src/apps/cocrea/
+├── services.rs                 # Module entry for injectable service surface
+├── services/
+│   └── server.rs               # Keys, FactoryOutput providers, service structs
+├── server.rs                   # Module entry for server-only implementation details
+├── server/
+│   ├── providers/              # LLM/provider adapters
+│   ├── prompts/                # Prompt construction
+│   └── repositories/           # Database/repository helpers
+└── server_fn/                  # Request/response boundary; injects services
+```
+
+`#[server_fn]` functions should stay request-shaped: validate input, assemble
+DTOs, and call keyed services for shared business operations. Avoid constructing
+settings directly or calling free functions for business operations inside
+`#[server_fn]`; that hides dependencies from DI, makes tests harder to override,
+and encourages mixed-purpose utility-function clusters.
 
 ### Provider Identity and Duplicate Registration
 
@@ -88,12 +124,12 @@ If you need two providers for the same underlying value type, use
 ```rust
 use reinhardt::di::{FactoryOutput, injectable, injectable_key};
 
-// BAD: both providers identify as DatabaseConnection
+// BAD: both providers identify as DatabaseConnection.
 #[injectable(scope = "singleton")]
-async fn create_read_db() -> DatabaseConnection { /* ... */ }
+async fn create_read_db() -> DatabaseConnection { /* ... */ } // compile-time/provider contract error
 
 #[injectable(scope = "singleton")]
-async fn create_write_db() -> DatabaseConnection { /* ... */ }  // PANIC: duplicate TypeId
+async fn create_write_db() -> DatabaseConnection { /* ... */ } // same problem
 
 // GOOD: keys make provider identity explicit
 #[injectable_key]
@@ -197,18 +233,140 @@ before the provider body executes. Use direct `T` for normal injectable values
 and `Depends<K, T>` only when consuming keyed provider output:
 
 ```rust
+#[injectable_key]
+struct UserServiceKey;
+
 #[injectable(scope = "singleton")]
 async fn create_user_service(
     #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>, // Resolves FactoryOutput<PrimaryDatabase, DatabaseConnection>
     #[inject] config: AppConfig,                              // Resolves direct Injectable value
-) -> UserService {
-    UserService::new(db, config)
+) -> FactoryOutput<UserServiceKey, UserService> {
+    FactoryOutput::new(UserService::new(db, config))
 }
 ```
 
 - `Depends<K, T>` parameter: resolves keyed provider output `FactoryOutput<K, T>`
 - `T` parameter: resolves `T` as a direct `Injectable` value; the generated
   resolver clones from the cached `Arc<T>` when cache lookup is used
+
+---
+
+## Endpoint Boundary: Shared Dependencies, Local Flows
+
+DI is common dependency injection for readability and swappability. It is not
+an abstraction layer for every use case. Put dependencies in DI when multiple
+`server_fn` / HTTP endpoints share them: settings, provider factories or
+registries, shared database accessors, job queue helpers, event publishers,
+storage adapters, and external provider adapters.
+
+Keep endpoint-specific validation, DTO assembly, persistence sequences,
+generation flows, outline edits, and other one-off workflows in the endpoint
+function or in a small private helper next to that endpoint. Avoid facades such
+as `OutlineService`, `ManuscriptService`, or `DocumentService` when they only
+hide a single endpoint's control flow.
+
+Moving the same script from `#[server_fn]` into `server/`, `service/`, or
+`services/` is not a cleanup by itself. Extract only when the new function or
+module owns a narrower concern, such as prompt rendering, provider adaptation,
+repository lookup, shared policy, or a domain operation reused by more than one
+endpoint. If the extracted item still knows the endpoint DTO, response shape,
+persistence order, and provider sequence, it is still the endpoint workflow.
+Before extracting, name the dependency that became injectable, the invariant
+that became independently testable, or the other endpoint that will reuse it; if
+the only answer is "the `server_fn` got shorter", keep the workflow visible.
+
+Inline and delete delegated helpers that are used by exactly one endpoint or
+one section when they still pass through the same endpoint DTOs, dependencies,
+persistence order, and provider sequence. A private helper is justified when it
+has a smaller contract, returns a reusable domain value, isolates a named
+invariant, or is called by more than one workflow.
+
+### Preferred: inject shared dependencies, keep the workflow visible
+
+```rust
+use reinhardt::di::{Depends, FactoryOutput, injectable, injectable_key};
+use reinhardt::pages::prelude::*;
+
+#[injectable_key]
+pub struct AiProviderRegistryKey;
+
+#[injectable(scope = "singleton")]
+async fn create_ai_provider_registry(
+    #[inject] settings: AiSettings,
+) -> FactoryOutput<AiProviderRegistryKey, ProviderRegistry> {
+    FactoryOutput::new(ProviderRegistry::from_settings(&settings))
+}
+
+#[server_fn]
+pub async fn generate_chapter(
+    project_id: Uuid,
+    input: GenerateChapterRequest,
+    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
+    #[inject] providers: Depends<AiProviderRegistryKey, ProviderRegistry>,
+) -> Result<ChapterResponse, ServerFnError> {
+    input.validate()?;
+
+    let outline = Outline::objects()
+        .filter(Outline::project_id.eq(project_id))
+        .get(&*db)
+        .await?;
+    let draft = build_chapter_draft(&providers, &outline, &input).await?;
+    let chapter = Chapter::from_draft(project_id, draft);
+    let saved = Chapter::objects()
+        .create_with_conn(&*db, &chapter)
+        .await?;
+
+    Ok(ChapterResponse::from_model(&saved))
+}
+
+#[cfg(native)]
+async fn build_chapter_draft(
+    providers: &ProviderRegistry,
+    outline: &Outline,
+    input: &GenerateChapterRequest,
+) -> Result<ChapterDraft, ServerFnError> {
+    providers
+        .writer(input.provider)
+        .generate_chapter(outline, input)
+        .await
+}
+```
+
+When a nearby helper mentions server-only types or providers, keep it in a
+server-only module or gate it with `#[cfg(native)]`; only the `#[server_fn]`
+body is replaced by the WASM client stub.
+
+### Avoid: hiding an endpoint workflow behind a thick facade
+
+```rust
+// Avoid this when the service only wraps generate_chapter's unique flow.
+// Moving this body to server/generation.rs would be the same problem if the
+// helper still owns the endpoint request, response, and persistence order.
+#[injectable(scope = "request")]
+pub struct ManuscriptService {
+    #[inject]
+    db: Depends<PrimaryDatabase, DatabaseConnection>,
+    #[inject]
+    providers: Depends<AiProviderRegistryKey, ProviderRegistry>,
+}
+
+impl ManuscriptService {
+    pub async fn generate_chapter(
+        &self,
+        project_id: Uuid,
+        input: GenerateChapterRequest,
+    ) -> Result<ChapterResponse, ServerFnError> {
+        // Validation, DTO assembly, persistence, and generation are now hidden
+        // from the endpoint even though no other endpoint reuses this flow.
+        run_hidden_generation_pipeline(&self.db, &self.providers, project_id, input).await
+    }
+}
+```
+
+Use a service when it represents a stable shared capability, such as a common
+job queue client, provider registry, storage adapter, policy engine, or domain
+operation reused by several endpoints. For one endpoint's use-case script,
+prefer endpoint-local code.
 
 ---
 
@@ -258,19 +416,21 @@ pub struct RequestLogger {
 
 ## `#[injectable]` for Functions
 
-`#[injectable]` can also be applied to functions. It generates an `Injectable` trait implementation for the return type:
+`#[injectable]` can also be applied to provider functions. In 0.3.x, provider
+functions are async and return `FactoryOutput<K, T>` so the key type becomes
+the dependency identity:
 
 ```rust
 use reinhardt::di::prelude::*;
 
-#[injectable]
-fn create_database(#[inject] config: AppConfig) -> DatabaseConnection {
-    DatabaseConnection::connect(&config.database_url)
-}
+#[injectable_key]
+pub struct DatabaseKey;
 
-#[injectable]
-async fn create_cache(#[inject] config: AppConfig) -> CacheClient {
-    CacheClient::connect(&config.cache_url).await
+#[injectable(scope = "singleton")]
+async fn create_database(
+    #[inject] config: AppConfig,
+) -> FactoryOutput<DatabaseKey, DatabaseConnection> {
+    FactoryOutput::new(DatabaseConnection::connect(&config.database_url).await)
 }
 ```
 
@@ -278,16 +438,15 @@ async fn create_cache(#[inject] config: AppConfig) -> CacheClient {
 
 | Feature | `#[injectable]` provider function | Legacy `#[injectable_factory]` |
 |---------|--------------------------|------------------------|
-| Sync/async | Both supported | Async only |
+| Sync/async | Async only | Async only |
 | Scope control | `scope = "..."` | `scope = "..."` |
 | Override support | `ctx.dependency(fn).override_with(value)` | Compatibility only |
 | Registration | Registers provider output in the global registry | Deprecated alias |
 
 For 0.3.x code, **`#[injectable]` is the supported provider macro**. Use
 `#[injectable_factory]` only when maintaining older 0.2-era code; it is a
-deprecated compatibility alias. When a provider function returns a value type
-that is not a unique dependency identity, use `#[injectable_key]` with
-`FactoryOutput<K, T>` and consume it as `Depends<K, T>`.
+deprecated compatibility alias. Use `#[injectable_key]` with
+`FactoryOutput<K, T>` and consume provider output as `Depends<K, T>`.
 
 ---
 
@@ -300,7 +459,7 @@ All injectable types **MUST** be explicitly registered. There is no auto-injecti
 | `#[injectable]` on struct | Struct with `#[inject]` / `#[no_inject]` field attributes |
 | `#[injectable]` on function | Function that produces `T` or `FactoryOutput<K, T>` |
 | `impl Injectable` manually | Custom resolution logic |
-| `#[injectable]` | Deprecated 0.2 compatibility alias for provider functions |
+| `#[injectable_factory]` | Deprecated 0.2 compatibility alias for provider functions |
 
 Unregistered types return `DiError::DependencyNotRegistered` at runtime.
 
@@ -454,25 +613,29 @@ must return `FactoryOutput<K, T>`, and `K` must implement `InjectableKey`.
 for shared access; extracting an owned `T` with `.into_inner()` requires `T:
 Clone`.
 
-Factory parameters and handler injection can receive either `Depends<K, T>` for
-keyed provider output or direct `T` for normal injectable values:
+Factory parameters and handler injection can receive `Depends<K, T>` for keyed
+provider output or direct `T` for normal injectable values:
 
 ```rust
 #[injectable_key]
 struct AppConfigKey;
+#[injectable_key]
+struct UserServiceKey;
+#[injectable_key]
+struct HandlerNameKey;
 
 // Receives keyed FactoryOutput<AppConfigKey, AppConfig>
 #[injectable(scope = "singleton")]
 async fn create_user_service(
     #[inject] config: Depends<AppConfigKey, AppConfig>,
-) -> UserService {
-    UserService::new(config)
+) -> FactoryOutput<UserServiceKey, UserService> {
+    FactoryOutput::new(UserService::new(config))
 }
 
 // Receives direct Injectable value
 #[injectable(scope = "transient")]
-async fn make_handler(#[inject] service: MyService) -> String {
-    service.value
+async fn make_handler(#[inject] service: MyService) -> FactoryOutput<HandlerNameKey, String> {
+    FactoryOutput::new(service.value)
 }
 ```
 
@@ -488,13 +651,17 @@ Prefer `try_unwrap()` when the wrapper is the sole owner (e.g., at the end of a 
 ```rust
 #[injectable_key]
 struct StateLockKey;
+#[injectable_key]
+struct ProcessorKey;
 
 #[injectable(scope = "request")]
-async fn create_processor(#[inject] lock: Depends<StateLockKey, RwLock<State>>) -> Processor {
+async fn create_processor(
+    #[inject] lock: Depends<StateLockKey, RwLock<State>>,
+) -> FactoryOutput<ProcessorKey, Processor> {
     // RwLock<State> does not implement Clone
     // try_unwrap() works because the factory is the sole consumer
     let state_lock = lock.try_unwrap().expect("sole owner");
-    Processor::new(state_lock)
+    FactoryOutput::new(Processor::new(state_lock))
 }
 ```
 
@@ -555,14 +722,27 @@ Extract shared logic into a third service:
 // BAD: UserService ↔ OrderService (circular)
 
 // GOOD: Both depend on UserRepository (no cycle)
+#[injectable_key]
+pub struct UserRepositoryKey;
+
+#[injectable_key]
+pub struct UserServiceKey;
+
+#[injectable_key]
+pub struct OrderServiceKey;
+
 #[injectable(scope = "singleton")]
-async fn create_user_service(#[inject] repo: UserRepository) -> UserService {
-    UserService::new(repo)
+async fn create_user_service(
+    #[inject] repo: Depends<UserRepositoryKey, UserRepository>,
+) -> FactoryOutput<UserServiceKey, UserService> {
+    FactoryOutput::new(UserService::from_repository(&*repo))
 }
 
 #[injectable(scope = "singleton")]
-async fn create_order_service(#[inject] repo: UserRepository) -> OrderService {
-    OrderService::new(repo)
+async fn create_order_service(
+    #[inject] repo: Depends<UserRepositoryKey, UserRepository>,
+) -> FactoryOutput<OrderServiceKey, OrderService> {
+    FactoryOutput::new(OrderService::from_repository(&*repo))
 }
 ```
 
@@ -577,12 +757,17 @@ Reinhardt DI provides a fluent API for overriding dependencies in tests using `c
 For functions registered with `#[injectable]` (function form), use the fluent override API:
 
 ```rust
-use reinhardt_di::{InjectionContext, SingletonScope};
+use reinhardt_di::{FactoryOutput, InjectionContext, SingletonScope, injectable_key};
 use std::sync::Arc;
 
+#[injectable_key]
+pub struct DatabaseKey;
+
 #[injectable]
-fn create_database(#[inject] config: AppConfig) -> DatabaseConnection {
-    DatabaseConnection::connect(&config.database_url)
+async fn create_database(
+    #[inject] config: AppConfig,
+) -> FactoryOutput<DatabaseKey, DatabaseConnection> {
+    FactoryOutput::new(DatabaseConnection::connect(&config.database_url).await)
 }
 
 #[rstest]
@@ -647,13 +832,16 @@ ctx.clear_overrides();
 Inside `#[injectable]` execution, use `get_di_context` to access the DI context without requiring `#[inject]`:
 
 ```rust
-use reinhardt::di::{get_di_context, try_get_di_context, ContextLevel};
+use reinhardt::di::{get_di_context, try_get_di_context, ContextLevel, FactoryOutput};
+
+#[injectable_key]
+pub struct RouterKey;
 
 #[injectable(scope = "transient")]
-async fn make_router(#[inject] config: AppConfig) -> Router {
+async fn make_router(#[inject] config: AppConfig) -> FactoryOutput<RouterKey, Router> {
     // Access the DI context directly
     let di_ctx = get_di_context(ContextLevel::Current);
-    Router::new().with_di_context(di_ctx)
+    FactoryOutput::new(Router::new().with_di_context(di_ctx))
 }
 
 // Non-panicking variant — returns None outside DI resolution context
@@ -693,11 +881,13 @@ DiError::Authentication(String)              // Maps to HTTP 401
 
 | Scenario | Recommended Pattern |
 |----------|-------------------|
-| Complex async initialization | `#[injectable]` |
+| Complex async initialization | `#[injectable]` provider returning `FactoryOutput<K, T>` |
 | Struct with injected fields | `#[injectable]` on struct |
-| Simple type with `Default` | `#[injectable]` with `Default::default()` body |
+| Simple type with `Default` | `#[injectable]` provider returning `FactoryOutput<K, T>` with `Default::default()` body |
 | Custom resolution logic | `impl Injectable` manually |
 | Endpoint DI | `#[inject]` in `#[get]`/`#[post]` etc. |
+| Endpoint-specific workflow | Endpoint body or private helper next to that endpoint |
+| Single-use helper that only delegates the same endpoint flow | Inline into the caller and delete the helper |
 | General function DI | `#[use_inject]` + `#[inject]` |
 | Test mocking (factory) | `ctx.dependency(fn).override_with(value)` |
 | Test mocking (unit) | Construct direct values or use `Depends::<K, T>::from_value()` for keyed wrappers |
@@ -716,7 +906,7 @@ your domain model or makes call sites clearer.
 ```rust
 use reinhardt::di::{Depends, FactoryOutput, injectable, injectable_key};
 
-// BAD: Vec<String> is too generic and can conflict if registered elsewhere
+// BAD: Vec<String> is too generic and the provider has no explicit key identity
 #[injectable(scope = "singleton")]
 async fn create_allowed_origins() -> Vec<String> {
     vec!["https://example.com".to_string()]

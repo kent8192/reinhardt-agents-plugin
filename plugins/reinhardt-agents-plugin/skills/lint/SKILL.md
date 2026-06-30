@@ -58,10 +58,26 @@ When checking 0.3.x readiness, run the migration-guide scans before the normal
 suite:
 
 ```bash
-rg -n "AuthUser|create_resource|create_resource_with_deps|use_effect_event|use_effect_event_with" src crates examples
-rg -n "\\.(function|route|handler_with_method)(_named)?\\(|FunctionHandler|Depends(Result|Option)" src crates examples
-rg -n "FactoryOutput<|Depends<[^,>]+>|injectable_factory|InjectableKey" src crates examples
-rg --files src examples | rg '(^|/)(pages\.rs|server_urls\.rs|client/pages(/|\.rs$)|src/shared/(forms|types)\.rs$)'
+SCAN_DIRS=()
+for dir in src crates examples; do
+  [[ -e "$dir" ]] && SCAN_DIRS+=("$dir")
+done
+
+PAGE_SCAN_DIRS=()
+for dir in src examples; do
+  [[ -e "$dir" ]] && PAGE_SCAN_DIRS+=("$dir")
+done
+
+if ((${#SCAN_DIRS[@]})); then
+  rg -n "AuthUser|create_resource|create_resource_with_deps|use_effect_event|use_effect_event_with" "${SCAN_DIRS[@]}"
+  rg -n "ServerRouter::route(_named)?\\(|\\.(function|handler_with_method)(_named)?\\(|FunctionHandler|Depends(Result|Option)" "${SCAN_DIRS[@]}"
+  rg -n "FactoryOutput<|Depends<[^,>]+>|injectable_factory|InjectableKey" "${SCAN_DIRS[@]}"
+  rg -n "\\.route(_named)?\\(" "${SCAN_DIRS[@]}" -g '*server_router.rs' -g '*server_urls.rs'
+fi
+
+if ((${#PAGE_SCAN_DIRS[@]})); then
+  rg --files "${PAGE_SCAN_DIRS[@]}" | rg '(^|/)(pages\.rs|server_urls\.rs|client/pages(/|\.rs$)|src/shared/(forms|types)\.rs$)'
+fi
 ```
 
 ## Important Rules

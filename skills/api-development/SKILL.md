@@ -34,6 +34,13 @@ Guide developers through building REST API endpoints using reinhardt-rest, reinh
 - Scoped endpoints must apply the same target scope to every backend path, including fallback filename, filesystem, and hybrid-search branches
 - `#[server_fn]` is for Pages client RPC; external workers and agent services should use explicit HTTP or gRPC endpoints with configured domains
 - Server-side prompt endpoints and generated text APIs must use `reinhardt-i18n` / locale-aware settings for language-specific output
+- For Pages `#[server_fn]` business logic, inject shared keyed services with `Depends<K, T>` rather than constructing settings directly in the request boundary
+- Prefer DI services over utility-function clusters when endpoint or server-function behavior needs settings, providers, repositories, external I/O, lifecycle scoping, or test overrides
+- Keep app `services/` modules limited to DI keys, providers, and service structs/functions; put provider adapters, prompt builders, parsers, converters, repository/database helpers, and pure helpers under app-local `server/` modules
+- Do not move the same endpoint control flow into `server/`, `service/`, or `services/` only to shorten a handler; extract only for a narrower contract, shared dependency, or independently testable invariant
+- Inline and delete single-use delegated helpers when they only pass through one endpoint's request, dependencies, and persistence/provider sequence
+- Keep endpoint decorator paths app-local; compose app/API prefixes in route modules or `*_urls.rs`, not inside handler paths or function bodies
+- Import request, DTO, and framework types at module scope instead of using long fully qualified paths inside handler or server function signatures/bodies
 - Preserve streamed text exactly unless normalization is part of the product requirement; do not collapse prose with `split_whitespace()`
 - Implement `From` for custom response DTOs and call `.into()` at mapping sites instead of repeating manual field-by-field conversions
 - Do not serialize absent typed identifiers as empty strings; drop the item or return an explicit optional/error shape

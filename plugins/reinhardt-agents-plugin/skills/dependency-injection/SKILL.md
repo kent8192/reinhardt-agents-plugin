@@ -20,8 +20,8 @@ Guide developers through DI configuration using reinhardt-di, including service 
 
 1. Read `references/di-patterns.md` for injection patterns
 2. Determine scope (request-scoped vs singleton)
-3. Implement `Injectable` trait or use auto-implementation
-4. Use `#[inject]` in handlers to receive the dependency
+3. For Reinhardt 0.3 provider functions, return `FactoryOutput<K, T>` from `#[injectable(scope = "...")]`
+4. Use `#[inject] dependency: Depends<K, T>` in handlers or `#[server_fn]` functions to receive keyed provider output
 
 ### Integrating with Database/Auth
 
@@ -35,9 +35,18 @@ Guide developers through DI configuration using reinhardt-di, including service 
 - Custom injection logic requires `#[async_trait] impl Injectable` (method is `inject`, not `resolve`)
 - Prefer `#[injectable]` for registering provider functions and injectable structs (async, explicit scope, auto-registered)
 - `#[injectable_factory]` is a deprecated 0.2 compatibility alias in 0.3.x — do not use it in new code
-- Use `#[injectable_key]` plus `FactoryOutput<K, T>` when a provider function returns a value type that is not a unique dependency identity
-- Consume keyed provider outputs with `Depends<K, T>`; remove old `DependsResult` / `DependsOption` sugar aliases
+- Use `#[injectable_key]` plus `FactoryOutput<K, T>` for 0.3 provider functions; the key type is the provider identity
+- Consume keyed provider outputs with `Depends<K, T>`; remove old `DependsResult` / `DependsOption` sugar aliases and deleted `Injected<T>` wrappers
 - In 0.3.x, inject direct `T` values for normal dependencies and use `Depends<K, T>` only for keyed `FactoryOutput<K, T>` provider output
+- Treat DI as common dependency injection for readability and swappability, not as an abstraction layer for every use case
+- DI-ify dependencies reused across multiple endpoints: settings, provider factories/registries, shared DB accessors, job queues, event publishers, storage adapters, and external provider adapters
+- In Pages apps, keep `services/` as the DI surface: keys, provider functions, service structs/functions, and stable business operations that need lifecycle scoping or test overrides
+- Keep provider adapters, prompt builders, parsers, converters, repository/database helpers, and pure state-transition helpers under app-local `server/` modules, not `services/`
+- Keep endpoint-specific validation, DTO assembly, persistence flows, generation flows, and outline/edit workflows in the `server_fn` / HTTP endpoint or a small private helper beside it
+- Avoid thick facades such as `OutlineService`, `ManuscriptService`, or `DocumentService` when they only hide one endpoint-specific flow
+- Do not "improve" a `#[server_fn]` by only moving the same control flow into `server/`, `service/`, or `services/`; extraction must create a narrower contract, reusable dependency, or independently testable invariant
+- If the extracted code still owns the endpoint request shape, response DTO, persistence order, and provider sequence, it is still the endpoint workflow and should stay visible near the `#[server_fn]`
+- Inline and delete single-use delegated helpers when they only forward one endpoint/section's request, dependencies, and control flow
 - Reinhardt DI checks: global registry → scope cache → pre-seeded values → `DependencyNotRegistered` error
 - Circular dependencies are detected at runtime and return `Err(DiError::CircularDependency)` — they do NOT panic
 - `#[use_inject]` enables `#[inject]` in general async functions (not just handlers)

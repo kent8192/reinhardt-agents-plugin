@@ -111,10 +111,17 @@ set_count(5);
 | `use_layout_effect` | `use_layout_effect(closure, deps)` | Synchronous effect before paint |
 
 ```rust
-use_effect(move || {
-    // Runs when dependencies change
-    log!("Count is: {}", count.get());
-}, [count]);
+use_effect(
+    {
+        let count = count.clone();
+        move || {
+            // Runs when dependencies change
+            log!("Count is: {}", count.get());
+            None::<fn()>
+        }
+    },
+    (count.clone(),),
+);
 ```
 
 **When to use `use_layout_effect`**: DOM measurements, preventing visual flicker.
@@ -184,7 +191,16 @@ Async data loading with reactive dependencies.
 #[cfg(wasm)]
 {
     let user_id = Signal::new(1);
-    let user = use_resource(fetch_user, (user_id,));
+    let user = use_resource(
+        {
+            let user_id = user_id.clone();
+            move || {
+                let id = user_id.get();
+                async move { fetch_user(id).await }
+            }
+        },
+        (user_id.clone(),),
+    );
 
     // Mount-only loading
     let current_user = use_resource(fetch_current_user, ());
@@ -349,10 +365,17 @@ use_effect(move || {
     log!("count changed: {}", count.get());
 });
 
-// 0.2.x — explicit dependency arrays
-use_effect(move || {
-    log!("count changed: {}", count.get());
-}, [count]);
+// 0.2.x — explicit dependency tuples
+use_effect(
+    {
+        let count = count.clone();
+        move || {
+            log!("count changed: {}", count.get());
+            None::<fn()>
+        }
+    },
+    (count.clone(),),
+);
 ```
 
 ```rust
@@ -362,9 +385,16 @@ use_layout_effect(move || {
 });
 
 // 0.2.x
-use_layout_effect(move || {
-    measure_element(&node_ref);
-}, [node_ref]);
+use_layout_effect(
+    {
+        let node_ref = node_ref.clone();
+        move || {
+            measure_element(&node_ref);
+            None::<fn()>
+        }
+    },
+    (node_ref.clone(),),
+);
 ```
 
 ### Derived Value Hooks
@@ -376,7 +406,13 @@ In 0.2.x, `use_memo` and `use_callback`/`use_callback_with` are rewritten with e
 use_memo(move || count.get() * 2);
 
 // 0.2.x — explicit dependencies
-use_memo(move || count.get() * 2, [count]);
+use_memo(
+    {
+        let count = count.clone();
+        move || count.get() * 2
+    },
+    (count.clone(),),
+);
 ```
 
 ```rust
@@ -386,9 +422,15 @@ use_callback(move |_| {
 });
 
 // 0.2.x
-use_callback(move |_| {
-    set_count(count.get() + 1);
-}, [count]);
+use_callback(
+    {
+        let count = count.clone();
+        move |_| {
+            set_count(count.get() + 1);
+        }
+    },
+    (count.clone(),),
+);
 ```
 
 ### Auto-wrapping in page! Macro

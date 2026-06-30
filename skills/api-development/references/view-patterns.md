@@ -74,6 +74,11 @@ pub async fn delete_user(Path(id): Path<i64>) -> ViewResult<Response> {
 | `name = "..."` | Named route for reverse URL lookup | `#[get("/users/", name = "user_list")]` |
 | `pre_validate = true` | Run validation before handler body | `#[post("/users/", name = "user_create", pre_validate = true)]` |
 
+Decorator paths should stay local to the app/router, such as
+`"/search/sources/"`. Compose app and API prefixes such as `"/api/writing"` in
+the route aggregate or `*_urls.rs` module with `mount`/`with_prefix`, and use
+reverse helpers at call sites instead of rebuilding full paths in handlers.
+
 ### Return Type
 
 All handlers return `ViewResult<Response>`. This is an alias for `Result<Response, AppError>` where errors are automatically converted to HTTP error responses.
@@ -180,6 +185,59 @@ pub async fn admin_list_users(
 | `Depends<K, T>` | Keyed provider output from the DI container |
 | `Depends<PrimaryDatabase, DatabaseConnection>` | Keyed database connection from the pool |
 
+### Endpoint-local workflows with shared DI dependencies
+
+Use DI for common dependencies that several endpoints share. Keep
+endpoint-specific validation, DTO assembly, persistence ordering, generation
+steps, and response shaping in the handler or in a private helper beside it.
+Do not create `OutlineService`, `ManuscriptService`, or `DocumentService`
+facades that merely hide a single endpoint flow.
+
+Do not move the same handler script into `server/`, `service/`, or `services/`
+only to shorten the endpoint. Extraction should expose a smaller helper contract,
+a reusable dependency, or a focused test target. If the helper still owns the
+request DTO, response DTO, persistence order, and provider sequence, it is still
+endpoint-local workflow.
+
+Inline and delete a helper that is used only by one endpoint section and only
+delegates the same request data, dependencies, persistence order, and provider
+sequence. Keep a helper when it returns a narrower domain value, isolates a
+named invariant, or has another caller.
+
+```rust
+use reinhardt::di::Depends;
+use reinhardt::views::prelude::*;
+
+#[post("/outlines/{id}/regenerate/", name = "outline_regenerate")]
+pub async fn regenerate_outline(
+    Path(id): Path<Uuid>,
+    Json(input): Json<RegenerateOutlineRequest>,
+    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
+    #[inject] providers: Depends<AiProviderRegistryKey, ProviderRegistry>,
+) -> ViewResult<Response> {
+    input.validate()?;
+
+    let current = Outline::objects().get(id, &*db).await?;
+    let draft = build_outline_revision(&providers, &current, &input).await?;
+    let revision = OutlineRevision::from_draft(id, draft);
+    let saved = OutlineRevision::objects()
+        .create_with_conn(&*db, &revision)
+        .await?;
+
+    Ok(Response::new(StatusCode::CREATED)
+        .with_header("Content-Type", "application/json")
+        .with_body(json::to_vec(&OutlineRevisionResponse::from_model(&saved))?))
+}
+
+async fn build_outline_revision(
+    providers: &ProviderRegistry,
+    current: &Outline,
+    input: &RegenerateOutlineRequest,
+) -> Result<OutlineDraft, AppError> {
+    providers.outliner(input.provider).regenerate(current, input).await
+}
+```
+
 ## Generic Views
 
 Generic views provide pre-built CRUD behavior. Override methods for customization.
@@ -282,25 +340,62 @@ fn user_handler() -> ModelViewSetHandler<User> {
 
 For full-stack applications scaffolded with `--with-pages`, server functions
 allow RPC-style calls from client-side WASM. The decorator is `#[server_fn]`
-(NOT `#[server]`):
+(NOT `#[server]`). Keep `#[server_fn]` functions as request/response
+boundaries: validate input, inject shared keyed services, and keep
+endpoint-specific DTO/persistence flow visible unless a narrower service
+contract is reused across endpoints.
 
 ```rust
+use reinhardt::di::Depends;
 use reinhardt::pages::prelude::*;
 
+use crate::apps::accounts::services::{
+    AuthService,
+    AuthServiceKey,
+    UserProfileService,
+    UserProfileServiceKey,
+};
+
 #[server_fn]
-pub async fn login(username: String, password: String) -> Result<AuthResponse, ServerFnError> {
-    let user = authenticate(&username, &password).await?;
-    let token = create_jwt_token(&user)?;
-    Ok(AuthResponse { token, user_id: user.id })
+pub async fn login(
+    username: String,
+    password: String,
+    #[inject] auth: Depends<AuthServiceKey, AuthService>,
+) -> Result<AuthResponse, ServerFnError> {
+    (*auth).login(username, password).await.map_err(ServerFnError::from)
 }
 
 #[server_fn]
-pub async fn get_user_profile(user_id: i64) -> Result<UserProfile, ServerFnError> {
-    let db = use_context::<DatabaseConnection>()?;
-    let user = User::objects().get(user_id).await?;
-    Ok(UserProfile::from(user))
+pub async fn get_user_profile(
+    user_id: i64,
+    #[inject] profiles: Depends<UserProfileServiceKey, UserProfileService>,
+) -> Result<UserProfile, ServerFnError> {
+    (*profiles).get(user_id).await.map_err(ServerFnError::from)
 }
 ```
+
+Register shared business services in the app's `services/` module with the
+Reinhardt 0.3 provider shape:
+
+```rust
+use reinhardt::di::{Depends, FactoryOutput, injectable, injectable_key};
+
+#[injectable_key]
+pub struct AuthServiceKey;
+
+#[injectable(scope = "request")]
+async fn auth_service(
+    #[inject] settings: Depends<AppSettingsKey, AppSettings>,
+) -> FactoryOutput<AuthServiceKey, AuthService> {
+    FactoryOutput::new(AuthService::from_settings(&*settings))
+}
+```
+
+Keep provider adapters, prompt construction, parsing/conversion helpers, and
+repository/database internals outside `services/`, for example under app-local
+`server/providers`, `server/prompts`, and `server/repositories`. The
+`services/` module should expose the DI surface only: keys, provider functions,
+and service structs/functions.
 
 ### `FromRequest` extractors in server functions (rc.18+)
 

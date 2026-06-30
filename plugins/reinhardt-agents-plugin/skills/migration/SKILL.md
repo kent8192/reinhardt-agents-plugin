@@ -60,6 +60,7 @@ For each migration task:
 - ALWAYS present the migration report to the user before making changes
 - NEVER modify code without user confirmation
 - For multi-version hops (e.g., rc.18 → rc.22), review each intermediate version's changes — see `references/upgrade-workflow.md` for the worked rc.18 → rc.22 example covering the rc.19 `urls/` directory move and the rc.22 `form!` `strip_arguments` migration
+- For direct 0.1.x → 0.3.x upgrades, treat the work as a combined migration: apply the 0.1.x → 0.2.x major-version guidance first, then apply the 0.2.x → 0.3.x checklist before editing code.
 - For 0.1.x → 0.2.x upgrades, this is a **major version migration** with extensive breaking changes. Use `references/upgrade-workflow.md` "Major Version Upgrade" section and `reinhardt/instructions/MIGRATION_0.2.md` for the full migration path.
 - For 0.2.x → 0.3.x upgrades, read `references/0.3-upgrade.md` first. If a local `reinhardt-web` checkout has `instructions/MIGRATION_0.3.md`, prefer that current guide and use the bundled reference as the fallback checklist.
 - After all migrations, run `cargo check` and `cargo test` to verify

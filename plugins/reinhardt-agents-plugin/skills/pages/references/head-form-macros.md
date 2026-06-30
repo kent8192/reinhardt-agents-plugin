@@ -314,6 +314,56 @@ pub async fn me(
 }
 ```
 
+Inject shared dependencies, but keep the endpoint's unique workflow visible in
+the `#[server_fn]` or a nearby private helper. Use DI for settings, provider
+registries, database access, queues, storage, and external adapters shared by
+multiple server functions. Do not introduce thick facades such as
+`ManuscriptService` when they only hide one server function's validation,
+DTO assembly, persistence sequence, or generation flow. When a helper mentions
+server-only types or providers, keep it in a server-only module or mark it
+`#[cfg(native)]`; only the `#[server_fn]` body is replaced by the WASM client
+stub.
+
+Do not extract the same request flow into `server/`, `service/`, or `services/`
+only because the `#[server_fn]` is long. Extract only when the helper has a
+smaller contract, isolates a domain invariant, or is reused by another server
+function.
+
+Inline and delete a helper that is called only by this `#[server_fn]` and only
+forwards the same request data, injected dependencies, persistence order, and
+provider sequence. Keep a private helper when it returns a narrower value or
+isolates a named invariant, as in the draft-building example below.
+
+```rust
+#[server_fn]
+pub async fn generate_scene(
+    chapter_id: Uuid,
+    input: GenerateSceneRequest,
+    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
+    #[inject] providers: Depends<AiProviderRegistryKey, ProviderRegistry>,
+) -> Result<SceneInfo, ServerFnError> {
+    input.validate()?;
+
+    let chapter = Chapter::objects().get(chapter_id, &*db).await?;
+    let draft = generate_scene_draft(&providers, &chapter, &input).await?;
+    let scene = Scene::from_draft(chapter_id, draft);
+    let saved = Scene::objects()
+        .create_with_conn(&*db, &scene)
+        .await?;
+
+    Ok(SceneInfo::from_model(&saved))
+}
+
+#[cfg(native)]
+async fn generate_scene_draft(
+    providers: &ProviderRegistry,
+    chapter: &Chapter,
+    input: &GenerateSceneRequest,
+) -> Result<SceneDraft, ServerFnError> {
+    providers.writer(input.provider).generate_scene(chapter, input).await
+}
+```
+
 ### Options
 
 | Option | Type | Default | Description |

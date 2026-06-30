@@ -28,20 +28,26 @@ reinhardt = { version = "...", features = ["auth-jwt", "argon2-hasher"] }
 
 ### Configuration
 
-Create `JwtConfig` from the project's composed settings accessor or from an
-app-owned settings wrapper registered in DI:
+Create a `JwtAuth` helper from the project's composed settings accessor or from
+an app-owned settings wrapper registered in DI:
 
 ```rust
-use reinhardt::auth::jwt::{JwtConfig, Algorithm};
-fn jwt_config(settings: &ProjectSettings) -> JwtConfig {
-    JwtConfig {
-        secret_key: settings.jwt_secret_key.clone(),
-        algorithm: Algorithm::HS256,
-        access_token_lifetime: Duration::from_secs(60 * 15),   // 15 minutes
-        refresh_token_lifetime: Duration::from_secs(60 * 60 * 24 * 7), // 7 days
-        issuer: Some("my-app".to_string()),
-        audience: None,
-    }
+use chrono::Duration;
+use reinhardt::auth::jwt::{Claims, JwtAuth, JwtError};
+
+fn jwt_auth(settings: &ProjectSettings) -> JwtAuth {
+    JwtAuth::new(settings.jwt_secret_key.as_bytes())
+}
+
+fn create_jwt_token(jwt_auth: &JwtAuth, user: &User) -> Result<String, JwtError> {
+    let claims = Claims::new(
+        user.id.to_string(),
+        user.username.clone(),
+        Duration::minutes(15),
+        user.is_staff,
+        user.is_superuser,
+    );
+    jwt_auth.encode(&claims)
 }
 ```
 
@@ -50,7 +56,7 @@ fn jwt_config(settings: &ProjectSettings) -> JwtConfig {
 Apply JWT middleware via `UnifiedRouter`:
 
 ```rust
-use reinhardt::auth::jwt::JwtAuthMiddleware;
+use reinhardt::middleware::JwtAuthMiddleware;
 
 UnifiedRouter::new()
     .mount("/api/", app_router)
@@ -109,9 +115,14 @@ pub async fn admin_dashboard(
 use reinhardt::pages::prelude::*;
 
 #[server_fn]
-pub async fn login(username: String, password: String) -> Result<AuthResponse, ServerFnError> {
+pub async fn login(
+    username: String,
+    password: String,
+    #[inject] settings: ProjectSettings,
+) -> Result<AuthResponse, ServerFnError> {
     let user = authenticate(&username, &password).await?;
-    let token = create_jwt_token(&user)?;
+    let jwt_auth = jwt_auth(&settings);
+    let token = create_jwt_token(&jwt_auth, &user)?;
     Ok(AuthResponse { token, user_id: user.id })
 }
 ```
@@ -133,10 +144,10 @@ Use the `SessionSettings` fragment and convert it to the compatibility
 `SessionConfig` value when wiring session middleware:
 
 ```rust
-use reinhardt_auth::{sessions::config::SessionConfig, SessionSettings};
+use reinhardt_auth::{sessions::config::SessionConfig, settings::SessionSettings};
 
-fn session_config(settings: &ProjectSettings) -> SessionConfig {
-    settings.auth_session.to_config()
+fn session_config(auth_session: &SessionSettings) -> SessionConfig {
+    auth_session.to_config()
 }
 ```
 

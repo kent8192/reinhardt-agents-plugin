@@ -65,6 +65,9 @@ For each CHANGELOG entry referencing a PR number `(#NNN)`:
 2. Filter: only include entries where `since` version is between `current_version` and `target_version`
 3. Extract the `note` field for each deprecated item (contains replacement guidance)
 4. Identify the deprecated symbol name (type, function, method, trait)
+5. If the local reinhardt source checkout is unavailable, skip this source-only
+   scan and continue to Step 4 using symbols from the CHANGELOG, PR context, and
+   fallback migration references.
 
 ### Step 4: Application Code Scan
 
@@ -136,7 +139,7 @@ Return a structured report in this format:
 - ALWAYS verify PR/Issue details via `gh` CLI — do not fabricate context
 - ONLY report deprecated APIs whose `since` version falls in the upgrade range
 - ONLY report application code usage that actually exists (verified by grep)
-- If reinhardt source is not available locally, note it and skip Steps 3-4
+- If reinhardt source is not available locally, note it and skip only Step 3's source-only deprecated annotation scan; still run Step 4 against the user's application code using CHANGELOG, PR, and fallback migration-reference symbols
 - If `gh` CLI fails, note the error and continue with CHANGELOG-only analysis
 - For 0.1.x → 0.2.x upgrades, include ALL breaking changes from the "Major Version Upgrade" reference in the report, even if the user's code doesn't directly use the affected APIs (they may use them transitively)
 - For 0.1.x → 0.2.x upgrades, also check `reinhardt/announcements/v0.2.0-rc.N.md` for 0.2.x-series release notes

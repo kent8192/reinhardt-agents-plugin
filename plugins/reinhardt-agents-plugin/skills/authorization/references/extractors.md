@@ -73,7 +73,7 @@ pub async fn get_profile(
 
 ## CurrentUser<U> (Full User Model)
 
-**Module:** `reinhardt_auth::current_user`
+**Module:** `reinhardt_auth::auth_user`
 
 Loads the full user model from the database using the authenticated user's ID.
 
@@ -190,5 +190,5 @@ In 0.2.x, auth extractors return types based on the unified `AuthIdentity` trait
 For the latest extractor API:
 
 1. Read `reinhardt/crates/reinhardt-auth/src/auth_info.rs` for AuthInfo
-2. Read `reinhardt/crates/reinhardt-auth/src/current_user.rs` for CurrentUser
+2. Read `reinhardt/crates/reinhardt-auth/src/auth_user.rs` for CurrentUser
 3. Read `reinhardt/instructions/MIGRATION_0.3.md` before migrating legacy AuthUser call sites
