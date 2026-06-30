@@ -115,9 +115,14 @@ pub async fn admin_dashboard(
 use reinhardt::pages::prelude::*;
 
 #[server_fn]
-pub async fn login(username: String, password: String) -> Result<AuthResponse, ServerFnError> {
+pub async fn login(
+    username: String,
+    password: String,
+    #[inject] settings: ProjectSettings,
+) -> Result<AuthResponse, ServerFnError> {
     let user = authenticate(&username, &password).await?;
-    let token = create_jwt_token(&user)?;
+    let jwt_auth = jwt_auth(&settings);
+    let token = create_jwt_token(&jwt_auth, &user)?;
     Ok(AuthResponse { token, user_id: user.id })
 }
 ```

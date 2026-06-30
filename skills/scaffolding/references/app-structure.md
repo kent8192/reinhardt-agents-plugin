@@ -288,8 +288,8 @@ use reinhardt::app_config;
 pub mod server;          // Server-side implementation tree
 #[cfg(wasm)]
 pub mod client;          // WASM client implementation tree
+#[cfg(native)]
 pub mod serializers;
-pub mod server_fn;
 pub mod services;        // Cross-target DI surface: keys, stubs, service APIs
 pub mod urls;
 
@@ -309,7 +309,7 @@ pub mod client_router;
 - `#[cfg(native)]` — Server-only modules (models, views, admin, etc.)
 - `#[cfg(wasm)]` — WASM-only modules (client components)
 - `#[cfg(server)]` — Server-mode-only routing (mode-gated, not platform-gated)
-- No annotation — Available on both platforms (server functions, shared types, DI service keys)
+- No annotation — Available on both platforms (DI service keys, service APIs, and shared DTOs that do not depend on native-only types)
 
 ### Pages Service and Server Boundaries
 
@@ -339,10 +339,12 @@ unconditional `server` modules only for cross-target stubs.
 
 ```bash
 mkdir -p src/apps/<app>/client/components src/apps/<app>/server src/apps/<app>/urls
+git mv src/apps/<app>/urls/client_urls.rs src/apps/<app>/urls/client_router.rs
 git mv src/apps/<app>/urls/server_urls.rs src/apps/<app>/urls/server_router.rs
 ```
 
-Then declare the target-specific router modules in `src/apps/<app>/urls.rs`:
+If the legacy app does not have `client_urls.rs`, create `client_router.rs`
+before declaring the target-specific router modules in `src/apps/<app>/urls.rs`:
 
 ```rust
 #[cfg(server)]
