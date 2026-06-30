@@ -88,15 +88,6 @@ pub struct Claims {
     pub is_superuser: bool,
 }
 
-pub struct JwtConfig {
-    pub secret_key: String,
-    pub algorithm: Algorithm,
-    pub access_token_lifetime: Duration,
-    pub refresh_token_lifetime: Duration,
-    pub issuer: Option<String>,
-    pub audience: Option<String>,
-}
-
 #[non_exhaustive]
 pub enum JwtError {
     TokenExpired,
@@ -130,24 +121,29 @@ pub enum JwtError {
 // Cargo.toml
 // reinhardt = { version = "...", features = ["auth-jwt", "argon2-hasher"] }
 
-use reinhardt::auth::jwt::{JwtConfig, Algorithm};
+use chrono::Duration;
+use reinhardt::auth::jwt::{Claims, JwtAuth, JwtError};
 
-fn jwt_config(settings: &ProjectSettings) -> JwtConfig {
-    JwtConfig {
-        secret_key: settings.jwt_secret_key.clone(),
-        algorithm: Algorithm::HS256,
-        access_token_lifetime: Duration::from_secs(60 * 15),       // 15 minutes
-        refresh_token_lifetime: Duration::from_secs(60 * 60 * 24 * 7), // 7 days
-        issuer: Some("my-app".to_string()),
-        audience: None,
-    }
+fn jwt_auth(settings: &ProjectSettings) -> JwtAuth {
+    JwtAuth::new(settings.jwt_secret_key.as_bytes())
+}
+
+fn create_jwt_token(jwt_auth: &JwtAuth, user: &User) -> Result<String, JwtError> {
+    let claims = Claims::new(
+        user.id.to_string(),
+        user.username.clone(),
+        Duration::minutes(15),
+        user.is_staff,
+        user.is_superuser,
+    );
+    jwt_auth.encode(&claims)
 }
 ```
 
 ### Middleware
 
 ```rust
-use reinhardt::auth::jwt::JwtAuthMiddleware;
+use reinhardt::middleware::JwtAuthMiddleware;
 
 UnifiedRouter::new()
     .mount("/api/", app_router)
@@ -239,10 +235,10 @@ pub struct SessionSettings {
 // Cargo.toml
 // reinhardt = { version = "...", features = ["auth-session", "sessions", "argon2-hasher"] }
 
-use reinhardt_auth::{sessions::config::SessionConfig, SessionSettings};
+use reinhardt_auth::{sessions::config::SessionConfig, settings::SessionSettings};
 
-fn session_config(settings: &ProjectSettings) -> SessionConfig {
-    settings.auth_session.to_config()
+fn session_config(auth_session: &SessionSettings) -> SessionConfig {
+    auth_session.to_config()
 }
 ```
 
