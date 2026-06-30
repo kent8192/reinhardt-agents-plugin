@@ -39,7 +39,7 @@ Execute these steps in order:
 
 Reference: `../skills/migration/references/changelog-format.md`
 
-For 0.2.x → 0.3.0 upgrades, read `reinhardt/instructions/MIGRATION_0.3.md`
+For 0.2.x → 0.3.x upgrades, read `reinhardt/instructions/MIGRATION_0.3.md`
 before CHANGELOG extraction when it exists. If it is unavailable, read
 `../skills/migration/references/0.3-upgrade.md` and treat it as the fallback
 source map for removed APIs, Pages layout changes, DI identity changes, routing
@@ -56,11 +56,6 @@ For each CHANGELOG entry referencing a PR number `(#NNN)`:
 
 ### Step 3: Deprecated API Detection
 
-If the local `reinhardt` source checkout is unavailable, note that Step 3 is
-limited to source-only `#[deprecated]` annotation detection and continue to Step
-4 with removed/deprecated symbols from CHANGELOG entries and migration
-references.
-
 1. Grep reinhardt source for `#[deprecated(since = "...")]`
 
    ```bash
@@ -70,6 +65,9 @@ references.
 2. Filter: only include entries where `since` version is between `current_version` and `target_version`
 3. Extract the `note` field for each deprecated item (contains replacement guidance)
 4. Identify the deprecated symbol name (type, function, method, trait)
+5. If the local reinhardt source checkout is unavailable, skip this source-only
+   scan and continue to Step 4 using symbols from the CHANGELOG, PR context, and
+   fallback migration references.
 
 ### Step 4: Application Code Scan
 
@@ -141,9 +139,9 @@ Return a structured report in this format:
 - ALWAYS verify PR/Issue details via `gh` CLI — do not fabricate context
 - ONLY report deprecated APIs whose `since` version falls in the upgrade range
 - ONLY report application code usage that actually exists (verified by grep)
-- If reinhardt source is not available locally, note it, skip only the source-only `#[deprecated]` annotation detection in Step 3, and still run Step 4 application scans from CHANGELOG entries and fallback migration symbols
+- If reinhardt source is not available locally, note it and skip only Step 3's source-only deprecated annotation scan; still run Step 4 against the user's application code using CHANGELOG, PR, and fallback migration-reference symbols
 - If `gh` CLI fails, note the error and continue with CHANGELOG-only analysis
 - For 0.1.x → 0.2.x upgrades, include ALL breaking changes from the "Major Version Upgrade" reference in the report, even if the user's code doesn't directly use the affected APIs (they may use them transitively)
 - For 0.1.x → 0.2.x upgrades, also check `reinhardt/announcements/v0.2.0-rc.N.md` for 0.2.x-series release notes
-- For 0.2.x → 0.3.0 upgrades, include ALL removed APIs and layout migrations from `MIGRATION_0.3.md` or `0.3-upgrade.md`, even when the app scan only finds a subset
-- For 0.2.x → 0.3.0 upgrades, explicitly scan for `AuthUser`, `create_resource*`, `use_effect_event*`, raw `ServerRouter` function/route registration, `FunctionHandler`, `DependsResult`, `DependsOption`, `pages.rs`, `server_urls`, `client/pages`, and broad `src/shared/forms.rs` / `src/shared/types.rs` usage
+- For 0.2.x → 0.3.x upgrades, include ALL removed APIs and layout migrations from `MIGRATION_0.3.md` or `0.3-upgrade.md`, even when the app scan only finds a subset
+- For 0.2.x → 0.3.x upgrades, explicitly scan for `AuthUser`, `create_resource*`, `use_effect_event*`, raw `ServerRouter` function/route registration, `FunctionHandler`, `DependsResult`, `DependsOption`, `pages.rs`, `server_urls`, `client/pages`, and broad `src/shared/forms.rs` / `src/shared/types.rs` usage

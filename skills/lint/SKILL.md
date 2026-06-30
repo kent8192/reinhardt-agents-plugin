@@ -60,16 +60,23 @@ suite:
 ```bash
 SCAN_DIRS=()
 for dir in src crates examples; do
-  [ -d "$dir" ] && SCAN_DIRS+=("$dir")
+  [[ -e "$dir" ]] && SCAN_DIRS+=("$dir")
 done
 
-if [ "${#SCAN_DIRS[@]}" -eq 0 ]; then
-  echo "No src/, crates/, or examples/ directories found to scan."
-else
+PAGE_SCAN_DIRS=()
+for dir in src examples; do
+  [[ -e "$dir" ]] && PAGE_SCAN_DIRS+=("$dir")
+done
+
+if ((${#SCAN_DIRS[@]})); then
   rg -n "AuthUser|create_resource|create_resource_with_deps|use_effect_event|use_effect_event_with" "${SCAN_DIRS[@]}"
-  rg -n "\\.(function|route|handler_with_method)(_named)?\\(|FunctionHandler|Depends(Result|Option)" "${SCAN_DIRS[@]}"
+  rg -n "ServerRouter::route(_named)?\\(|\\.(function|handler_with_method)(_named)?\\(|FunctionHandler|Depends(Result|Option)" "${SCAN_DIRS[@]}"
   rg -n "FactoryOutput<|Depends<[^,>]+>|injectable_factory|InjectableKey" "${SCAN_DIRS[@]}"
-  rg --files "${SCAN_DIRS[@]}" | rg '(^|/)(pages\.rs|server_urls\.rs|client/pages(/|\.rs$)|src/shared/(forms|types)\.rs$)'
+  rg -n "\\.route(_named)?\\(" "${SCAN_DIRS[@]}" -g '*server_router.rs' -g '*server_urls.rs'
+fi
+
+if ((${#PAGE_SCAN_DIRS[@]})); then
+  rg --files "${PAGE_SCAN_DIRS[@]}" | rg '(^|/)(pages\.rs|server_urls\.rs|client/pages(/|\.rs$)|src/shared/(forms|types)\.rs$)'
 fi
 ```
 

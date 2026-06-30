@@ -25,7 +25,7 @@ Follow the 7-layer sequence. Each step references the appropriate skill for deta
    - Use the modeling skill: `../modeling/references/model-patterns.md`
 2. **Define Serializer** — read `references/layer-sequence.md` § Serializer Layer
    - Use the API skill: `../api-development/references/serializer-patterns.md`
-3. **Implement Service** — read `references/layer-sequence.md` § Service Layer
+3. **Choose Endpoint or Shared Service Boundary** — read `references/layer-sequence.md` § Service Layer
    - Use the DI skill: `../dependency-injection/references/di-patterns.md`
 4. **Create API Routes** — read `references/layer-sequence.md` § API Layer
    - Use the API skill: `../api-development/references/view-patterns.md`
@@ -48,10 +48,16 @@ Read `references/error-mapping.md` for the standard mapping from service-layer e
 
 - Follow the layer sequence — earlier layers are dependencies for later ones
 - Every feature MUST have tests at minimum two layers: unit (service) and integration (API)
-- Services MUST return domain types, not ORM models directly
+- Services return reusable domain results when a shared service is justified; endpoint-specific DTO and response assembly stays outside the service
+- Do not create a service facade just because an endpoint has a use-case flow; keep endpoint-specific validation, DTO assembly, persistence, generation, and edit flows in the endpoint or a nearby private helper
+- Do not count moving a `#[server_fn]` body into `server/`, `service/`, or `services/` as architectural separation unless the extracted code has a narrower contract, reusable consumer, or independently testable invariant
+- Inline single-use delegated helpers when they only forward one endpoint/section's request, dependencies, and persistence/provider sequence
 - Error types from services are mapped centrally — do not handle HTTP concerns in services
+- Keep route decorators app-local and compose app/API prefixes in route modules or `*_urls.rs`
 - Cross-layer operations must preserve their domain invariants: scope filters, idempotency, accepted/current version uniqueness, and ordered sibling integrity
+- Keep single-use orchestration logic inline unless it is a reusable service boundary; reusable or long workflow steps belong on injectable service methods or injected services
 - Research/agent services should return evidence and diagnostics only unless the feature explicitly assigns them authoring or mutation ownership
+- Server-side prompt builders and user-visible generated text must use `reinhardt-i18n` / typed locale settings for language-specific output
 - ALL code comments must be in English
 - Use `reinhardt-query` for custom queries, NEVER raw SQL
 - For 0.3.x features, use endpoint macros plus `.endpoint(...)` for server routes instead of raw `ServerRouter::function` / `.route` registration

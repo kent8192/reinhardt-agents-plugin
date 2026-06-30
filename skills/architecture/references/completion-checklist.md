@@ -21,24 +21,33 @@ Run through this checklist after implementing a feature to verify all layers are
 - [ ] Write serializer / input type defined (API request)
 - [ ] Field validation applied where needed
 - [ ] Nested serializers for related models (if applicable)
+- [ ] Custom DTOs use centralized `From`/`Into` conversions instead of repeated literal field mapping
 
 ## Service Layer
 
-- [ ] Service struct defined with dependency fields
-- [ ] `#[injectable]` macro applied
+- [ ] Service exists only when a capability or dependency bundle is shared across multiple endpoints
+- [ ] Endpoint-specific validation, DTO assembly, persistence ordering, generation, and edit flows remain in the endpoint or adjacent private helper
+- [ ] No file-only extraction from `#[server_fn]`; moving the same control flow into `server/`, `service/`, or `services/` has a narrower contract, shared consumer, or independently testable invariant
+- [ ] Single-use helpers that only delegate one endpoint/section's request, dependencies, and persistence/provider sequence are inlined and deleted
+- [ ] Service struct defined with common dependency fields when a service is justified
+- [ ] `#[injectable]` macro applied when a service is justified
 - [ ] `#[injectable_key]` / `FactoryOutput<K, T>` used when provider output type is not unique
 - [ ] Constructor receives all dependencies via injection
-- [ ] Methods return domain types, not ORM models
+- [ ] Methods return reusable domain results; endpoint-specific DTO and response assembly stays outside service code
 - [ ] Error handling uses domain error types (not HTTP status codes)
 - [ ] No direct HTTP concerns in service code
+- [ ] No thick `OutlineService`, `ManuscriptService`, or `DocumentService` facade hiding one endpoint-specific workflow
 - [ ] Scoped operations apply the same scope to every branch and fallback path
 - [ ] Regeneration/re-indexing paths are idempotent or explicitly reject duplicates
 - [ ] Stateful fake providers share storage across the operations being tested
+- [ ] Single-use helper logic is inlined; reusable or long workflow steps are service methods or injected services
+- [ ] Language-specific prompts and generated text use i18n/settings
 
 ## API Layer
 
 - [ ] View functions defined with HTTP method decorators
 - [ ] URL routes configured and mounted in app config
+- [ ] Endpoint decorator paths are app-local; app/API prefixes are composed in route modules or `*_urls.rs`
 - [ ] Authentication configured (if required)
 - [ ] Permission guards applied (if required)
 - [ ] Error mapping verified (service errors → HTTP responses)

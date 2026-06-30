@@ -357,7 +357,7 @@ pub struct AppConfig {
 **Crate:** `reinhardt-di/macros`
 
 Mark an async function as a dependency provider with automatic registration.
-In 0.3.x, return `FactoryOutput<K, T>` when the produced value type needs an
+In 0.3.x, provider functions are async-only. Return `FactoryOutput<K, T>` when the produced value type needs an
 explicit provider identity. `#[injectable_factory]` remains only as a deprecated
 0.2 compatibility alias.
 The `DbSettings` parameter below represents an application-owned settings type

@@ -42,7 +42,7 @@ compatibility `SessionConfig` value when wiring session middleware.
 
 ```rust
 use reinhardt::settings;
-use reinhardt_auth::{sessions::config::SessionConfig, SessionSettings};
+use reinhardt::auth::{sessions::config::SessionConfig, SessionSettings};
 
 #[settings(core: CoreSettings | auth_session: SessionSettings)]
 pub struct ProjectSettings;
