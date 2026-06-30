@@ -89,6 +89,10 @@ Checklist:
 - Use `#[field(skip_info = true)]` on model fields that must not appear in info DTOs.
 - Use `Validate` / `#[validate(...)]` on write DTOs for request-level constraints.
 - Avoid hand-written serializers that merely mirror every model field.
+- For custom DTOs, implement `From<Model>` / `From<&Model>` or the equivalent
+  domain conversion once, then use `.into()` at call sites.
+- Keep conversion code next to the DTO or serializer module; do not scatter
+  repeated literal field mapping through handlers and services.
 
 ---
 

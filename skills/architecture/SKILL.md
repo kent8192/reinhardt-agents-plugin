@@ -55,7 +55,9 @@ Read `references/error-mapping.md` for the standard mapping from service-layer e
 - Error types from services are mapped centrally — do not handle HTTP concerns in services
 - Keep route decorators app-local and compose app/API prefixes in route modules or `*_urls.rs`
 - Cross-layer operations must preserve their domain invariants: scope filters, idempotency, accepted/current version uniqueness, and ordered sibling integrity
+- Keep single-use orchestration logic inline unless it is a reusable service boundary; reusable or long workflow steps belong on injectable service methods or injected services
 - Research/agent services should return evidence and diagnostics only unless the feature explicitly assigns them authoring or mutation ownership
+- Server-side prompt builders and user-visible generated text must use `reinhardt-i18n` / typed locale settings for language-specific output
 - ALL code comments must be in English
 - Use `reinhardt-query` for custom queries, NEVER raw SQL
 - For 0.3.x features, use endpoint macros plus `.endpoint(...)` for server routes instead of raw `ServerRouter::function` / `.route` registration

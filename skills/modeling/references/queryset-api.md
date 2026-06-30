@@ -62,9 +62,14 @@ let active_users = User::objects()
     .all()
     .await?;
 
-// Filter with Filter object (Django-style)
+// Filter with generated field helpers (preferred for application code)
 let alice = User::objects()
     .filter_by(User::field_name().eq("Alice"))
+    .all()
+    .await?;
+
+let project_docs = Document::objects()
+    .filter_by(Document::field_project().eq(project_id))
     .all()
     .await?;
 
@@ -75,6 +80,11 @@ let users = User::objects()
     .all()
     .await?;
 ```
+
+Prefer generated field helpers such as `<Model>::field_project().eq(value)` for
+application filters. Use lower-level filter constructors only when building
+schema tooling or query abstractions that cannot express the predicate through
+model metadata.
 
 ### Ordering, Pagination, Limit/Offset
 

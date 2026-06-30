@@ -331,6 +331,7 @@ layer that can prove the failure. Good targets include:
 - Split/merge/reorder: assert operation payloads actually mutate the tree, duplicate reorder IDs are rejected, and omitted siblings are rejected.
 - Streaming text: preserve paragraph breaks and Markdown spacing in the saved output.
 - External services: assert gRPC/HTTP handler names, request payload fields, and optional IDs match the Rust client contract.
+- I18n prompts: assert non-default locales use localized message catalogs rather than hardcoded fallback text.
 
 ## Test Module Organization
 

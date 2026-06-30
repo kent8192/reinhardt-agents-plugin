@@ -159,6 +159,8 @@ impl ProductCatalog {
 - [ ] No HTTP concerns (status codes, headers) in service
 - [ ] No thick `OutlineService` / `ManuscriptService` / `DocumentService` facade that only hides one endpoint workflow
 - [ ] Mutable operations enforce domain invariants before writing: accepted/current version uniqueness, exact sibling reorder lists, scoped searches, and idempotent re-index/regenerate behavior where applicable
+- [ ] Single-use helper logic is inlined; reusable or long workflow steps are modeled as service methods or injected services
+- [ ] Language-specific prompts or generated text flow through i18n/settings instead of hardcoded strings
 
 ---
 

@@ -208,6 +208,24 @@ each service method if that constructor creates a fresh in-memory provider.
 Indexing and lookup paths must share the same backing state in tests and in
 fake mode.
 
+### Service Method Boundaries
+
+Keep service workflows readable, but do not extract every local branch into a
+free helper by default. If a helper is used only once and has no independent
+service responsibility, inline it at the call site. This keeps endpoint and
+service orchestration close to the behavior being reviewed.
+
+When the extracted logic is a reusable boundary, make it part of DI instead:
+
+- Move cohesive workflow steps onto the injectable service and call them through
+  `self.method(...)`.
+- Promote cross-service responsibilities into a separate `#[injectable]`
+  service dependency.
+- Keep injected state on the service struct instead of rebuilding providers or
+  registries inside helper functions.
+- Prefer a short private method over a long public method only when the split
+  preserves a domain boundary, invariant check, or dependency reuse point.
+
 ### `#[inject]` Inside Providers
 
 Parameters marked with `#[inject]` are resolved from the `InjectionContext`
