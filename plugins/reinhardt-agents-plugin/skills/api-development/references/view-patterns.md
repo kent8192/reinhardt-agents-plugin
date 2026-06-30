@@ -282,25 +282,64 @@ fn user_handler() -> ModelViewSetHandler<User> {
 
 For full-stack applications scaffolded with `--with-pages`, server functions
 allow RPC-style calls from client-side WASM. The decorator is `#[server_fn]`
-(NOT `#[server]`):
+(NOT `#[server]`). Keep `#[server_fn]` functions as request/response
+boundaries: validate input, inject keyed services, then delegate application
+business operations to those services.
 
 ```rust
+use reinhardt::di::Depends;
 use reinhardt::pages::prelude::*;
 
+use crate::apps::accounts::services::{
+    AuthService,
+    AuthServiceKey,
+    UserProfileService,
+    UserProfileServiceKey,
+};
+
 #[server_fn]
-pub async fn login(username: String, password: String) -> Result<AuthResponse, ServerFnError> {
-    let user = authenticate(&username, &password).await?;
-    let token = create_jwt_token(&user)?;
-    Ok(AuthResponse { token, user_id: user.id })
+pub async fn login(
+    username: String,
+    password: String,
+    #[inject] auth: Depends<AuthServiceKey, AuthService>,
+) -> Result<AuthResponse, ServerFnError> {
+    (*auth).login(username, password).await.map_err(ServerFnError::from)
 }
 
 #[server_fn]
-pub async fn get_user_profile(user_id: i64) -> Result<UserProfile, ServerFnError> {
-    let db = use_context::<DatabaseConnection>()?;
-    let user = User::objects().get(user_id).await?;
-    Ok(UserProfile::from(user))
+pub async fn get_user_profile(
+    user_id: i64,
+    #[inject] profiles: Depends<UserProfileServiceKey, UserProfileService>,
+) -> Result<UserProfile, ServerFnError> {
+    (*profiles).get(user_id).await.map_err(ServerFnError::from)
 }
 ```
+
+Register the injected services in the app's `services/` module with the
+Reinhardt 0.3 provider shape:
+
+```rust
+use reinhardt::di::{Depends, FactoryOutput, injectable, injectable_key};
+
+#[injectable_key]
+pub struct AuthServiceKey;
+
+#[injectable(scope = "request")]
+async fn auth_service(
+    #[inject] settings: Depends<AppSettingsKey, AppSettings>,
+) -> FactoryOutput<AuthServiceKey, AuthService> {
+    FactoryOutput::new(AuthService::from_settings(&*settings))
+}
+```
+
+Keep provider adapters, prompt construction, parsing/conversion helpers, and
+repository/database internals outside `services/`, for example under app-local
+`server/providers`, `server/prompts`, and `server/repositories` modules. The
+`services/` module should expose the DI surface only: keys, provider functions,
+and service structs/functions. Prefer that DI service surface over composing
+business workflows from utility-function clusters; keep utility functions for
+small pure transformations that do not need settings, providers, lifecycle
+scope, or test overrides.
 
 ### `FromRequest` extractors in server functions (rc.18+)
 

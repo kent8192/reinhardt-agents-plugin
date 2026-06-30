@@ -40,6 +40,9 @@ Guide developers through building REST API endpoints using reinhardt-rest, reinh
 - In 0.3.x, raw server-route registration (`ServerRouter::function`, `.route`, `.handler_with_method`, and named variants) is removed from the public migration surface — use `#[get]` / `#[post]` / endpoint macros plus `.endpoint(factory)`
 - `FunctionHandler` is not a public app-facing registration type in 0.3.x; keep `.view(...)` / `.view_named(...)` only for intentional class-style `Handler` implementations
 - Use `CurrentUser<T>` for full authenticated-user extraction; migrate legacy `AuthUser<T>` before upgrading to 0.3.x
+- For Pages `#[server_fn]` business logic, inject keyed services with `Depends<K, Service>`; do not construct settings directly and call free functions inside the request boundary
+- Prefer DI services over utility-function clusters when endpoint or server-function behavior needs settings, providers, repositories, external I/O, lifecycle scoping, or test overrides
+- Keep app `services/` modules limited to DI keys, providers, and service structs/functions; put provider adapters, prompt builders, parsers, converters, repository/database helpers, and pure helpers under app-local `server/` modules
 
 ## Cross-Domain References
 

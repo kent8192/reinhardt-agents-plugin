@@ -84,12 +84,18 @@ my_project/
 │           ├── client/
 │           │   ├── components.rs
 │           │   └── components/
+│           ├── models.rs
+│           ├── serializers.rs
 │           ├── server.rs
 │           ├── server/
 │           │   ├── admin.rs
 │           │   ├── forms.rs
-│           │   ├── models.rs
+│           │   ├── providers/
+│           │   ├── prompts/
+│           │   ├── repositories/
 │           │   └── views.rs
+│           ├── server_fn.rs
+│           ├── server_fn/
 │           ├── services.rs
 │           ├── services/
 │           │   ├── client.rs
@@ -279,35 +285,58 @@ subdirectories.
 
 ```rust
 // src/apps/my_app.rs — Pages app entry point
-#[cfg(native)]
+#[cfg(server)]
 use reinhardt::app_config;
 
-#[cfg(native)]
-pub mod server;          // Server-side implementation tree
-#[cfg(wasm)]
+#[cfg(client)]
 pub mod client;          // WASM client implementation tree
+#[cfg(server)]
+pub mod server;          // Server-side implementation tree
+pub mod models;
 pub mod serializers;
 pub mod server_fn;
 pub mod services;
 pub mod urls;
 
-#[cfg(native)]
+#[cfg(server)]
 #[app_config(name = "my_app", label = "my_app")]
 pub struct MyAppConfig;
 ```
 
 ```rust
 // src/apps/my_app/urls.rs — target-specific router entry
-#[cfg(server)]
-pub mod server_router;
 #[cfg(client)]
 pub mod client_router;
+#[cfg(server)]
+pub mod server_router;
 ```
 
-- `#[cfg(native)]` — Server-only modules (models, views, admin, etc.)
-- `#[cfg(wasm)]` — WASM-only modules (client components)
-- `#[cfg(server)]` — Server-mode-only routing (mode-gated, not platform-gated)
-- No annotation — Available on both platforms (server functions, shared types)
+- `#[cfg(server)]` — Server-only modules and server-function route registration
+- `#[cfg(client)]` — WASM-only modules and client route registration
+- No annotation — Available on both platforms (models, serializers, server functions, services, urls)
+
+### Pages Service and Server Boundaries
+
+For Pages apps, `services/` is reserved for injectable service keys, provider
+functions, and service structs/functions. Register application business
+operations there with Reinhardt 0.3 DI shape:
+`#[injectable(scope = "...")] -> FactoryOutput<K, Service>`, then inject them
+from `#[server_fn]` as `Depends<K, Service>`.
+
+Keep `services` visible on server and client targets so `#[server_fn]` stubs can
+import service keys and service types. Gate only server-only provider
+implementations or submodules inside `services/`.
+
+Prefer this DI service surface over composing application behavior from
+utility-function clusters. Use utility functions only for small pure
+transformations that do not need settings, providers, repositories, external
+I/O, lifecycle scoping, or test overrides.
+
+Keep implementation details outside `services/`. Put provider adapters, prompt
+builders, parsing/conversion helpers, repository/database internals, and pure
+state-transition helpers in app-local `server/` modules such as
+`server/providers`, `server/prompts`, and `server/repositories`. Gate these
+implementation-detail modules with `#[cfg(server)]`.
 
 **Migration from older generated layouts:**
 
