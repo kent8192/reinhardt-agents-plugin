@@ -129,14 +129,20 @@ reinhardt = { version = "...", features = ["auth-session", "sessions", "argon2-h
 
 ### Configuration
 
-Use the `SessionSettings` fragment and convert it to the compatibility
-`SessionConfig` value when wiring session middleware:
+Use the facade `SessionSettings` re-export and convert it at the middleware
+call site. Do not import `reinhardt_auth` directly unless the app declares that
+crate as a direct dependency.
 
 ```rust
-use reinhardt_auth::{sessions::config::SessionConfig, SessionSettings};
+use reinhardt::SessionSettings;
 
-fn session_config(settings: &ProjectSettings) -> SessionConfig {
-    settings.auth_session.to_config()
+struct ProjectSettings {
+    auth_session: SessionSettings,
+}
+
+fn install_session_middleware(settings: &ProjectSettings) {
+    let session_config = settings.auth_session.to_config();
+    // Pass session_config to the session middleware/backend builder here.
 }
 ```
 

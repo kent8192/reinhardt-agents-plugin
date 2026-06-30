@@ -56,6 +56,11 @@ For each CHANGELOG entry referencing a PR number `(#NNN)`:
 
 ### Step 3: Deprecated API Detection
 
+If the local `reinhardt` source checkout is unavailable, note that Step 3 is
+limited to source-only `#[deprecated]` annotation detection and continue to Step
+4 with removed/deprecated symbols from CHANGELOG entries and migration
+references.
+
 1. Grep reinhardt source for `#[deprecated(since = "...")]`
 
    ```bash
@@ -136,7 +141,7 @@ Return a structured report in this format:
 - ALWAYS verify PR/Issue details via `gh` CLI — do not fabricate context
 - ONLY report deprecated APIs whose `since` version falls in the upgrade range
 - ONLY report application code usage that actually exists (verified by grep)
-- If reinhardt source is not available locally, note it and skip Steps 3-4
+- If reinhardt source is not available locally, note it, skip only the source-only `#[deprecated]` annotation detection in Step 3, and still run Step 4 application scans from CHANGELOG entries and fallback migration symbols
 - If `gh` CLI fails, note the error and continue with CHANGELOG-only analysis
 - For 0.1.x → 0.2.x upgrades, include ALL breaking changes from the "Major Version Upgrade" reference in the report, even if the user's code doesn't directly use the affected APIs (they may use them transitively)
 - For 0.1.x → 0.2.x upgrades, also check `reinhardt/announcements/v0.2.0-rc.N.md` for 0.2.x-series release notes

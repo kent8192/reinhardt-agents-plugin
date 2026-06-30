@@ -22,6 +22,7 @@ Ask the user which version they want to upgrade to:
 - Accept specific versions (e.g., `0.1.3`, `0.2.0`, `0.3.0`)
 - Accept `latest` — resolve via `gh release list -R kent8192/reinhardt-web --limit 1` or by reading `reinhardt/Cargo.toml` if the repo is available locally
 - If the target is the same as current, inform the user and exit
+- If upgrading from 0.1.x to `latest` or 0.3.x, warn the user this is a **multi-step major version upgrade** spanning 0.1.x → 0.2.x and 0.2.x → 0.3.x, and recommend applying both migration paths before proceeding
 - If upgrading from 0.1.x to 0.2.x, warn the user this is a **major version upgrade** with extensive breaking changes, and recommend reviewing the migration skill's "Major Version Upgrade: 0.1.x → 0.2.x" section before proceeding
 - If upgrading from 0.2.x to 0.3.x, warn the user this is a **major version upgrade** and recommend reviewing `skills/migration/references/0.3-upgrade.md` or the local `reinhardt/instructions/MIGRATION_0.3.md` guide before proceeding
 

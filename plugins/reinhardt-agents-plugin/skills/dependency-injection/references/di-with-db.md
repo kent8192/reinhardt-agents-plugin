@@ -3,13 +3,9 @@
 ## DatabaseConnection Injection
 
 `DatabaseConnection` is available from the DI registry when the database feature
-is enabled. In 0.3.x, examples that consume it through `Depends` assume a keyed
-provider such as `PrimaryDatabase`:
-
-```rust
-#[injectable_key]
-struct PrimaryDatabase;
-```
+is enabled. Inject it directly for the built-in database connection. Use
+`Depends<K, T>` only after your application registers a matching keyed provider
+that returns `FactoryOutput<K, T>`.
 
 ```rust
 use reinhardt::db::prelude::*;
@@ -20,11 +16,11 @@ use reinhardt::views::prelude::*;
 #[get("/users/{id}/", name = "user_retrieve")]
 pub async fn get_user(
     Path(id): Path<i64>,
-    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
+    #[inject] db: DatabaseConnection,
 ) -> ViewResult<Response> {
     let user = User::objects()
         .filter(User::id.eq(id))
-        .get(&*db)
+        .get(&db)
         .await
         .map_err(|_| AppError::NotFound("User not found".into()))?;
 
@@ -40,7 +36,7 @@ pub async fn get_user(
 #[post("/transfers/", name = "transfer_create")]
 pub async fn transfer_funds(
     Json(data): Json<TransferRequest>,
-    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
+    #[inject] db: DatabaseConnection,
 ) -> ViewResult<Response> {
 
     // Begin a transaction
@@ -185,7 +181,7 @@ Handlers can receive any combination of injectable types:
 #[post("/orders/", name = "order_create")]
 pub async fn create_order(
     #[inject] AuthInfo(state): AuthInfo,
-    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
+    #[inject] db: DatabaseConnection,
     #[inject] email_service: EmailService,
     #[inject] session: Session,
 ) -> ViewResult<Response> {
@@ -225,14 +221,14 @@ use std::sync::Arc;
 #[injectable(scope = Singleton)]
 pub struct UserRepository {
     #[inject]
-    pool: Depends<PrimaryDatabase, DatabaseConnection>,
+    pool: DatabaseConnection,
 }
 
 impl UserRepository {
     pub async fn find_by_email(&self, email: &str) -> Result<Option<User>, QueryError> {
         User::objects()
             .filter(User::email.eq(email))
-            .first(&*self.pool)
+            .first(&self.pool)
             .await
     }
 
