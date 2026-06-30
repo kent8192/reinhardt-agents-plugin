@@ -89,11 +89,13 @@ my_project/
 │           │   ├── admin.rs
 │           │   ├── forms.rs
 │           │   ├── models.rs
+│           │   ├── providers.rs
+│           │   ├── prompts.rs
+│           │   ├── repositories.rs
 │           │   └── views.rs
-│           ├── services.rs
+│           ├── services.rs      # Cross-target DI service surface entry
 │           ├── services/
-│           │   ├── client.rs
-│           │   └── server.rs
+│           │   └── server.rs    # Keys, FactoryOutput providers, service structs/functions
 │           ├── urls.rs
 │           └── urls/
 │               ├── client_router.rs
@@ -288,7 +290,7 @@ pub mod server;          // Server-side implementation tree
 pub mod client;          // WASM client implementation tree
 pub mod serializers;
 pub mod server_fn;
-pub mod services;
+pub mod services;        // Cross-target DI surface: keys, stubs, service APIs
 pub mod urls;
 
 #[cfg(native)]
@@ -307,7 +309,31 @@ pub mod client_router;
 - `#[cfg(native)]` — Server-only modules (models, views, admin, etc.)
 - `#[cfg(wasm)]` — WASM-only modules (client components)
 - `#[cfg(server)]` — Server-mode-only routing (mode-gated, not platform-gated)
-- No annotation — Available on both platforms (server functions, shared types)
+- No annotation — Available on both platforms (server functions, shared types, DI service keys)
+
+### Pages Service and Server Boundaries
+
+For Pages apps, `services/` is reserved for injectable service keys, provider
+functions, and service structs/functions. Register application business
+operations there with Reinhardt 0.3 DI shape:
+`#[injectable(scope = "...")] -> FactoryOutput<K, T>`, then inject them from
+`#[server_fn]` as `Depends<K, T>`.
+
+Keep `services` visible on native and WASM targets so `#[server_fn]` stubs can
+import service keys and service types. Gate native/server-only provider
+implementations or submodules inside `services/`.
+
+Prefer this DI service surface over composing application behavior from
+utility-function clusters. Use utility functions only for small pure
+transformations that do not need settings, providers, repositories, external
+I/O, lifecycle scoping, or test overrides.
+
+Keep implementation details outside `services/`. Put provider adapters, prompt
+builders, parsing/conversion helpers, repository/database internals, and pure
+state-transition helpers in app-local `server/` modules such as
+`server/providers`, `server/prompts`, and `server/repositories`. Gate these
+implementation-detail modules with `#[cfg(server)]` or `#[cfg(native)]`; leave
+unconditional `server` modules only for cross-target stubs.
 
 **Migration from older generated layouts:**
 
