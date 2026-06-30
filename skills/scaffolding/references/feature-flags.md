@@ -132,7 +132,7 @@ Auth features can be combined (e.g., JWT for API clients + Session for admin pan
 ```toml
 [dependencies]
 reinhardt = {
-    version = "0.2.0",
+    version = "...",
     default-features = false,
     features = [
         "core",
@@ -149,7 +149,7 @@ reinhardt = {
 
 [dev-dependencies]
 reinhardt = {
-    version = "0.2.0",
+    version = "...",
     features = ["test", "testcontainers"]
 }
 ```
@@ -159,7 +159,7 @@ reinhardt = {
 ```toml
 [dependencies]
 reinhardt = {
-    version = "0.2.0",
+    version = "...",
     default-features = false,
     features = [
         "core",
@@ -186,7 +186,7 @@ reinhardt = {
 
 [dev-dependencies]
 reinhardt = {
-    version = "0.2.0",
+    version = "...",
     features = ["test", "testcontainers", "server-fn-test"]
 }
 ```
@@ -196,7 +196,7 @@ reinhardt = {
 ```toml
 [dependencies]
 reinhardt = {
-    version = "0.2.0",
+    version = "...",
     default-features = false,
     features = [
         "core",
@@ -207,7 +207,7 @@ reinhardt = {
 
 [dev-dependencies]
 reinhardt = {
-    version = "0.2.0",
+    version = "...",
     features = ["test"]
 }
 ```
@@ -217,7 +217,7 @@ reinhardt = {
 ```toml
 [dependencies]
 reinhardt = {
-    version = "0.2.0",
+    version = "...",
     default-features = false,
     features = [
         "core",

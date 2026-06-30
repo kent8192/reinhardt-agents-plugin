@@ -23,27 +23,31 @@ JWT is the verified production pattern, confirmed in use by the reinhardt-cloud 
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.2.0", features = ["auth-jwt", "argon2-hasher"] }
+reinhardt = { version = "...", features = ["auth-jwt", "argon2-hasher"] }
 ```
 
 ### Configuration
 
-Use `#[injectable_factory]` to create `JwtConfig` from `ProjectSettings`:
+Create a `JwtAuth` helper from the project's composed settings accessor or from
+an app-owned settings wrapper registered in DI:
 
 ```rust
-use reinhardt::auth::jwt::{JwtConfig, Algorithm};
-use reinhardt::di::prelude::*;
+use chrono::Duration;
+use reinhardt::auth::jwt::{Claims, JwtAuth, JwtError};
 
-#[injectable_factory(scope = "singleton")]
-async fn jwt_config(#[inject] settings: Depends<ProjectSettings>) -> JwtConfig {
-    JwtConfig {
-        secret_key: settings.jwt_secret_key.clone(),
-        algorithm: Algorithm::HS256,
-        access_token_lifetime: Duration::from_secs(60 * 15),   // 15 minutes
-        refresh_token_lifetime: Duration::from_secs(60 * 60 * 24 * 7), // 7 days
-        issuer: Some("my-app".to_string()),
-        audience: None,
-    }
+fn jwt_auth(settings: &ProjectSettings) -> JwtAuth {
+    JwtAuth::new(settings.jwt_secret_key.as_bytes())
+}
+
+fn create_jwt_token(jwt_auth: &JwtAuth, user: &User) -> Result<String, JwtError> {
+    let claims = Claims::new(
+        user.id.to_string(),
+        user.username.clone(),
+        Duration::minutes(15),
+        user.is_staff,
+        user.is_superuser,
+    );
+    jwt_auth.encode(&claims)
 }
 ```
 
@@ -52,7 +56,7 @@ async fn jwt_config(#[inject] settings: Depends<ProjectSettings>) -> JwtConfig {
 Apply JWT middleware via `UnifiedRouter`:
 
 ```rust
-use reinhardt::auth::jwt::JwtAuthMiddleware;
+use reinhardt::middleware::JwtAuthMiddleware;
 
 UnifiedRouter::new()
     .mount("/api/", app_router)
@@ -84,14 +88,16 @@ pub async fn get_profile(
 }
 ```
 
-#### AuthUser<T> (Full User Model)
+#### CurrentUser<T> (Full User Model)
 
-`AuthUser<T>` resolves the full user model from the auth token:
+`CurrentUser<T>` resolves the full user model from the auth token or session:
 
 ```rust
+use reinhardt::CurrentUser;
+
 #[get("/admin/dashboard/", name = "admin_dashboard")]
 pub async fn admin_dashboard(
-    #[inject] reinhardt::AuthUser(user): reinhardt::AuthUser<User>,
+    #[inject] CurrentUser(user): CurrentUser<User>,
 ) -> ViewResult<Response> {
     if !user.is_staff {
         return Err(AppError::Authentication("Admin access required".into()));
@@ -109,9 +115,14 @@ pub async fn admin_dashboard(
 use reinhardt::pages::prelude::*;
 
 #[server_fn]
-pub async fn login(username: String, password: String) -> Result<AuthResponse, ServerFnError> {
+pub async fn login(
+    username: String,
+    password: String,
+    #[inject] settings: ProjectSettings,
+) -> Result<AuthResponse, ServerFnError> {
     let user = authenticate(&username, &password).await?;
-    let token = create_jwt_token(&user)?;
+    let jwt_auth = jwt_auth(&settings);
+    let token = create_jwt_token(&jwt_auth, &user)?;
     Ok(AuthResponse { token, user_id: user.id })
 }
 ```
@@ -124,27 +135,19 @@ pub async fn login(username: String, password: String) -> Result<AuthResponse, S
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.2.0", features = ["auth-session", "sessions", "argon2-hasher"] }
+reinhardt = { version = "...", features = ["auth-session", "sessions", "argon2-hasher"] }
 ```
 
 ### Configuration
 
-Use `#[injectable_factory]` to create `SessionConfig` from `ProjectSettings`:
+Use the `SessionSettings` fragment and convert it to the compatibility
+`SessionConfig` value when wiring session middleware:
 
 ```rust
-use reinhardt::sessions::{SessionConfig, SessionEngine};
-use reinhardt::di::prelude::*;
+use reinhardt_auth::{sessions::config::SessionConfig, settings::SessionSettings};
 
-#[injectable_factory(scope = "singleton")]
-async fn session_config(#[inject] settings: Depends<ProjectSettings>) -> SessionConfig {
-    SessionConfig {
-        engine: SessionEngine::Database, // or Redis, Cookie
-        cookie_name: "sessionid".to_string(),
-        cookie_age: Duration::from_secs(60 * 60 * 24 * 14), // 2 weeks
-        cookie_secure: settings.is_production(),
-        cookie_httponly: true,
-        cookie_samesite: SameSite::Lax,
-    }
+fn session_config(auth_session: &SessionSettings) -> SessionConfig {
+    auth_session.to_config()
 }
 ```
 
@@ -227,7 +230,10 @@ let is_valid = check_password("user_password", &hashed)?;
 
 ## Permission Classes
 
-Permission classes control access to views. Apply them via `get_permissions()` on ViewSets or as middleware.
+Permission classes control access to views. Apply them via `Guard<P>` in
+`#[inject]` parameters, `#[permission_required("app.codename")]` for named
+permission checks, or `ModelViewSetHandler::add_permission(...)` when using the
+handler builder APIs.
 
 | Permission | Description |
 |-----------|-------------|
@@ -235,34 +241,27 @@ Permission classes control access to views. Apply them via `get_permissions()` o
 | `IsAuthenticated` | User must be authenticated |
 | `IsAdminUser` | User must have `is_staff = true` |
 | `IsAuthenticatedOrReadOnly` | Authenticated for write, anyone for read |
-| `HasPermission(perm)` | User must have the named permission |
-| `HasGroupPermission(group)` | User must belong to the named group |
 
 ### Applying Permissions
 
 ```rust
-// On a ViewSet
-impl ViewSet for UserViewSet {
-    fn get_permissions(&self) -> Vec<Box<dyn Permission>> {
-        vec![Box::new(IsAuthenticated)]
+use reinhardt::auth::{Guard, IsAuthenticated};
+use reinhardt::CurrentUser;
+
+#[get("/admin/dashboard/", name = "admin_dashboard")]
+pub async fn admin_dashboard(
+    #[inject] _guard: Guard<IsAuthenticated>,
+    #[inject] CurrentUser(user): CurrentUser<User>,
+) -> ViewResult<Response> {
+    if !user.is_staff {
+        return Err(AppError::Authentication("Admin access required".into()));
     }
+    Ok(Response::json(serde_json::json!({ "status": "ok" })))
 }
 
-// On a function-based view (via middleware)
-#[permission(IsAdminUser)]
-pub async fn admin_dashboard(request: Request, auth: AuthUser) -> Response {
-    // Only staff users reach here
-    Response::json(serde_json::json!({ "status": "ok" }))
-}
-
-// Per-action permissions on a ViewSet
-impl ViewSet for ArticleViewSet {
-    fn get_permissions_for_action(&self, action: &Action) -> Vec<Box<dyn Permission>> {
-        match action {
-            Action::List | Action::Retrieve => vec![Box::new(AllowAny)],
-            _ => vec![Box::new(IsAuthenticated)],
-        }
-    }
+fn article_handler() -> ModelViewSetHandler<Article> {
+    ModelViewSetHandler::<Article>::new()
+        .add_permission(std::sync::Arc::new(IsAuthenticated))
 }
 ```
 

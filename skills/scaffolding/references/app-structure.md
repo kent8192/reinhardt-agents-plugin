@@ -80,26 +80,31 @@ my_project/
 │   │   └── types.rs             # Shared data types
 │   └── apps/
 │       └── <app>/
-│           ├── lib.rs           # NO top-level `pub mod ws_urls` (rc.21 fix)
+│           ├── client.rs
+│           ├── client/
+│           │   ├── components.rs
+│           │   └── components/
+│           ├── server.rs
+│           ├── server/
+│           │   ├── admin.rs
+│           │   ├── forms.rs
+│           │   ├── models.rs
+│           │   ├── providers.rs
+│           │   ├── prompts.rs
+│           │   ├── repositories.rs
+│           │   └── views.rs
 │           ├── services.rs      # Cross-target DI service surface entry
 │           ├── services/
-│           │   └── server.rs    # Key-visible service APIs plus server-gated providers
-│           ├── server.rs        # Server-only implementation-detail module entry
-│           ├── server/          # Server-only implementation details
-│           │   ├── providers/   # Provider adapters and clients
-│           │   ├── prompts/     # Prompt construction
-│           │   └── repositories/ # Database/repository helpers
-│           ├── urls.rs          # Mounts the urls/ submodule tree
-│           └── urls/            # rc.19: server/client/ws routing symmetric here
-│               ├── server_urls.rs
-│               ├── client_urls.rs
-│               └── ws_urls.rs   # WebSocketRouter (rc.19 fix to return type)
+│           │   └── server.rs    # Keys, FactoryOutput providers, service structs/functions
+│           ├── urls.rs
+│           └── urls/
+│               ├── client_router.rs
+│               └── server_router.rs
 ```
 
-> **Breaking change (rc.19):** `ws_url_resolvers` moved from
-> `crate::apps::<app>::ws_urls::*` to `crate::apps::<app>::urls::ws_urls::*`.
-> Existing apps must `git mv` their top-level `ws_urls.rs` under `urls/`.
-> See `../../migration/SKILL.md` for the recipe.
+> **0.3.x migration:** route wrappers live under `client/components/`; legacy
+> app-local `pages.rs`, `client/pages`, and `urls/server_urls.rs` should be
+> removed after migrating to route-backed components and `urls/server_router.rs`.
 
 ## Entry Points
 
@@ -158,6 +163,9 @@ async fn main() {
 - **NEVER** use glob re-exports (`pub use module::*`) except `use super::*` in test modules
 - Maximum nesting depth: 4 levels
 - Use `pub use` in module entry points to control the public API surface
+- Do not keep generated placeholder views or demo components once a real app surface exists.
+- Do not hardcode full route paths in generated links/forms when named route reverse helpers are available.
+- Use descriptive component/module names in templates so generated code is production-shaped from the first edit.
 
 ## App Configuration
 
@@ -267,9 +275,9 @@ Follow this procedure to add a new app to an existing project:
 
 ### Pages App Modules
 
-Pages apps include additional modules for WASM support. **Do not add a
-top-level `pub mod ws_urls;` — that line was a stray scaffolding bug fixed in
-rc.21. ws routing lives under `urls/ws_urls.rs` instead (see rc.19 below).**
+Pages apps include additional modules for WASM support. In 0.3.x, app roots are
+declaration files and target-specific implementation lives in app-local
+subdirectories.
 
 ```rust
 // src/apps/my_app.rs — Pages app entry point
@@ -277,21 +285,13 @@ rc.21. ws routing lives under `urls/ws_urls.rs` instead (see rc.19 below).**
 use reinhardt::app_config;
 
 #[cfg(native)]
-pub mod admin;
+pub mod server;          // Server-side implementation tree
 #[cfg(wasm)]
-pub mod client;          // WASM client components
-#[cfg(native)]
-pub mod models;
+pub mod client;          // WASM client implementation tree
 #[cfg(native)]
 pub mod serializers;
 pub mod services;        // Cross-target DI surface: keys, stubs, service APIs
-#[cfg(server)]
-pub mod server;          // Server-only implementation details
-pub mod shared;          // Shared types (available on both)
-#[cfg(native)]
-pub mod urls;            // Mounts urls/server_urls.rs, urls/client_urls.rs, urls/ws_urls.rs
-#[cfg(native)]
-pub mod views;
+pub mod urls;
 
 #[cfg(native)]
 #[app_config(name = "my_app", label = "my_app")]
@@ -299,29 +299,28 @@ pub struct MyAppConfig;
 ```
 
 ```rust
-// src/apps/my_app/urls.rs — unified entry that wires the three routing modes
+// src/apps/my_app/urls.rs — target-specific router entry
 #[cfg(server)]
-pub mod server_urls;
-#[cfg(server)]
-pub mod ws_urls;          // rc.19: ws_url_resolvers live here, not at app root
-pub mod client_urls;      // available on native + wasm for client-side routing
+pub mod server_router;
+#[cfg(client)]
+pub mod client_router;
 ```
 
 - `#[cfg(native)]` — Server-only modules (models, views, admin, etc.)
 - `#[cfg(wasm)]` — WASM-only modules (client components)
 - `#[cfg(server)]` — Server-mode-only routing (mode-gated, not platform-gated)
-- No annotation — Available on both platforms (server functions, shared types)
+- No annotation — Available on both platforms (DI service keys, service APIs, and shared DTOs that do not depend on native-only types)
 
 ### Pages Service and Server Boundaries
 
 For Pages apps, `services/` is reserved for injectable service keys, provider
 functions, and service structs/functions. Register application business
 operations there with Reinhardt 0.3 DI shape:
-`#[injectable(scope = "...")] -> FactoryOutput<Key, Service>`, then inject them
-from `#[server_fn]` as `Depends<Key, Service>`.
+`#[injectable(scope = "...")] -> FactoryOutput<K, T>`, then inject them from
+`#[server_fn]` as `Depends<K, T>`.
 
 Keep `services` visible on native and WASM targets so `#[server_fn]` stubs can
-import service keys and service types. Gate only native/server-only provider
+import service keys and service types. Gate native/server-only provider
 implementations or submodules inside `services/`.
 
 Prefer this DI service surface over composing application behavior from
@@ -336,20 +335,23 @@ state-transition helpers in app-local `server/` modules such as
 implementation-detail modules with `#[cfg(server)]` or `#[cfg(native)]`; leave
 unconditional `server` modules only for cross-target stubs.
 
-**Migration from pre-rc.19 layout:**
+**Migration from older generated layouts:**
 
 ```bash
-mkdir -p src/apps/<app>/urls
-git mv src/apps/<app>/ws_urls.rs src/apps/<app>/urls/ws_urls.rs
+mkdir -p src/apps/<app>/client/components src/apps/<app>/server src/apps/<app>/urls
+git mv src/apps/<app>/urls/client_urls.rs src/apps/<app>/urls/client_router.rs
+git mv src/apps/<app>/urls/server_urls.rs src/apps/<app>/urls/server_router.rs
 ```
 
-Then declare the submodule in `src/apps/<app>/urls.rs` (create the file if it
-does not already exist):
+If the legacy app does not have `client_urls.rs`, create `client_router.rs`
+before declaring the target-specific router modules in `src/apps/<app>/urls.rs`:
 
 ```rust
 #[cfg(server)]
-pub mod ws_urls;
+pub mod server_router;
+#[cfg(client)]
+pub mod client_router;
 ```
 
-`ws_url_patterns()` must return `WebSocketRouter` (the rc.19 scaffold template
-fix corrected a stray `()` return type that produced an `E0599` error).
+Move route-backed Pages wrappers into `client/components/` and delete obsolete
+`pages.rs` / `client/pages` wrappers after the new components are registered.

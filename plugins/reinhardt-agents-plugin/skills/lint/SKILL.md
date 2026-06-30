@@ -1,7 +1,7 @@
 ---
 name: lint
 description: Use when running static analysis, fixing lint errors, or preparing code for commit - covers the full cargo/clippy/rustdoc/semgrep suite with fix-iterate workflow
-versions: ["0.1.x", "0.2.0"]
+versions: ["0.1.x", "0.2.x", "0.3.x"]
 ---
 
 # Reinhardt Static Analysis & Linting
@@ -52,13 +52,44 @@ For checking only changes relative to main:
 semgrep scan --config .semgrep/ --baseline-commit origin/main --error --metrics off
 ```
 
+### 0.3 Migration Scans
+
+When checking 0.3.x readiness, run the migration-guide scans before the normal
+suite:
+
+```bash
+SCAN_DIRS=()
+for dir in src crates examples; do
+  [[ -e "$dir" ]] && SCAN_DIRS+=("$dir")
+done
+
+PAGE_SCAN_DIRS=()
+for dir in src examples; do
+  [[ -e "$dir" ]] && PAGE_SCAN_DIRS+=("$dir")
+done
+
+if ((${#SCAN_DIRS[@]})); then
+  rg -n "AuthUser|create_resource|create_resource_with_deps|use_effect_event|use_effect_event_with" "${SCAN_DIRS[@]}"
+  rg -n "ServerRouter::route(_named)?\\(|\\.(function|handler_with_method)(_named)?\\(|FunctionHandler|Depends(Result|Option)" "${SCAN_DIRS[@]}"
+  rg -n "FactoryOutput<|Depends<[^,>]+>|injectable_factory|InjectableKey" "${SCAN_DIRS[@]}"
+  rg -n "\\.route(_named)?\\(" "${SCAN_DIRS[@]}" -g '*server_router.rs' -g '*server_urls.rs'
+fi
+
+if ((${#PAGE_SCAN_DIRS[@]})); then
+  rg --files "${PAGE_SCAN_DIRS[@]}" | rg '(^|/)(pages\.rs|server_urls\.rs|client/pages(/|\.rs$)|src/shared/(forms|types)\.rs$)'
+fi
+```
+
 ## Important Rules
 
 - Fix formatting FIRST — clippy may report different issues on unformatted code
 - ALL `#[allow(...)]` attributes MUST have an explanatory comment
 - NEVER silence semgrep findings without understanding the security implication
 - Rustdoc warnings with `-D warnings` will fail CI — fix locally before pushing
+- Prefer named functions for exported service handlers/fakes over exported lambda expressions when interop or test discovery relies on stable names
+- Remove redundant raw identifiers (`r#name`) when the identifier is not a Rust keyword in that position
 - Run `cargo doc --no-deps` locally before pushing doc-related changes
+- For 0.3.x upgrades, treat matches from the 0.3 migration scans as migration work, not ordinary lint noise
 - Known gotchas: read `references/known-gotchas.md` before investigating unfamiliar warnings
 
 ## Cross-Domain References
@@ -74,3 +105,4 @@ For the latest lint configuration:
 1. Read `reinhardt/Makefile.toml` for cargo-make task definitions
 2. Read `reinhardt/.semgrep/` for custom semgrep rules
 3. Read `reinhardt/clippy.toml` or `reinhardt/.clippy.toml` for clippy configuration (if exists)
+4. Read `reinhardt/instructions/MIGRATION_0.3.md` before adding or changing 0.3.x migration checks

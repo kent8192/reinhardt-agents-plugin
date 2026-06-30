@@ -74,7 +74,7 @@ pub struct ProductSerializer {
     pub created_at: NaiveDateTime,
 }
 
-#[derive(Deserialize, Schema)]
+#[derive(Deserialize, Validate, Schema)]
 pub struct ProductCreateInput {
     pub name: String,
     pub description: Option<String>,
@@ -90,60 +90,75 @@ pub struct ProductCreateInput {
 
 ---
 
-## Layer 3: Service
+## Layer 3: Shared Service or Endpoint-Local Flow
 
-Implement business logic as an injectable service.
+Create an injectable service only for stable capabilities or dependency bundles
+shared by multiple endpoints. For endpoint-specific validation, DTO assembly,
+persistence ordering, generation flows, outline edits, and response shaping,
+keep the code in the `server_fn` / HTTP endpoint or a small private helper
+beside it. DI is for common dependency injection and swappability, not a
+mandatory abstraction layer for every use case.
+
+Do not split a `#[server_fn]` only to move lines into `server/`, `service/`, or
+`services/`. A new file is justified when it owns a smaller contract, isolates a
+domain invariant for focused tests, or serves more than one endpoint. If the
+extracted function still takes the endpoint input and returns the endpoint
+response after running the same persistence/provider sequence, it is still the
+endpoint workflow.
+
+Inline and delete single-use delegated helpers when they only pass through one
+endpoint or one section's request, dependencies, persistence order, and provider
+sequence. Keep a private helper only when it names a smaller contract, reusable
+domain value, shared caller, or independently testable invariant.
 
 **Steps:**
 
-1. Create service file: `src/<app>/services/<entity>.rs`
-2. Define service struct with dependencies as fields
-3. Implement business methods
-4. Register with DI using `#[injectable_factory]`
+1. Decide whether the logic is reused by multiple endpoints
+2. Name the smaller contract, shared dependency, or invariant that extraction would isolate
+3. If yes, create a service file: `src/<app>/services/<capability>.rs`
+4. Define service struct with only common dependencies as fields
+5. Register with DI using `#[injectable]`
+6. If no, keep the flow in the endpoint or a nearby private helper
 
 **Example:**
 
 ```rust
 use reinhardt::prelude::*;
 
-pub struct ProductService {
-    db: Arc<DatabasePool>,
+#[injectable_key]
+struct PrimaryDatabase;
+
+#[injectable(scope = "request")]
+pub struct ProductCatalog {
+    #[inject]
+    db: Depends<PrimaryDatabase, DatabaseConnection>,
 }
 
-#[injectable_factory]
-impl ProductService {
-    pub fn new(db: Arc<DatabasePool>) -> Self {
-        Self { db }
-    }
-
-    pub async fn create(&self, input: ProductCreateInput) -> Result<ProductSerializer, AppError> {
-        let product = Product {
-            id: None,
-            name: input.name,
-            description: input.description,
-            created_at: None,
-        };
-        let saved = Product::objects(&self.db).create(product).await?;
-        Ok(ProductSerializer::from_model(&saved))
-    }
-
-    pub async fn get_by_id(&self, id: Uuid) -> Result<ProductSerializer, AppError> {
-        let product = Product::objects(&self.db)
-            .get(id)
+impl ProductCatalog {
+    pub async fn get_by_id(&self, id: Uuid) -> Result<Product, AppError> {
+        let product = Product::objects()
+            .get(id, &*self.db)
             .await
             .map_err(|_| AppError::NotFound("Product not found".into()))?;
-        Ok(ProductSerializer::from_model(&product))
+        Ok(product)
     }
 }
 ```
 
 **Checklist:**
 
-- [ ] Service struct defined with injected dependencies
-- [ ] `#[injectable_factory]` applied
-- [ ] Returns domain types / serializers, not raw models
+- [ ] Service exists only when the capability or dependency bundle is reused across endpoints
+- [ ] Endpoint-specific flows remain in the endpoint or a private helper beside it
+- [ ] No file-only extraction from `#[server_fn]`; each extracted helper/service has a narrower contract, shared consumer, or independently testable invariant
+- [ ] Single-use helpers that only delegate the same endpoint flow are inlined and deleted
+- [ ] Service struct defined with injected common dependencies
+- [ ] `#[injectable]` applied when a service is justified
+- [ ] `#[injectable_key]` / `FactoryOutput<K, T>` used if the provider output type is not unique
+- [ ] Returns reusable domain results; endpoint-specific DTO and response assembly stays outside the service
 - [ ] Error handling uses domain error types
 - [ ] No HTTP concerns (status codes, headers) in service
+- [ ] No thick `OutlineService` / `ManuscriptService` / `DocumentService` facade that only hides one endpoint workflow
+- [ ] Mutable operations enforce domain invariants before writing: accepted/current version uniqueness, exact sibling reorder lists, scoped searches, and idempotent re-index/regenerate behavior where applicable
 
 ---
 
@@ -166,19 +181,32 @@ use reinhardt::rest::prelude::*;
 #[get("/{id}")]
 async fn get_product(
     path: Path<Uuid>,
-    service: Inject<ProductService>,
+    #[inject] catalog: ProductCatalog,
 ) -> Result<Json<ProductSerializer>, AppError> {
-    let product = service.get_by_id(path.into_inner()).await?;
-    Ok(Json(product))
+    let product = catalog.get_by_id(path.into_inner()).await?;
+    Ok(Json(ProductSerializer::from_model(&product)))
 }
 
 #[post("/")]
 async fn create_product(
-    body: Json<ProductCreateInput>,
-    service: Inject<ProductService>,
+    Json(input): Json<ProductCreateInput>,
+    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
 ) -> Result<Json<ProductSerializer>, AppError> {
-    let product = service.create(body.into_inner()).await?;
-    Ok(Json(product))
+    input.validate()?;
+    let product = build_product(input)?;
+    let saved = Product::objects()
+        .create_with_conn(&*db, &product)
+        .await?;
+    Ok(Json(ProductSerializer::from_model(&saved)))
+}
+
+fn build_product(input: ProductCreateInput) -> Result<Product, AppError> {
+    Ok(Product {
+        id: None,
+        name: input.name,
+        description: input.description,
+        created_at: None,
+    })
 }
 
 pub fn product_routes(cfg: &mut ServiceConfig) {
@@ -194,6 +222,7 @@ pub fn product_routes(cfg: &mut ServiceConfig) {
 
 - [ ] View functions defined with correct HTTP method decorators
 - [ ] URL routes configured and mounted
+- [ ] Endpoint decorators use app-local paths; app/API prefixes are composed in route modules or `*_urls.rs`
 - [ ] Authentication applied (if required)
 - [ ] Permission guards applied (if required)
 - [ ] Error mapping works (service errors → HTTP responses)
@@ -241,26 +270,23 @@ Write tests at three levels: unit, integration, and API.
 
 **Steps:**
 
-1. **Unit tests** — test service logic with mocked dependencies
+1. **Unit tests** — test shared service logic or endpoint-local helpers
 2. **Integration tests** — test with real database via TestContainers
 3. **API tests** — test HTTP endpoints end-to-end
 
-**Unit test example (service):**
+**Unit test example (endpoint-local helper):**
 
 ```rust
 #[rstest]
-async fn test_create_product_success(
-    #[future] mock_db: Arc<MockDatabasePool>,
-) {
+fn test_build_product_success() {
     // Arrange
-    let service = ProductService::new(mock_db.await);
     let input = ProductCreateInput {
         name: "Test Product".into(),
         description: None,
     };
 
     // Act
-    let result = service.create(input).await;
+    let result = build_product(input);
 
     // Assert
     assert!(result.is_ok());
@@ -324,7 +350,7 @@ async fn test_create_product_api(
 
 **Checklist:**
 
-- [ ] Unit tests for service business logic
+- [ ] Unit tests for shared service business logic or endpoint-local helpers
 - [ ] Integration tests with TestContainers for DB operations
 - [ ] API tests for HTTP endpoint behavior
 - [ ] All tests use `#[rstest]`, not `#[test]`

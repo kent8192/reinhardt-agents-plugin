@@ -1,7 +1,7 @@
 ---
 name: pages
 description: Use when building WASM frontend pages with reinhardt-pages - covers page!/head!/form! macros, reactive hooks (Signal/Effect/useState), routing, SSR/hydration, server functions, and API client
-versions: ["0.1.x", "0.2.0", "0.3.x"]
+versions: ["0.1.x", "0.2.x", "0.3.x"]
 ---
 
 # Reinhardt Pages (WASM Frontend)
@@ -25,35 +25,44 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 3. **Set Up Reactivity** — read `references/reactive-hooks.md`
 4. **Configure Routing** — read `references/routing-ssr.md` (if SPA)
 5. **Add Server Functions** — read `references/head-form-macros.md` (`#[server_fn]` section)
-6. **Route Business Logic Through DI** — read `../dependency-injection/references/di-patterns.md` (`Pages Service-Layer Boundary`)
-7. **Connect API** — read `references/api-tables.md` (if data fetching)
-8. **Test** — read `references/testing-guide.md`
+6. **Connect API** — read `references/api-tables.md` (if data fetching)
+7. **Test** — read `references/testing-guide.md`
 
 ### Creating a Form
 
 1. **Define Form** — read `references/head-form-macros.md` (form! section)
 2. **Add Server Function** — read `references/head-form-macros.md` (`#[server_fn]` section)
-3. **Inject Service** — use `Depends<Key, Service>` for business operations called by the server function
-4. **Embed in Page** — read `references/page-macro.md`
-5. **Test** — read `references/testing-guide.md`
+3. **Embed in Page** — read `references/page-macro.md`
+4. **Test** — read `references/testing-guide.md`
 
 ## Important Rules
 
 - Prefer explicit imports over prelude (e.g., `use reinhardt::pages::component::Page;`) — see reinhardt-cloud dashboard for the canonical import style
+- Import app/framework types at the top of the module instead of repeating long fully qualified paths in components or server function signatures/bodies
+- Build static form structure with `form!` and dynamic form state with `use_form`
 - Configure `cfg_aliases` in `build.rs` for `wasm`/`native` aliases
 - Event handlers in `page!` are auto-handled across platforms (no manual `#[cfg(wasm)]` needed)
 - Use `watch {}` for reactive conditionals (not static `if` with extracted Signal values)
+- Use route reverse helpers for `href`, `action`, and `formaction` when named routes exist; avoid hardcoded paths
+- Use `reinhardt-i18n` for language-specific UI text and prompts, including Japanese output
 - Boolean attributes require expressions, not literals (`disabled: is_disabled`, NOT `disabled: true`)
 - `img` elements require both `src` and `alt` (compile-time enforcement)
 - `button` elements require text content or `aria-label`/`aria-labelledby`
 - URL attributes (`href`, `src`, `action`, `formaction`) block dangerous schemes (`javascript:`, `data:`, `vbscript:`)
 - ALL code comments must be in English
 - Use `reinhardt-query` for any SQL construction, NEVER raw SQL
-- `#[server_fn]` functions should inject keyed services for application business logic (`Depends<Key, Service>`) instead of constructing settings directly and calling free functions
+- `#[server_fn]` functions should inject shared keyed services for application business logic (`Depends<K, T>`) instead of constructing settings directly and calling free functions
 - Prefer DI services over utility-function clusters for business operations; reserve utility functions for small pure transformations that do not need settings, providers, lifecycle scoping, or test overrides
 - Keep Pages app `services/` modules focused on injectable keys, provider functions, and service structs/functions; put prompt builders, provider adapters, parsers, converters, repository/database helpers, and pure helpers under app-local `server/` modules
-- In 0.2.x, reactive expressions in `page!` are auto-wrapped — explicit `Page::reactive(...)` is no longer needed
-- In 0.2.x, `use_effect`/`use_memo`/`use_callback` take explicit dependency arrays
+- Since 0.2.x, reactive expressions in `page!` are auto-wrapped — explicit `Page::reactive(...)` is no longer needed
+- Since 0.2.x, `use_effect`/`use_memo`/`use_callback` take explicit dependency arrays
+- In 0.3.x, use `use_resource(fetcher, deps)` for both mount-only and dependency-driven resources; replace `create_resource*`
+- In 0.3.x, replace `use_effect_event*` with `use_callback*` or `.get_untracked()` inside the effect
+- Put route-backed `#[component]` wrappers under `src/apps/<app>/client/components/`, not in app-local `pages.rs` or `client/pages`
+- For `#[server_fn]`, keep endpoint-specific request flows visible; do not move the same logic into `server/`, `service/`, or `services/` unless the extraction creates a narrower contract, shared dependency, or independently testable invariant
+- Inline and delete single-use helpers that only delegate one `#[server_fn]` section's request, dependencies, and persistence/provider sequence
+- Use 0.3 Pages primitives directly where relevant: `#[wasm_server_api]`, `Portal` / `mount_portal`, `ActivityBoundary`, `ViewTransitionBoundary`, and `FieldArray`
+- Keep shared app code cfg-clean across native and `wasm32-unknown-unknown`; rely on documented inert stubs instead of broad call-site `#[cfg]` workarounds
 
 ## Cross-Domain References
 

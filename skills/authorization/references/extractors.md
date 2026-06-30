@@ -11,8 +11,8 @@ Auth extractors provide access to authentication state and user data in handlers
 | Extractor | DB Query | Returns | Use Case |
 |-----------|----------|---------|----------|
 | `AuthInfo` | No | `AuthState` (user_id, flags) | Lightweight auth check, routing decisions |
-| `AuthUser<U>` | Yes | Full user model `U` | When you need user fields (name, email, etc.) |
-| `CurrentUser<U>` | **DEPRECATED** | — | Use `AuthUser<U>` instead |
+| `CurrentUser<U>` | Yes | Full user model `U` | When you need user fields (name, email, etc.) |
+| `AuthUser<U>` | Removed in 0.3.x | — | Use `CurrentUser<U>` instead |
 
 ---
 
@@ -71,14 +71,14 @@ pub async fn get_profile(
 
 ---
 
-## AuthUser<U> (Full User Model)
+## CurrentUser<U> (Full User Model)
 
 **Module:** `reinhardt_auth::auth_user`
 
 Loads the full user model from the database using the authenticated user's ID.
 
 ```rust
-pub struct AuthUser<U: BaseUser>(pub U);
+pub struct CurrentUser<U: BaseUser>(pub U);
 ```
 
 ### Type Constraints
@@ -98,7 +98,7 @@ use reinhardt::auth::prelude::*;
 
 #[get("/admin/dashboard/", name = "admin_dashboard")]
 pub async fn admin_dashboard(
-    #[inject] AuthUser(user): AuthUser<User>,
+    #[inject] CurrentUser(user): CurrentUser<User>,
 ) -> ViewResult<Response> {
     if !user.is_staff {
         return Err(AppError::Authentication("Admin access required".into()));
@@ -118,7 +118,7 @@ pub async fn admin_dashboard(
 | User not found in DB | HTTP 401 Unauthorized |
 | Database error | HTTP 500 Internal Server Error |
 
-### When to Use AuthUser
+### When to Use CurrentUser
 
 - You need user fields (name, email, roles, etc.)
 - You need to check user-specific attributes beyond basic flags
@@ -144,13 +144,13 @@ pub async fn api_data(
         .with_body(json::to_vec(&data)?))
 }
 
-// Guard + AuthUser (full model)
+// Guard + CurrentUser (full model)
 #[get("/admin/settings/", name = "admin_settings")]
 pub async fn admin_settings(
     _guard: guard!(IsAdminUser & IsActiveUser),
-    #[inject] AuthUser(user): AuthUser<User>,
+    #[inject] CurrentUser(user): CurrentUser<User>,
 ) -> ViewResult<Response> {
-    // Guard ensures admin + active, AuthUser provides full model
+    // Guard ensures admin + active, CurrentUser provides full model
     Ok(Response::new(StatusCode::OK)
         .with_body(json::to_vec(&Settings::for_admin(&user)?)?))
 }
@@ -179,9 +179,9 @@ pub async fn get_user_profile() -> Result<UserProfile, ServerFnError> {
 }
 ```
 
-## Version Differences (0.2.x)
+## Version Differences
 
-In 0.2.x, auth extractors return types based on the unified `AuthIdentity` trait instead of concrete user types. `AuthUser<T>` still resolves the full user model, but the underlying authentication layer uses `Box<dyn AuthIdentity>` instead of `Box<dyn User>`.
+In 0.2.x, auth extractors return types based on the unified `AuthIdentity` trait instead of concrete user types. In 0.3.x, `AuthUser<T>` is removed and `CurrentUser<T>` is the full user-model extractor.
 
 ---
 
@@ -190,5 +190,5 @@ In 0.2.x, auth extractors return types based on the unified `AuthIdentity` trait
 For the latest extractor API:
 
 1. Read `reinhardt/crates/reinhardt-auth/src/auth_info.rs` for AuthInfo
-2. Read `reinhardt/crates/reinhardt-auth/src/auth_user.rs` for AuthUser
-3. Read `reinhardt/crates/reinhardt-auth/src/current_user.rs` for deprecated CurrentUser
+2. Read `reinhardt/crates/reinhardt-auth/src/auth_user.rs` for CurrentUser
+3. Read `reinhardt/instructions/MIGRATION_0.3.md` before migrating legacy AuthUser call sites

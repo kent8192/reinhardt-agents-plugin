@@ -7,27 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
+## [0.3.1] - 2026-06-29
 
-- **`agents/main-range-pr-merger.md`** — custom agent for forwarding every
-  first-parent PR merge from a `main` version range into a target branch, with
-  `wtp`-based worktree setup, conflict-resolution rules, PR completeness
-  auditing, and Draft PR publication guidance.
-- **README** — documents the new `main-range-pr-merger` agent in the Agents
-  table.
+### Changed
+
+- Carry the 0.3.0 skill alignment into the Codex PR feedback branch and keep
+  root and packaged plugin copies synchronized.
+- Incorporate review-derived guidance for model field metadata, scoped
+  invariants, Pages form state, provider storage, and regression testing on
+  the 0.3.x skill line.
+- Set Claude Code and Codex plugin manifest versions to `0.3.1`.
+
+## [0.3.0] - 2026-06-28
 
 ### Changed
 
 - Align README, commands, skills, agents, and packaged plugin docs with the
-  stable `reinhardt-web` `0.2.0` release instead of the older `0.2.0-rc.2`
-  development target.
-- Update the 0.1.x to 0.2.0 upgrade workflow to use
-  `reinhardt-web` milestone
-  [`v0.2.0-rc`](https://github.com/kent8192/reinhardt-web/milestone/1)
-  as the issue-level source map for 0.2.0 migration surfaces.
-- Make generated Cargo.toml examples stable-first with `reinhardt = "0.2.0"`
-  and keep `0.1.x` guidance only for migration analysis.
-- Set Claude Code and Codex plugin manifest versions to `0.2.0`.
+  `reinhardt-web` `0.3.0` release line using the `v0.3.0-rc.*`
+  announcements, `instructions/MIGRATION_0.3.md`, and merged
+  `develop/0.3.0` PRs as source material.
+- Add 0.2.x → 0.3.0 migration guidance for removed compatibility APIs
+  (`AuthUser`, `create_resource*`, `use_effect_event*`, raw
+  `ServerRouter` registration, `FunctionHandler`, `DependsResult`, and
+  `DependsOption`).
+- Update DI guidance for keyed provider identity with `#[injectable]`,
+  `#[injectable_key]`, `FactoryOutput<K, T>`, and `Depends<K, T>`.
+- Update Pages and scaffolding guidance for route-backed `#[component]`
+  wrappers, app-local `client/components/`, split `server/` modules,
+  `server_router.rs`, and removal of obsolete app-local `pages.rs` /
+  `client/pages` wrappers.
+- Update auth, authorization, API, macro, testing, and review guidance to use
+  `CurrentUser<T>` and the 0.3.x migration scans.
+- Make generated Cargo.toml examples stable-first with `reinhardt = "0.3.0"`
+  and keep `0.2.x` / `0.1.x` guidance only for migration analysis.
+- Set Claude Code and Codex plugin manifest versions to `0.3.0`.
 
 ## [1.2.0] - 2026-05-27
 

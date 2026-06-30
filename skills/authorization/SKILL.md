@@ -1,7 +1,7 @@
 ---
 name: authorization
 description: Use when configuring authorization and permissions in reinhardt-web applications - covers Permission trait, Guard types, guard! macro, model/object permissions, and auth extractors
-versions: ["0.1.x", "0.2.0"]
+versions: ["0.1.x", "0.2.x", "0.3.x"]
 ---
 
 # Reinhardt Authorization
@@ -13,7 +13,7 @@ Guide developers through authorization setup using reinhardt-auth, including per
 - User configures access control or permissions
 - User defines permission classes or guards
 - User uses `#[permission_required]` attribute
-- User works with `Guard<P>`, `AuthInfo`, or `AuthUser<T>`
+- User works with `Guard<P>`, `AuthInfo`, `CurrentUser<T>`, or legacy `AuthUser<T>` usage
 - User mentions: "permission", "authorization", "guard", "access control", "role", "admin only", "IsAuthenticated", "AllowAny", "RBAC", "object permission", "model permission", "IP whitelist", "rate limit"
 
 ## Workflow
@@ -27,9 +27,9 @@ Guide developers through authorization setup using reinhardt-auth, including per
 
 ### Using Auth Extractors
 
-1. Read `references/extractors.md` for `AuthInfo` and `AuthUser<T>`
+1. Read `references/extractors.md` for `AuthInfo` and `CurrentUser<T>`
 2. Use `AuthInfo` for lightweight access (reads request extensions, no DB query)
-3. Use `AuthUser<T>` for full user model (loads from DB)
+3. Use `CurrentUser<T>` for full user model (loads from DB)
 4. Both use `#[inject]` — requires `params` feature
 
 ### Implementing Custom Permissions
@@ -51,11 +51,11 @@ Guide developers through authorization setup using reinhardt-auth, including per
 - `Public` guard always succeeds (equivalent to `AllowAny` in guard context)
 - `guard!` macro precedence: `!` > `&` > `|` — use parentheses for clarity
 - `AuthInfo` is lightweight (no DB query) — use when you only need auth state
-- `AuthUser<T>` loads from DB — use when you need user model fields
-- `CurrentUser<T>` is **DEPRECATED** — use `AuthUser<T>` instead
+- `CurrentUser<T>` loads from DB — use when you need user model fields
+- `AuthUser<T>` is removed in 0.3.x — replace it with `CurrentUser<T>` before upgrading
 - Permission checks run **before** the handler executes
 - `#[permission_required]` is for attribute-based access control on views
-- For ViewSet per-action permissions, use `get_permissions_for_action()`
+- For ViewSet permissions, use handler builder APIs such as `ModelViewSetHandler::add_permission(...)`; per-action override hooks are not part of the current ViewSet API
 
 ## Cross-Domain References
 

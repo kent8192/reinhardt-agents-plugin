@@ -8,7 +8,7 @@ Common issues and their solutions when running the static analysis suite on rein
 
 ### Macro-Generated Code False Positives
 
-Reinhardt's proc macros (`#[model]`, `#[admin]`, `#[injectable_factory]`) generate code that may trigger clippy warnings. If a clippy warning originates from macro-generated code:
+Reinhardt's proc macros (`#[model]`, `#[admin]`, `#[injectable]`) generate code that may trigger clippy warnings. If a clippy warning originates from macro-generated code:
 
 1. Verify the warning is genuinely from macro expansion (not your code)
 2. Add `#[allow(clippy::rule_name)]` with a comment explaining it's macro-generated
@@ -31,6 +31,22 @@ fn helper() {}
 #[allow(dead_code)] // Used by test fixtures only
 fn helper() {}
 ```
+
+### Redundant Raw Identifiers
+
+Do not keep `r#ident` syntax unless the raw identifier is actually required for
+a keyword or generated API. If normal `ident` compiles, prefer the normal form.
+
+### Long Fully Qualified Paths
+
+Inside handlers, components, and server functions, import framework/app types at
+the module top instead of repeating long fully qualified paths in signatures and
+expressions. This keeps generated code readable and makes review comments
+target the real API boundary instead of path noise.
+
+This applies inside function bodies too: avoid constructing calls around
+`crate::apps::<app>::...` request/DTO paths when a local import can name the API
+surface directly.
 
 ---
 

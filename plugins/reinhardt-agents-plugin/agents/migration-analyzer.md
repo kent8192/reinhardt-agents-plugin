@@ -20,10 +20,10 @@ Called by the migration skill with:
 Before analysis, determine the version families involved:
 
 - **0.1.x family**: `0.1.0-rc.*`, `0.1.0`, `0.1.1`, `0.1.2`, `0.1.3` — legacy stable series
-- **0.2.x family**: `0.2.0-rc.*`, `0.2.0`, `0.2.1`, `0.2.2` — stable 0.2 line with breaking changes from 0.1.x
-- **0.3.0 family**: `0.3.0-alpha.*`, `0.3.0-rc.*`, `0.3.0` — next major stable line
-- **Cross-family upgrade** (0.1.x → 0.2.0): Flag as a **major version migration** with extensive breaking changes. Use the migration skill's "Major Version Upgrade: 0.1.x → 0.2.0" section and milestone #1 for the comprehensive migration path.
-- **Cross-family upgrade** (0.2.x → 0.3.0): Flag as a **major version migration**. Use `../skills/migration/references/0.3-upgrade.md` and prefer `reinhardt/instructions/MIGRATION_0.3.md` when the local source checkout is available.
+- **0.2.x family**: `0.2.0-rc.*`, `0.2.0`, and later `0.2.*` patches — stable 0.2 line with breaking changes from 0.1.x
+- **0.3.x family**: `0.3.0-alpha.*`, `0.3.0-rc.*`, `0.3.0`, and later `0.3.*` patches — current major stable line
+- **Cross-family upgrade** (0.1.x → 0.2.x): Flag as a **major version migration** with extensive breaking changes. Use the migration skill's "Major Version Upgrade: 0.1.x → 0.2.x" section and `reinhardt/instructions/MIGRATION_0.2.md` for the comprehensive migration path.
+- **Cross-family upgrade** (0.2.x → 0.3.x): Flag as a **major version migration**. Use `../skills/migration/references/0.3-upgrade.md` and prefer `reinhardt/instructions/MIGRATION_0.3.md` when the local source checkout is available.
 
 ## Analysis Steps
 
@@ -65,6 +65,9 @@ For each CHANGELOG entry referencing a PR number `(#NNN)`:
 2. Filter: only include entries where `since` version is between `current_version` and `target_version`
 3. Extract the `note` field for each deprecated item (contains replacement guidance)
 4. Identify the deprecated symbol name (type, function, method, trait)
+5. If the local reinhardt source checkout is unavailable, skip this source-only
+   scan and continue to Step 4 using symbols from the CHANGELOG, PR context, and
+   fallback migration references.
 
 ### Step 4: Application Code Scan
 
@@ -136,7 +139,7 @@ Return a structured report in this format:
 - ALWAYS verify PR/Issue details via `gh` CLI — do not fabricate context
 - ONLY report deprecated APIs whose `since` version falls in the upgrade range
 - ONLY report application code usage that actually exists (verified by grep)
-- If reinhardt source is not available locally, note it, skip only the source-only deprecated annotation scan in Step 3, and still run Step 4 application scans using bundled fallback symbols when available
+- If reinhardt source is not available locally, note it and skip only Step 3's source-only deprecated annotation scan; still run Step 4 against the user's application code using CHANGELOG, PR, and fallback migration-reference symbols
 - If `gh` CLI fails, note the error and continue with CHANGELOG-only analysis
 - For 0.1.x → 0.2.x upgrades, include ALL breaking changes from the "Major Version Upgrade" reference in the report, even if the user's code doesn't directly use the affected APIs (they may use them transitively)
 - For 0.1.x → 0.2.x upgrades, also check `reinhardt/announcements/v0.2.0-rc.N.md` for 0.2.x-series release notes

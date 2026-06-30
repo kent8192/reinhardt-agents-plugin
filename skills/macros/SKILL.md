@@ -1,7 +1,7 @@
 ---
 name: macros
 description: Use when working with reinhardt procedural macros - covers attribute macros (#[model], #[user], #[inject], HTTP decorators), derive macros, and function-like macros (guard!, installed_apps!, path!)
-versions: ["0.1.x", "0.2.0"]
+versions: ["0.1.x", "0.2.x", "0.3.x"]
 ---
 
 # Reinhardt Macros
@@ -12,7 +12,7 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 
 - User uses or asks about any `#[attribute]` or `derive()` macro
 - User defines models, views, routes, or injectable services
-- User mentions: "macro", "#[model]", "#[user]", "#[inject]", "#[get]", "#[post]", "#[routes]", "#[settings]", "#[admin]", "#[app_config]", "#[hook]", "guard!", "installed_apps!", "path!", "#[derive(Schema)]", "#[derive(Model)]", "#[derive(Validate)]", "#[server_fn]", "#[permission_required]", "#[injectable]", "#[use_inject]"
+- User mentions: "macro", "#[model]", "#[user]", "#[inject]", "#[get]", "#[post]", "#[routes]", "#[component]", "#[settings]", "#[admin]", "#[app_config]", "#[hook]", "guard!", "installed_apps!", "path!", "#[derive(Schema)]", "#[derive(Model)]", "#[derive(Validate)]", "#[server_fn]", "#[wasm_server_api]", "#[permission_required]", "#[injectable]", "#[injectable_key]", "#[use_inject]"
 
 ## Workflow
 
@@ -25,11 +25,11 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 ### Model Definition
 
 1. Use `#[model(app_label = "...")]` to define a database model
-2. Use `#[field(...)]` attributes on fields for constraints
+2. Use `#[field(...)]` attributes on every scalar field, including unconstrained fields
 3. Use `#[rel(...)]` attributes for relationships
 4. Optionally use `#[user(...)]` for user model with auth traits
 
-> **0.2.x note:** In 0.2.x, `#[model]` auto-generates a `{Model}Info` companion struct; opt-out with `#[model(info = false)]`.
+> **0.3.x note:** `#[model]` still auto-generates `{Model}Info`; relation fields now use `RelationInfo<T>` / `ManyToManyInfo<Source, Target>` payloads.
 
 ### View/Handler Definition
 
@@ -37,15 +37,23 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 2. Use `#[api_view]` for function-based API views
 3. Use `#[action]` for custom ViewSet actions
 4. Use `#[routes]` for URL pattern registration
+5. Use `#[component]` for 0.3 route-backed Pages components
 
 > **0.2.x note:** `#[url_patterns]` is removed in 0.2.x — use `#[routes]` for all URL registration.
+
+### Validation DTOs
+
+1. Use `#[derive(Validate)]` with `#[validate(...)]` attributes for request DTOs
+2. Prefer generated `{Model}Info` types for model-shaped response DTOs
+3. Only hand-write serializer structs when the API shape intentionally differs from the model
 
 ### DI Integration
 
 1. Use `#[inject]` on handler parameters to receive dependencies
 2. Use `#[injectable]` on structs for auto-registration (auto-derives `Clone`)
-3. Use `#[injectable_factory]` on async functions for factory-based registration
-4. Use `#[use_inject]` to enable `#[inject]` in non-handler async functions
+3. Use `#[injectable]` on async provider functions for factory-based registration
+4. Use `#[injectable_key]` with `FactoryOutput<K, T>` when the provider output type is not a unique dependency identity
+5. Use `#[use_inject]` to enable `#[inject]` in non-handler async functions
 
 ### Server Hooks
 
@@ -57,13 +65,16 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 
 - ALL macros are re-exported through the `reinhardt` facade crate
 - `#[model]` auto-derives `Model`, `Serialize`, `Deserialize`, `Clone`, `Debug`
-- `#[user]` auto-implements `BaseUser` and `AuthIdentity` traits
+- Every scalar field inside `#[model]` should have `#[field]` or `#[field(...)]`; relationship fields should have `#[rel(...)]`
+- Use `#[derive(Validate)]` / `#[validate(...)]` for request validation instead of duplicating validation logic in services
+- `#[user]` auto-implements `BaseUser` and `AuthIdentity` traits on native targets and is inert on WASM in 0.3.x
 - HTTP decorators (`#[get]`, etc.) accept `name` and `use_inject` options
+- Register 0.3 endpoint-macro handlers with `ServerRouter::endpoint(...)`; do not use removed raw `ServerRouter::function` / `.route` registration
 - `guard!` precedence: `!` > `&` > `|` — use parentheses for clarity
 - `installed_apps!` validates app names at compile time
 - `path!` validates URL patterns at compile time (must start with `/`, snake_case params)
-- `#[injectable]` and `#[injectable_factory]` are distinct: struct vs function registration
-- `#[injectable]` auto-derives `Clone` on structs (no need to manually derive)
+- `#[injectable]` covers structs and provider functions in 0.3.x; `#[injectable_factory]` is a deprecated compatibility alias
+- `#[injectable]` auto-derives `Clone` on structs (no need to manually derive) and emits inert WASM stubs for shared provider functions
 - `#[inject(cache = false)]` creates a fresh instance per injection (no caching)
 - `#[hook(on = runserver)]` requires a unit struct (no fields, no generics) implementing `RunserverHook`
 - `#[model]` uses UUID v7 (`Uuid::now_v7()`) for `Option<Uuid>` primary keys — better index performance
@@ -82,7 +93,7 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 For the latest macro definitions:
 
 1. Read `reinhardt/crates/reinhardt-core/macros/src/lib.rs` for core macros (#[model], #[user], #[get], etc.)
-2. Read `reinhardt/crates/reinhardt-di/macros/src/lib.rs` for DI macros (#[injectable], #[injectable_factory])
+2. Read `reinhardt/crates/reinhardt-di/macros/src/lib.rs` for DI macros (#[injectable], #[injectable_key])
 3. Read `reinhardt/crates/reinhardt-auth/macros/src/lib.rs` for guard! macro
 4. Read `reinhardt/crates/reinhardt-db-macros/src/lib.rs` for #[document] macro
 5. Read `reinhardt/crates/reinhardt-pages/macros/src/lib.rs` for #[server_fn], page!, head!, form!

@@ -74,6 +74,11 @@ pub async fn delete_user(Path(id): Path<i64>) -> ViewResult<Response> {
 | `name = "..."` | Named route for reverse URL lookup | `#[get("/users/", name = "user_list")]` |
 | `pre_validate = true` | Run validation before handler body | `#[post("/users/", name = "user_create", pre_validate = true)]` |
 
+Decorator paths should stay local to the app/router, such as
+`"/search/sources/"`. Compose app and API prefixes such as `"/api/writing"` in
+the route aggregate or `*_urls.rs` module with `mount`/`with_prefix`, and use
+reverse helpers at call sites instead of rebuilding full paths in handlers.
+
 ### Return Type
 
 All handlers return `ViewResult<Response>`. This is an alias for `Result<Response, AppError>` where errors are automatically converted to HTTP error responses.
@@ -88,7 +93,7 @@ Extractors pull typed data from the incoming request:
 | `Json(body): Json<T>` | JSON request body (requires `T: Deserialize`) | `#[post("/users/")]` |
 | `Query(params): Query<T>` | Query string parameters (requires `T: Deserialize`) | `?page=1&per_page=20` |
 | `#[inject] AuthInfo(state): AuthInfo` | Lightweight auth state (JWT-based) | `state.user_id()` |
-| `#[inject] AuthUser(user): AuthUser<User>` | Full user model resolution | `user.username` |
+| `#[inject] CurrentUser(user): CurrentUser<User>` | Full user model resolution | `user.username` |
 
 ```rust
 #[get("/users/", name = "user_list")]
@@ -139,6 +144,7 @@ Use `#[inject]` to receive services and auth context from the DI container:
 
 ```rust
 use reinhardt::di::prelude::*;
+use reinhardt::CurrentUser;
 use reinhardt::views::prelude::*;
 
 #[get("/profile/", name = "user_profile")]
@@ -155,7 +161,7 @@ pub async fn get_profile(
 
 #[get("/admin/users/", name = "admin_user_list")]
 pub async fn admin_list_users(
-    #[inject] reinhardt::AuthUser(user): reinhardt::AuthUser<User>,
+    #[inject] CurrentUser(user): CurrentUser<User>,
     Query(params): Query<PaginationParams>,
 ) -> ViewResult<Response> {
     if !user.is_staff {
@@ -174,9 +180,63 @@ pub async fn admin_list_users(
 | Type | Description |
 |------|-------------|
 | `AuthInfo` | Lightweight JWT auth state with `state.user_id()` |
-| `AuthUser<T>` | Full user model resolution from auth token |
-| `Depends<Key, T>` | Project-local keyed service from the DI container |
-| `Depends<DatabaseConnection>` | Framework-managed database connection from the pool |
+| `CurrentUser<T>` | Full user model resolution from auth token or session |
+| `T` | Direct injectable service/configuration value from the DI container |
+| `Depends<K, T>` | Keyed provider output from the DI container |
+| `Depends<PrimaryDatabase, DatabaseConnection>` | Keyed database connection from the pool |
+
+### Endpoint-local workflows with shared DI dependencies
+
+Use DI for common dependencies that several endpoints share. Keep
+endpoint-specific validation, DTO assembly, persistence ordering, generation
+steps, and response shaping in the handler or in a private helper beside it.
+Do not create `OutlineService`, `ManuscriptService`, or `DocumentService`
+facades that merely hide a single endpoint flow.
+
+Do not move the same handler script into `server/`, `service/`, or `services/`
+only to shorten the endpoint. Extraction should expose a smaller helper contract,
+a reusable dependency, or a focused test target. If the helper still owns the
+request DTO, response DTO, persistence order, and provider sequence, it is still
+endpoint-local workflow.
+
+Inline and delete a helper that is used only by one endpoint section and only
+delegates the same request data, dependencies, persistence order, and provider
+sequence. Keep a helper when it returns a narrower domain value, isolates a
+named invariant, or has another caller.
+
+```rust
+use reinhardt::di::Depends;
+use reinhardt::views::prelude::*;
+
+#[post("/outlines/{id}/regenerate/", name = "outline_regenerate")]
+pub async fn regenerate_outline(
+    Path(id): Path<Uuid>,
+    Json(input): Json<RegenerateOutlineRequest>,
+    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
+    #[inject] providers: Depends<AiProviderRegistryKey, ProviderRegistry>,
+) -> ViewResult<Response> {
+    input.validate()?;
+
+    let current = Outline::objects().get(id, &*db).await?;
+    let draft = build_outline_revision(&providers, &current, &input).await?;
+    let revision = OutlineRevision::from_draft(id, draft);
+    let saved = OutlineRevision::objects()
+        .create_with_conn(&*db, &revision)
+        .await?;
+
+    Ok(Response::new(StatusCode::CREATED)
+        .with_header("Content-Type", "application/json")
+        .with_body(json::to_vec(&OutlineRevisionResponse::from_model(&saved))?))
+}
+
+async fn build_outline_revision(
+    providers: &ProviderRegistry,
+    current: &Outline,
+    input: &RegenerateOutlineRequest,
+) -> Result<OutlineDraft, AppError> {
+    providers.outliner(input.provider).regenerate(current, input).await
+}
+```
 
 ## Generic Views
 
@@ -268,9 +328,11 @@ impl ViewSet for UserViewSet {
         User::objects().all()
     }
 
-    fn get_permissions(&self) -> Vec<Box<dyn Permission>> {
-        vec![Box::new(IsAuthenticated)]
-    }
+}
+
+fn user_handler() -> ModelViewSetHandler<User> {
+    ModelViewSetHandler::<User>::new()
+        .add_permission(std::sync::Arc::new(IsAuthenticated))
 }
 ```
 
@@ -279,8 +341,9 @@ impl ViewSet for UserViewSet {
 For full-stack applications scaffolded with `--with-pages`, server functions
 allow RPC-style calls from client-side WASM. The decorator is `#[server_fn]`
 (NOT `#[server]`). Keep `#[server_fn]` functions as request/response
-boundaries: validate input, inject keyed services, then delegate application
-business operations to those services.
+boundaries: validate input, inject shared keyed services, and keep
+endpoint-specific DTO/persistence flow visible unless a narrower service
+contract is reused across endpoints.
 
 ```rust
 use reinhardt::di::Depends;
@@ -311,7 +374,7 @@ pub async fn get_user_profile(
 }
 ```
 
-The injected services should be registered in the app's `services/` module with
+Register shared business services in the app's `services/` module with the
 Reinhardt 0.3 provider shape:
 
 ```rust
@@ -330,18 +393,15 @@ async fn auth_service(
 
 Keep provider adapters, prompt construction, parsing/conversion helpers, and
 repository/database internals outside `services/`, for example under app-local
-`server/providers`, `server/prompts`, and `server/repositories` modules. The
+`server/providers`, `server/prompts`, and `server/repositories`. The
 `services/` module should expose the DI surface only: keys, provider functions,
-and service structs/functions. Prefer that DI service surface over composing
-business workflows from utility-function clusters; keep utility functions for
-small pure transformations that do not need settings, providers, lifecycle
-scope, or test overrides.
+and service structs/functions.
 
 ### `FromRequest` extractors in server functions (rc.18+)
 
 Since rc.18, `#[server_fn]` accepts `FromRequest`-based extractors
 (`Validated`, `Json`, `Form`, `Header`, `Cookie`, `Path`, `Query`, `Body`,
-`AuthUser<U>`, etc.) as first-class parameters. They are resolved on the
+`CurrentUser<U>`, etc.) as first-class parameters. They are resolved on the
 server via `FromRequest::from_request` and **excluded from the WASM client's
 argument struct**, so the client call site only passes the
 data-shaped parameters.
@@ -351,7 +411,7 @@ data-shaped parameters.
 pub async fn submit_vote(
     poll_id: i64,                            // Sent from the client
     choice_id: i64,                          // Sent from the client
-    AuthUser(user): AuthUser<User>,          // Server-side only
+    CurrentUser(user): CurrentUser<User>,    // Server-side only
     Validated(meta): Validated<VoteMetadata>, // Server-side only
 ) -> Result<(), ServerFnError> {
     Vote::record(user.id, poll_id, choice_id, meta).await?;
@@ -367,6 +427,15 @@ block instead of relying on the legacy implicit auto-injection. The
 auto-injection path remains for backward compatibility but is deprecated;
 new code should follow the explicit pattern documented in the `form!`
 reference (`../../macros/references/proc-macros.md`).
+
+### Server functions vs service endpoints
+
+Use `#[server_fn]` for browser-to-server RPC from Reinhardt Pages clients. If a
+separate worker, agent service, TypeScript process, or third-party client needs
+to call the backend, expose an explicit HTTP or gRPC endpoint instead. Pass
+runtime details such as callback domain, model/provider selection, and request
+scope through typed settings or request fields; do not hardcode them in the
+worker or hide them behind a Pages-only server function.
 
 ## Response Building
 
@@ -414,6 +483,10 @@ pub async fn get_user(Path(id): Path<i64>) -> ViewResult<Response> {
         .with_body(json::to_vec(&UserResponse::from(user))?))
 }
 ```
+
+For ORM reads and counts, use `Model::objects()` or the app's service layer.
+Do not bypass the model manager with ad hoc low-level builders when the standard
+manager API expresses the query.
 
 ## ModelViewSet / ReadOnlyModelViewSet (rc.23+)
 

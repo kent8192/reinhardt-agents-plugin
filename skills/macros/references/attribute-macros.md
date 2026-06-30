@@ -21,10 +21,19 @@ pub struct Post {
     #[field(unique)]
     pub slug: String,
 
+    #[field]
     pub title: String,
+
+    #[field]
     pub content: String,
+
+    #[field]
     pub is_published: bool,
+
+    #[field(auto_now_add = true)]
     pub created_at: DateTime<Utc>,
+
+    #[field(null = true)]
     pub updated_at: Option<DateTime<Utc>>,
 }
 ```
@@ -56,6 +65,10 @@ pub struct Post {
 | `min` | number | Minimum value (numeric) |
 | `max` | number | Maximum value (numeric) |
 | `skip_info` | `bool` | **(0.2.x)** Exclude this field from the auto-generated `{Model}Info` struct. Set `skip_info = true` to omit. |
+
+Use `#[field]` even when a scalar field has no options. This keeps field
+metadata complete for migrations, validation, serializers, admin, and generated
+`{Model}Info` structs.
 
 ### Relationship Attributes (`#[rel(...)]`)
 
@@ -153,11 +166,19 @@ pub struct UserDocument {
 | `use_inject` | `bool` | Enable `#[inject]` on parameters |
 | `pre_validate` | `bool` | Run validation before handler |
 
+Examples that inject `Depends<PrimaryDatabase, DatabaseConnection>` assume a
+database provider key in scope:
+
+```rust
+#[injectable_key]
+struct PrimaryDatabase;
+```
+
 ```rust
 #[get("/users/{id}/", name = "user_detail", use_inject = true)]
 pub async fn user_detail(
     Path(id): Path<Uuid>,
-    #[inject] db: Depends<DatabaseConnection>,
+    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
 ) -> ViewResult<Response> {
     // ...
 }
@@ -273,7 +294,7 @@ Mark a parameter for DI resolution.
 #[get("/config/", name = "config_info", use_inject = true)]
 pub async fn config_info(
     #[inject] config: AppConfig,
-    #[inject] db: Depends<DatabaseConnection>,
+    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
     #[inject(cache = false)] counter: RequestCounter,  // Fresh instance each time
 ) -> ViewResult<Response> {
     // ...
@@ -331,18 +352,28 @@ pub struct AppConfig {
 | `#[scope(request)]` | Request scope |
 | `#[scope(transient)]` | Transient scope (new instance each time) |
 
-### `#[injectable_factory]`
+### `#[injectable]` Provider Functions
 
 **Crate:** `reinhardt-di/macros`
 
-Mark an async function as a dependency factory with automatic registration.
+Mark an async function as a dependency provider with automatic registration.
+In 0.3.x, provider functions are async-only. Return `FactoryOutput<K, T>` when the produced value type needs an
+explicit provider identity. `#[injectable_factory]` remains only as a deprecated
+0.2 compatibility alias.
+The `DbSettings` parameter below represents an application-owned settings type
+or fragment that your app has registered as an injectable value.
 
 ```rust
-#[injectable_factory(scope = "singleton")]
+use reinhardt::di::{FactoryOutput, injectable, injectable_key};
+
+#[injectable_key]
+struct PrimaryDatabase;
+
+#[injectable(scope = "singleton")]
 async fn create_db_pool(
-    #[inject] settings: Depends<ProjectSettings>,
-) -> DatabaseConnection {
-    DatabaseConnection::connect(&settings.database_url).await.unwrap()
+    #[inject] settings: DbSettings,
+) -> FactoryOutput<PrimaryDatabase, DatabaseConnection> {
+    FactoryOutput::new(DatabaseConnection::connect(&settings.database_url).await.unwrap())
 }
 ```
 
@@ -536,7 +567,7 @@ pub async fn create_post(
     title: String,                        // Sent from the client
     body: String,                         // Sent from the client
     Validated(payload): Validated<NewPostPayload>, // Server-side, not in client args
-    AuthUser(user): AuthUser<User>,       // Server-side
+    CurrentUser(user): CurrentUser<User>, // Server-side
 ) -> Result<Post, ServerFnError> {
     // ...
 }
@@ -581,7 +612,7 @@ gRPC service method with DI support.
 ```rust
 #[grpc_handler]
 pub async fn get_user(
-    #[inject] db: Depends<DatabaseConnection>,
+    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
     request: Request<GetUserRequest>,
 ) -> Result<Response<UserResponse>, Status> {
     // ...
@@ -597,7 +628,7 @@ GraphQL resolver with DI support.
 ```rust
 #[graphql_handler]
 pub async fn get_user(
-    #[inject] db: Depends<DatabaseConnection>,
+    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
     ctx: &Context<'_>,
 ) -> Result<User, Error> {
     // ...

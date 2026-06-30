@@ -1,7 +1,7 @@
 ---
 name: authentication
 description: Use when configuring authentication in reinhardt-web applications - covers auth backends (JWT, Session, Token, OAuth2/Social), user models, password hashing, and session management
-versions: ["0.1.x", "0.2.0"]
+versions: ["0.1.x", "0.2.x", "0.3.x"]
 ---
 
 # Reinhardt Authentication
@@ -15,7 +15,7 @@ Guide developers through authentication setup using reinhardt-auth, including ba
 - User works with login/logout flows
 - User configures JWT, session, token, or OAuth2/social authentication
 - User asks about password hashing or session management
-- User mentions: "auth", "authentication", "login", "logout", "JWT", "token", "session", "password", "OAuth", "social login", "Google login", "GitHub login", "BasicAuth", "AuthUser", "AuthInfo", "user model", "BaseUser", "createsuperuser"
+- User mentions: "auth", "authentication", "login", "logout", "JWT", "token", "session", "password", "OAuth", "social login", "Google login", "GitHub login", "BasicAuth", "CurrentUser", "AuthUser", "AuthInfo", "user model", "BaseUser", "createsuperuser"
 
 ## Workflow
 
@@ -24,7 +24,7 @@ Guide developers through authentication setup using reinhardt-auth, including ba
 1. Read `references/auth-backends.md` for backend comparison
 2. Select backend based on use case (JWT for APIs, Session for web apps, Social for third-party login)
 3. Enable the corresponding feature flag in `Cargo.toml`
-4. Configure via `#[injectable_factory]` — read DI skill for patterns
+4. Configure via `#[injectable]` providers — read DI skill for keyed provider patterns
 
 ### Defining a Custom User Model
 
@@ -36,9 +36,9 @@ Guide developers through authentication setup using reinhardt-auth, including ba
 
 ### Setting Up Auth Extractors
 
-1. Read `../authorization/references/extractors.md` for `AuthInfo` and `AuthUser<T>`
+1. Read `../authorization/references/extractors.md` for `AuthInfo` and `CurrentUser<T>`
 2. Use `AuthInfo` for lightweight access (no DB query)
-3. Use `AuthUser<T>` when the full user model is needed
+3. Use `CurrentUser<T>` when the full user model is needed
 4. Both require `#[inject]` in handler parameters
 
 ### Configuring Social/OAuth2 Login
@@ -60,8 +60,10 @@ Guide developers through authentication setup using reinhardt-auth, including ba
 - **ALWAYS** use `argon2-hasher` feature for production password hashing
 - **NEVER** store secrets (JWT keys, OAuth client secrets) in code — use environment variables
 - `AuthInfo` is lightweight (reads from request extensions) — use when you only need user ID
-- `AuthUser<T>` loads the full user model from DB — use when you need user fields
-- `CurrentUser<T>` is **DEPRECATED** — use `AuthUser<T>` instead
+- `CurrentUser<T>` loads the full user model from DB — use when you need user fields
+- `AuthUser<T>` is removed in 0.3.x — migrate old code to `CurrentUser<T>`
+- Register `SessionMiddleware` once for cookie-backed session apps; use `CookieSessionAuthMiddleware` only for direct custom `AsyncSessionBackend` integration
+- In 0.3.x, `#[user]` is inert on WASM, so shared user model declarations should stay visible to browser builds without broad call-site `#[cfg]` workarounds
 - Feature flags: `auth-jwt`, `auth-session`, `auth-token`, `auth-oauth`, `argon2-hasher`, `social`
 - JWT access token lifetime should be short (15 min recommended); use refresh tokens for longer sessions
 - Session cookies MUST use `HttpOnly`, `SameSite`, and `Secure` (in production)

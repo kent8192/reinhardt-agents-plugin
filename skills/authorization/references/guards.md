@@ -156,9 +156,9 @@ pub async fn health_check(
 #[get("/profile/", name = "user_profile")]
 pub async fn user_profile(
     _guard: guard!(IsAuthenticated),
-    #[inject] AuthUser(user): AuthUser<User>,
+    #[inject] CurrentUser(user): CurrentUser<User>,
 ) -> ViewResult<Response> {
-    // Guard ensures auth, AuthUser provides the user model
+    // Guard ensures auth, CurrentUser provides the user model
     Ok(Response::new(StatusCode::OK)
         .with_body(json::to_vec(&user)?))
 }

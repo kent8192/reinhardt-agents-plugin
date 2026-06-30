@@ -1,7 +1,7 @@
 ---
 name: configuration
 description: Use when setting up or modifying reinhardt-web project configuration - covers settings fragments, TOML sources, profiles, and the composable settings system
-versions: ["0.1.x", "0.2.0"]
+versions: ["0.1.x", "0.2.x", "0.3.x"]
 ---
 
 # Reinhardt Configuration
@@ -35,8 +35,13 @@ Guide developers through reinhardt-web's composable settings system using fragme
 
 - Use `#[settings]` macro for both ProjectSettings and individual fragments
 - NEVER hardcode configuration values — use TOML files or environment variables
+- Provider/model/domain selections that affect runtime behavior must be represented in typed settings and, when user-facing, exposed through UI rather than only TOML comments
+- External service calls must receive needed runtime configuration through settings, request payloads, HTTP, or gRPC; do not duplicate backend constants in a worker process
+- Configure language and locale behavior through `I18nSettings` / `reinhardt-i18n`, not hardcoded language-specific strings
 - Use `LowPriorityEnvSource` for env vars, `TomlFileSource` for TOML files
 - Priority order (highest to lowest): env-specific TOML > base TOML > env vars > defaults
+- In 0.3.x shared app/config modules should compile cfg-clean across native and WASM; avoid broad call-site `#[cfg]` workarounds around settings types
+- If settings are provided through DI, use 0.3 keyed provider patterns (`#[injectable]`, optional `FactoryOutput<K, T>`) when multiple settings-like values can exist
 
 ## Dynamic References
 
@@ -45,3 +50,4 @@ For the latest configuration API:
 1. Read `reinhardt/crates/reinhardt-conf/src/settings/` for all settings types
 2. Read `reinhardt/crates/reinhardt-conf/src/settings/builder.rs` for SettingsBuilder
 3. Read `reinhardt-cloud/dashboard/src/config/settings.rs` for a production example
+4. Read `reinhardt/instructions/MIGRATION_0.3.md` for cfg-clean app/config expectations during 0.3.x migrations

@@ -1,7 +1,7 @@
 ---
 name: architecture
 description: Use when implementing a complete feature across all reinhardt layers - guides the full workflow from model to API to tests with completion checklist
-versions: ["0.1.x", "0.2.0"]
+versions: ["0.1.x", "0.2.x", "0.3.x"]
 ---
 
 # Reinhardt Feature Development Architecture
@@ -25,7 +25,7 @@ Follow the 7-layer sequence. Each step references the appropriate skill for deta
    - Use the modeling skill: `../modeling/references/model-patterns.md`
 2. **Define Serializer** — read `references/layer-sequence.md` § Serializer Layer
    - Use the API skill: `../api-development/references/serializer-patterns.md`
-3. **Implement Service** — read `references/layer-sequence.md` § Service Layer
+3. **Choose Endpoint or Shared Service Boundary** — read `references/layer-sequence.md` § Service Layer
    - Use the DI skill: `../dependency-injection/references/di-patterns.md`
 4. **Create API Routes** — read `references/layer-sequence.md` § API Layer
    - Use the API skill: `../api-development/references/view-patterns.md`
@@ -48,10 +48,21 @@ Read `references/error-mapping.md` for the standard mapping from service-layer e
 
 - Follow the layer sequence — earlier layers are dependencies for later ones
 - Every feature MUST have tests at minimum two layers: unit (service) and integration (API)
-- Services MUST return domain types, not ORM models directly
+- Services return reusable domain results when a shared service is justified; endpoint-specific DTO and response assembly stays outside the service
+- Do not create a service facade just because an endpoint has a use-case flow; keep endpoint-specific validation, DTO assembly, persistence, generation, and edit flows in the endpoint or a nearby private helper
+- Do not count moving a `#[server_fn]` body into `server/`, `service/`, or `services/` as architectural separation unless the extracted code has a narrower contract, reusable consumer, or independently testable invariant
+- Inline single-use delegated helpers when they only forward one endpoint/section's request, dependencies, and persistence/provider sequence
 - Error types from services are mapped centrally — do not handle HTTP concerns in services
+- Keep route decorators app-local and compose app/API prefixes in route modules or `*_urls.rs`
+- Cross-layer operations must preserve their domain invariants: scope filters, idempotency, accepted/current version uniqueness, and ordered sibling integrity
+- Research/agent services should return evidence and diagnostics only unless the feature explicitly assigns them authoring or mutation ownership
 - ALL code comments must be in English
 - Use `reinhardt-query` for custom queries, NEVER raw SQL
+- For 0.3.x features, use endpoint macros plus `.endpoint(...)` for server routes instead of raw `ServerRouter::function` / `.route` registration
+- For 0.3.x DI providers, use `#[injectable]`, `#[injectable_key]`, `FactoryOutput<K, T>`, and `Depends<K, T>` when provider output type is not a unique identity
+- For 0.3.x auth, use `CurrentUser<T>` for full user extraction and remove legacy `AuthUser<T>`
+- For 0.3.x model-facing APIs, review generated `{Model}Info` relation fields and avoid assuming flattened `*_id` payloads
+- For Pages features, place route-backed `#[component]` wrappers under `src/apps/<app>/client/components/` and keep client/server modules split
 
 ## Cross-Domain References
 
@@ -73,3 +84,4 @@ For the latest API:
 2. Read `reinhardt/crates/reinhardt-rest/src/lib.rs` for serializer types
 3. Read `reinhardt/crates/reinhardt-views/src/lib.rs` for view types
 4. Read `reinhardt/crates/reinhardt-core/src/signals.rs` for signal types
+5. Read `reinhardt/instructions/MIGRATION_0.3.md` when designing or updating a 0.3.x feature surface

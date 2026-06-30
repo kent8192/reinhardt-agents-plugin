@@ -45,15 +45,16 @@ claude install kent8192/reinhardt-agents-plugin
 
 ## Supported Versions
 
-This plugin is aligned with the latest stable reinhardt-web release and keeps
-0.1.x guidance only for projects that are still migrating:
+This plugin is aligned with the reinhardt-web 0.3.0 release line and keeps
+older-version guidance only for projects that are still migrating:
 
 | Version | Status | Source |
 |---------|--------|--------|
-| **0.2.0** | Latest stable | `reinhardt-web-v0.2.0` release |
+| **0.3.0** | Target stable line | `develop/0.3.0` announcements and `MIGRATION_0.3.md` |
+| **0.2.x** | Legacy migration source | `reinhardt-web-v0.2.x` releases |
 | **0.1.x** | Legacy migration source | `reinhardt-web-v0.1.3` and earlier tags |
 
-Skills use inline version markers — `**(0.1.x)**` / `**(0.2.x)**` — where APIs diverge between versions. Check your project's `Cargo.toml` to determine which version family applies.
+Skills use inline version markers — `**(0.1.x)**` / `**(0.2.x)**` / `**(0.3.x)**` — where APIs diverge between versions. Check your project's `Cargo.toml` to determine which version family applies.
 
 ## Features
 
@@ -125,9 +126,9 @@ The PostToolUse hook automatically scans code changes for these reinhardt-specif
 
 ## Requirements
 
-- **Rust** >= 1.94.0 (2024 Edition)
-- **reinhardt-web** `0.2.0` (latest stable); legacy `0.1.x` guidance is kept for migrations
-- **reinhardt-admin-cli** -- `cargo install reinhardt-admin-cli --version "0.2.0"`
+- **Rust** >= 1.96.0 (2024 Edition)
+- **reinhardt-web** `0.3.0`; legacy `0.2.x` / `0.1.x` guidance is kept for migrations
+- **reinhardt-admin-cli** -- `cargo install reinhardt-admin-cli`
 - **Docker Desktop** -- required for TestContainers-based database tests
 - **semgrep** (optional) -- enables automatic anti-pattern detection via PostToolUse hook
 

@@ -88,15 +88,6 @@ pub struct Claims {
     pub is_superuser: bool,
 }
 
-pub struct JwtConfig {
-    pub secret_key: String,
-    pub algorithm: Algorithm,
-    pub access_token_lifetime: Duration,
-    pub refresh_token_lifetime: Duration,
-    pub issuer: Option<String>,
-    pub audience: Option<String>,
-}
-
 #[non_exhaustive]
 pub enum JwtError {
     TokenExpired,
@@ -130,26 +121,29 @@ pub enum JwtError {
 // Cargo.toml
 // reinhardt = { version = "...", features = ["auth-jwt", "argon2-hasher"] }
 
-use reinhardt::auth::jwt::{JwtConfig, Algorithm};
-use reinhardt::di::prelude::*;
+use chrono::Duration;
+use reinhardt::auth::jwt::{Claims, JwtAuth, JwtError};
 
-#[injectable_factory(scope = "singleton")]
-async fn jwt_config(#[inject] settings: Depends<ProjectSettings>) -> JwtConfig {
-    JwtConfig {
-        secret_key: settings.jwt_secret_key.clone(),
-        algorithm: Algorithm::HS256,
-        access_token_lifetime: Duration::from_secs(60 * 15),       // 15 minutes
-        refresh_token_lifetime: Duration::from_secs(60 * 60 * 24 * 7), // 7 days
-        issuer: Some("my-app".to_string()),
-        audience: None,
-    }
+fn jwt_auth(settings: &ProjectSettings) -> JwtAuth {
+    JwtAuth::new(settings.jwt_secret_key.as_bytes())
+}
+
+fn create_jwt_token(jwt_auth: &JwtAuth, user: &User) -> Result<String, JwtError> {
+    let claims = Claims::new(
+        user.id.to_string(),
+        user.username.clone(),
+        Duration::minutes(15),
+        user.is_staff,
+        user.is_superuser,
+    );
+    jwt_auth.encode(&claims)
 }
 ```
 
 ### Middleware
 
 ```rust
-use reinhardt::auth::jwt::JwtAuthMiddleware;
+use reinhardt::middleware::JwtAuthMiddleware;
 
 UnifiedRouter::new()
     .mount("/api/", app_router)
@@ -208,13 +202,12 @@ pub struct SessionAuthConfig {
     pub enforce_csrf: bool,
 }
 
-pub struct SessionConfig {
-    pub engine: SessionEngine,
+pub struct SessionSettings {
     pub cookie_name: String,
-    pub cookie_age: Duration,
+    pub cookie_age_secs: Option<u64>,
     pub cookie_secure: bool,
     pub cookie_httponly: bool,
-    pub cookie_samesite: SameSite,
+    pub cookie_samesite: String,
 }
 ```
 
@@ -242,19 +235,10 @@ pub struct SessionConfig {
 // Cargo.toml
 // reinhardt = { version = "...", features = ["auth-session", "sessions", "argon2-hasher"] }
 
-use reinhardt::sessions::{SessionConfig, SessionEngine};
-use reinhardt::di::prelude::*;
+use reinhardt_auth::{sessions::config::SessionConfig, settings::SessionSettings};
 
-#[injectable_factory(scope = "singleton")]
-async fn session_config(#[inject] settings: Depends<ProjectSettings>) -> SessionConfig {
-    SessionConfig {
-        engine: SessionEngine::Database,
-        cookie_name: "sessionid".to_string(),
-        cookie_age: Duration::from_secs(60 * 60 * 24 * 14), // 2 weeks
-        cookie_secure: settings.is_production(),
-        cookie_httponly: true,
-        cookie_samesite: SameSite::Lax,
-    }
+fn session_config(auth_session: &SessionSettings) -> SessionConfig {
+    auth_session.to_config()
 }
 ```
 

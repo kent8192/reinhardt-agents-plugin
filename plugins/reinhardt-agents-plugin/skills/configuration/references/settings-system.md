@@ -148,13 +148,13 @@ secure_ssl_redirect = true
 
 ## Accessing Settings in Code
 
-Settings are registered in the DI container and injected into handlers:
+Build composed settings through the project's settings accessor. The
+`#[settings]` macro does not automatically register `ProjectSettings` in DI.
 
 ```rust
 #[get("/info/", name = "app_info")]
-pub async fn app_info(
-    #[inject] settings: Depends<ProjectSettings>,
-) -> ViewResult<Response> {
+pub async fn app_info() -> ViewResult<Response> {
+    let settings = crate::config::settings::get_settings();
     let debug = settings.core.debug;
     // ...
 }
@@ -163,6 +163,8 @@ pub async fn app_info(
 ### Accessing Specific Fragments
 
 ```rust
+let settings = crate::config::settings::get_settings();
+
 // Access core settings
 let secret = &settings.core.secret_key;
 let debug = settings.core.debug;
@@ -173,6 +175,20 @@ let db_config = settings.core.databases.get("default").unwrap();
 // Access i18n settings (field name from fragment's section())
 let lang = &settings.i18n.language_code;
 ```
+
+## Runtime-Selectable Settings
+
+When configuration changes product behavior, model it as typed settings and
+decide whether users need a UI surface for it. Examples include provider
+selection, model names, callback domains, research scope defaults, and language
+selection.
+
+Guidelines:
+
+- TOML should define defaults and environment overrides.
+- UI state should select among allowed settings when operators or users need to switch behavior at runtime.
+- Cross-process services should receive the selected value in the request or over gRPC/HTTP metadata; do not copy backend constants into the worker.
+- Language-specific prompts or copy should route through `I18nSettings` and message catalogs so Japanese and English paths stay testable.
 
 ## Profile Selection
 

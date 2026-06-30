@@ -144,9 +144,16 @@ UnifiedRouter::new()
     .mount("/api/", auth_routes())
 ```
 
+Endpoint decorators should declare the route-local path, for example
+`#[get("/search/sources/", name = "writing_sources_search")]`. Compose broader
+prefixes such as `"/api/writing"` in the app route aggregate or `*_urls.rs`
+module with `mount` / `with_prefix`, then call routes through reverse helpers.
+Do not hardcode the full mounted path inside the handler or rebuild it inside a
+function body.
+
 ### DI Context Setup
 
-Build an `InjectionContext` with a `SingletonScope` and attach it to the router. Register singletons via `#[injectable_factory]` macros (not `set_singleton`). Access the context in middleware via `request.get_di_context::<InjectionContext>()`:
+Build an `InjectionContext` with a `SingletonScope` and attach it to the router. Register singletons via `#[injectable]` provider functions (not `set_singleton`). Access the context in middleware via `request.get_di_context::<InjectionContext>()`:
 
 ```rust
 use reinhardt::di::{InjectionContext, SingletonScope};
@@ -160,14 +167,19 @@ UnifiedRouter::new()
     .with_di_context(di_ctx)
 ```
 
-Register services using `#[injectable_factory]` instead of manual `set_singleton`:
+Register services using `#[injectable]` instead of manual `set_singleton`:
 
 ```rust
 use reinhardt::di::prelude::*;
 
-#[injectable_factory(scope = "singleton")]
-async fn create_email_service(#[inject] config: Depends<AppConfig>) -> EmailService {
-    EmailService::new(&config.email_api_key)
+#[injectable_key]
+struct EmailServiceKey;
+
+#[injectable(scope = "singleton")]
+async fn create_email_service(
+    #[inject] config: AppConfig,
+) -> FactoryOutput<EmailServiceKey, EmailService> {
+    FactoryOutput::new(EmailService::new(&config.email_api_key))
 }
 ```
 
@@ -177,7 +189,7 @@ Access the DI context:
 // In middleware: from the request
 let ctx = request.get_di_context::<InjectionContext>();
 
-// In #[injectable_factory] or #[injectable]: global function
+// In #[injectable]: global function
 use reinhardt::di::{get_di_context, ContextLevel};
 let ctx = get_di_context(ContextLevel::Root);    // singleton scope context
 let ctx = get_di_context(ContextLevel::Current); // request/transient scope context
@@ -272,7 +284,7 @@ pub fn router() -> ServerRouter {
 | Middleware | Description |
 |-----------|-------------|
 | `JwtAuthMiddleware::from_secret(secret)` | JWT authentication (verified pattern from dashboard) |
-| `AuthenticationMiddleware` | Validates auth credentials and populates `AuthUser` |
+| `AuthenticationMiddleware` | Validates auth credentials and populates auth state for `AuthInfo` / `CurrentUser` |
 | `RequirePermission::new(perm)` | Checks user has the specified permission |
 | `CorsMiddleware` | Cross-Origin Resource Sharing headers |
 | `RateLimitMiddleware` | Request rate limiting |
