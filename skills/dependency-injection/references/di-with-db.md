@@ -4,11 +4,22 @@
 
 `DatabaseConnection` is available from the DI registry when the database feature
 is enabled. In 0.3.x, examples that consume it through `Depends` assume a keyed
-provider such as `PrimaryDatabase`:
+provider such as `PrimaryDatabase`. Register the provider before injecting it:
 
 ```rust
+use reinhardt::di::prelude::*;
+use reinhardt::db::prelude::*;
+
 #[injectable_key]
 struct PrimaryDatabase;
+
+#[injectable(scope = "singleton")]
+async fn create_primary_database(
+    #[inject] settings: DbSettings,
+) -> FactoryOutput<PrimaryDatabase, DatabaseConnection> {
+    let db = DatabaseConnection::connect(&settings.database_url).await.unwrap();
+    FactoryOutput::new(db)
+}
 ```
 
 ```rust

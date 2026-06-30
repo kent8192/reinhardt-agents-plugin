@@ -441,7 +441,7 @@ All injectable types **MUST** be explicitly registered. There is no auto-injecti
 | `#[injectable]` on struct | Struct with `#[inject]` / `#[no_inject]` field attributes |
 | `#[injectable]` on function | Function that produces `T` or `FactoryOutput<K, T>` |
 | `impl Injectable` manually | Custom resolution logic |
-| `#[injectable]` | Deprecated 0.2 compatibility alias for provider functions |
+| `#[injectable_factory]` | Deprecated 0.2 compatibility alias for provider functions |
 
 Unregistered types return `DiError::DependencyNotRegistered` at runtime.
 

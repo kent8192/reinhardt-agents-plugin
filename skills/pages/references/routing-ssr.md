@@ -390,10 +390,14 @@ use cfg_aliases::cfg_aliases;
 fn main() {
     println!("cargo::rustc-check-cfg=cfg(wasm)");
     println!("cargo::rustc-check-cfg=cfg(native)");
+    println!("cargo::rustc-check-cfg=cfg(server)");
+    println!("cargo::rustc-check-cfg=cfg(client)");
 
     cfg_aliases! {
         wasm: { target_arch = "wasm32" },
         native: { not(target_arch = "wasm32") },
+        client: { target_arch = "wasm32" },
+        server: { not(target_arch = "wasm32") },
     }
 }
 ```
@@ -404,7 +408,8 @@ fn main() {
 cfg_aliases = "0.2"
 ```
 
-Then use `#[cfg(wasm)]` and `#[cfg(native)]` instead of `#[cfg(target_arch = "wasm32")]`.
+Use `#[cfg(server)]` / `#[cfg(client)]` for router submodules and keep
+`#[cfg(wasm)]` / `#[cfg(native)]` for lower-level platform-specific code.
 
 ## Version Differences (0.2.x)
 

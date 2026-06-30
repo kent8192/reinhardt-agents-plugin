@@ -172,9 +172,14 @@ Register services using `#[injectable]` instead of manual `set_singleton`:
 ```rust
 use reinhardt::di::prelude::*;
 
+#[injectable_key]
+struct EmailServiceKey;
+
 #[injectable(scope = "singleton")]
-async fn create_email_service(#[inject] config: AppConfig) -> EmailService {
-    EmailService::new(&config.email_api_key)
+async fn create_email_service(
+    #[inject] config: AppConfig,
+) -> FactoryOutput<EmailServiceKey, EmailService> {
+    FactoryOutput::new(EmailService::new(&config.email_api_key))
 }
 ```
 
