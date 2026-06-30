@@ -32,6 +32,9 @@ Guide developers through building REST API endpoints using reinhardt-rest, reinh
 - Use `reinhardt-query` for custom queries, NEVER raw SQL
 - ALL code comments must be in English
 - `#[url_patterns]` is removed in 0.2.x -- use `#[routes]` for all URL registration
+- For Pages `#[server_fn]` business logic, inject keyed services with `Depends<Key, Service>`; do not construct settings directly and call free functions inside the request boundary
+- Prefer DI services over utility-function clusters when endpoint or server-function behavior needs settings, providers, repositories, external I/O, lifecycle scoping, or test overrides
+- Keep app `services/` modules limited to DI keys, providers, and service structs/functions; put provider adapters, prompt builders, parsers, converters, repository/database helpers, and pure helpers under app-local `server/` modules
 
 ## Cross-Domain References
 

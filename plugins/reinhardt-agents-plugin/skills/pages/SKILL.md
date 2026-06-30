@@ -1,7 +1,7 @@
 ---
 name: pages
 description: Use when building WASM frontend pages with reinhardt-pages - covers page!/head!/form! macros, reactive hooks (Signal/Effect/useState), routing, SSR/hydration, server functions, and API client
-versions: ["0.1.x", "0.2.0"]
+versions: ["0.1.x", "0.2.0", "0.3.x"]
 ---
 
 # Reinhardt Pages (WASM Frontend)
@@ -25,15 +25,17 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 3. **Set Up Reactivity** — read `references/reactive-hooks.md`
 4. **Configure Routing** — read `references/routing-ssr.md` (if SPA)
 5. **Add Server Functions** — read `references/head-form-macros.md` (`#[server_fn]` section)
-6. **Connect API** — read `references/api-tables.md` (if data fetching)
-7. **Test** — read `references/testing-guide.md`
+6. **Route Business Logic Through DI** — read `../dependency-injection/references/di-patterns.md` (`Pages Service-Layer Boundary`)
+7. **Connect API** — read `references/api-tables.md` (if data fetching)
+8. **Test** — read `references/testing-guide.md`
 
 ### Creating a Form
 
 1. **Define Form** — read `references/head-form-macros.md` (form! section)
 2. **Add Server Function** — read `references/head-form-macros.md` (`#[server_fn]` section)
-3. **Embed in Page** — read `references/page-macro.md`
-4. **Test** — read `references/testing-guide.md`
+3. **Inject Service** — use `Depends<Key, Service>` for business operations called by the server function
+4. **Embed in Page** — read `references/page-macro.md`
+5. **Test** — read `references/testing-guide.md`
 
 ## Important Rules
 
@@ -47,6 +49,9 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - URL attributes (`href`, `src`, `action`, `formaction`) block dangerous schemes (`javascript:`, `data:`, `vbscript:`)
 - ALL code comments must be in English
 - Use `reinhardt-query` for any SQL construction, NEVER raw SQL
+- `#[server_fn]` functions should inject keyed services for application business logic (`Depends<Key, Service>`) instead of constructing settings directly and calling free functions
+- Prefer DI services over utility-function clusters for business operations; reserve utility functions for small pure transformations that do not need settings, providers, lifecycle scoping, or test overrides
+- Keep Pages app `services/` modules focused on injectable keys, provider functions, and service structs/functions; put prompt builders, provider adapters, parsers, converters, repository/database helpers, and pure helpers under app-local `server/` modules
 - In 0.2.x, reactive expressions in `page!` are auto-wrapped — explicit `Page::reactive(...)` is no longer needed
 - In 0.2.x, `use_effect`/`use_memo`/`use_callback` take explicit dependency arrays
 
