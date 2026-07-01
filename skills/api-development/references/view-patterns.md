@@ -411,6 +411,15 @@ repository/database internals outside `services/`, for example under app-local
 `services/` module should expose the DI surface only: keys, provider functions,
 and service structs/functions.
 
+Do not extract a top-level free helper under an app-local `server/` module only
+to make one `#[server_fn]`, service wrapper, or adjacent server flow shorter. If
+the helper has exactly one production call site, keep the logic at that call
+site unless it defines a reusable domain contract, isolates genuinely complex
+behavior with a clear operational name, or is expected to gain more call sites.
+This rule does not apply to struct-associated functions or trait/impl methods;
+the review concern is free-standing helpers that add an unnecessary semantic
+hop.
+
 ### `FromRequest` extractors in server functions (rc.18+)
 
 Since rc.18, `#[server_fn]` accepts `FromRequest`-based extractors
