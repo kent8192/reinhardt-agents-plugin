@@ -39,6 +39,7 @@ Guide developers through building REST API endpoints using reinhardt-rest, reinh
 - Keep app `services/` modules limited to DI keys, providers, and service structs/functions; put provider adapters, prompt builders, parsers, converters, repository/database helpers, and pure helpers under app-local `server/` modules
 - Do not move the same endpoint control flow into `server/`, `service/`, or `services/` only to shorten a handler; extract only for a narrower contract, shared dependency, or independently testable invariant
 - Inline and delete single-use delegated helpers when they only pass through one endpoint's request, dependencies, and persistence/provider sequence
+- Do not add top-level free helpers under app `server/` modules for exactly one production call site; inline the logic unless the helper has a reusable domain contract, isolates genuinely complex behavior with a clear operational name, or is expected to gain more call sites
 - Keep endpoint decorator paths app-local; compose app/API prefixes in route modules or `*_urls.rs`, not inside handler paths or function bodies
 - Import request, DTO, and framework types at module scope instead of using long fully qualified paths inside handler or server function signatures/bodies
 - Preserve streamed text exactly unless normalization is part of the product requirement; do not collapse prose with `split_whitespace()`
