@@ -138,6 +138,20 @@ use reinhardt::core::serde::json;
 let bytes = json::to_vec(&response_data)?;
 ```
 
+### Resolving User-Facing Related Inputs
+
+When a user-facing API or Pages `#[server_fn]` creates or updates a record with
+a foreign key, prefer a representative related value in the request body instead
+of a visible raw PK field. Examples include `project_title`, `project_name`, or
+`project_slug`. Resolve that value to the stored FK server-side before
+persistence, and return clear validation errors when the related record is not
+found or when the representative value matches more than one row.
+
+Raw FK primary-key inputs are acceptable for explicitly internal/admin-only
+surfaces, machine clients, URL path lookups, and models that do not have a
+usable representative field. For user-facing forms, asking for `Project ID` is
+a review smell.
+
 ## Views with Dependency Injection
 
 Use `#[inject]` to receive services and auth context from the DI container:
@@ -429,6 +443,15 @@ repository/database internals outside `services/`, for example under app-local
 `server/providers`, `server/prompts`, and `server/repositories`. The
 `services/` module should expose the DI surface only: keys, provider functions,
 and service structs/functions.
+
+Do not extract a top-level free helper under an app-local `server/` module only
+to make one `#[server_fn]`, service wrapper, or adjacent server flow shorter. If
+the helper has exactly one production call site, keep the logic at that call
+site unless it defines a reusable domain contract, isolates genuinely complex
+behavior with a clear operational name, or is expected to gain more call sites.
+This rule does not apply to struct-associated functions or trait/impl methods;
+the review concern is free-standing helpers that add an unnecessary semantic
+hop.
 
 ### `FromRequest` extractors in server functions (rc.18+)
 
