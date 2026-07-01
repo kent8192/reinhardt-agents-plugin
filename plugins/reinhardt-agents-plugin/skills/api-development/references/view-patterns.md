@@ -138,6 +138,20 @@ use reinhardt::core::serde::json;
 let bytes = json::to_vec(&response_data)?;
 ```
 
+### Resolving User-Facing Related Inputs
+
+When a user-facing API or Pages `#[server_fn]` creates or updates a record with
+a foreign key, prefer a representative related value in the request body instead
+of a visible raw PK field. Examples include `project_title`, `project_name`, or
+`project_slug`. Resolve that value to the stored FK server-side before
+persistence, and return clear validation errors when the related record is not
+found or when the representative value matches more than one row.
+
+Raw FK primary-key inputs are acceptable for explicitly internal/admin-only
+surfaces, machine clients, URL path lookups, and models that do not have a
+usable representative field. For user-facing forms, asking for `Project ID` is
+a review smell.
+
 ## Views with Dependency Injection
 
 Use `#[inject]` to receive services and auth context from the DI container:
