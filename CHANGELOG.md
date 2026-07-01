@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-07-01
+
 ### Added
 
 - Add a root-to-packaged-plugin sync script and document that root plugin files
@@ -17,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Clarify Pages service-boundary policy for domain rules, lifecycle
   transitions, validation policy, request-scoped orchestration dependencies,
   and pure `server/` helper functions.
+
+### Changed
+
+- Set Claude Code marketplace metadata and Claude Code/Codex plugin manifest
+  versions to `0.3.2`.
 
 ## [0.3.1] - 2026-06-29
 
