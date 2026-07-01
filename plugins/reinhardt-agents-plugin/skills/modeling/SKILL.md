@@ -56,6 +56,7 @@ Guide developers through model definition, database operations, and migration ma
 ## Important Rules
 
 - ALWAYS use `Model::objects()` for application-level CRUD
+- Keep simple `Model::objects()` CRUD visible at the endpoint/server_fn call site; do not hide one `get`, `filter`, `all`, `create`, `update`, or `delete` behind a semantic helper/service name
 - Use `reinhardt-query` ONLY for migrations and schema DDL, NOT for application queries
 - Migration commands are in the project-specific `manage` binary, NOT in `reinhardt-admin`
 - `reinhardt-admin` is only for: `startproject`, `startapp`, `plugin`, `fmt`

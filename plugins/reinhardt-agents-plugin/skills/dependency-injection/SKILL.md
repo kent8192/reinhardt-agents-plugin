@@ -40,6 +40,7 @@ Guide developers through DI configuration using reinhardt-di, including service 
 - In 0.3.x, inject direct `T` values for normal dependencies and use `Depends<K, T>` only for keyed `FactoryOutput<K, T>` provider output
 - Treat DI as common dependency injection for readability and swappability, not as an abstraction layer for every use case
 - DI-ify dependencies reused across multiple endpoints: settings, provider factories/registries, shared DB accessors, job queues, event publishers, storage adapters, and external provider adapters
+- Do not DI-ify a helper/service whose only behavior is simple `Model::objects()` CRUD; keep direct `get`, `filter`, `all`, `create`, `update`, and `delete` calls in the endpoint/server_fn unless the service owns reusable domain behavior
 - In Pages apps, keep `services/` as the DI surface: keys, provider functions, service structs/functions, and stable business operations that own domain policy, state transitions, validation policy, orchestration dependencies, lifecycle scoping, or test overrides
 - Keep pure codecs, DTO conversion, error mapping, provider-local wire conversion, provider adapters, prompt builders, parsers, converters, repository/database internals, and narrow private helpers under app-local `server/` modules, not `services/`
 - Keep endpoint-specific validation, DTO assembly, persistence flows, generation flows, and outline/edit workflows in the `server_fn` / HTTP endpoint or a small private helper beside it

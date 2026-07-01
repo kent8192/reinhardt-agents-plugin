@@ -222,80 +222,39 @@ pub async fn create_order(
 }
 ```
 
-## Custom Repository Pattern with Injectable
+## Avoid CRUD-only Injectable Repositories
 
-Define repository types that encapsulate database access and inject them into handlers.
-
-```rust
-use reinhardt::db::prelude::*;
-use reinhardt::di::prelude::*;
-use async_trait::async_trait;
-use std::sync::Arc;
-
-/// Register as singleton via `#[injectable]` macro with `#[inject]` fields.
-#[injectable(scope = Singleton)]
-pub struct UserRepository {
-    #[inject]
-    pool: Depends<PrimaryDatabase, DatabaseConnection>,
-}
-
-impl UserRepository {
-    pub async fn find_by_email(&self, email: &str) -> Result<Option<User>, QueryError> {
-        User::objects()
-            .filter(User::email.eq(email))
-            .first(&*self.pool)
-            .await
-    }
-
-    pub async fn find_active(&self) -> Result<Vec<User>, QueryError> {
-        User::objects()
-            .filter(User::is_active.eq(true))
-            .order_by(User::username.asc())
-            .all(&*self.pool)
-            .await
-    }
-
-    pub async fn create(&self, username: &str, email: &str) -> Result<User, QueryError> {
-        User::objects()
-            .create(|u| {
-                u.username = username.to_string();
-                u.email = email.to_string();
-            })
-            .execute(&*self.pool)
-            .await
-    }
-
-    pub async fn deactivate(&self, user_id: i64) -> Result<(), QueryError> {
-        User::objects()
-            .filter(User::id.eq(user_id))
-            .update(User::is_active.set(false))
-            .execute(&*self.pool)
-            .await?;
-        Ok(())
-    }
-}
-```
-
-### Using the Repository in Handlers
+Do not create injectable repository types just to wrap direct
+`Model::objects()` calls such as `find_by_email`, `find_active`, `create`, or
+`deactivate`. Keep route-specific CRUD visible in the handler or `server_fn`
+beside local `NotFound` mapping, ownership filters, ordering, and DTO
+conversion. Inject the shared database connection, not a semantic wrapper
+around one query.
 
 ```rust
 #[get("/users/", name = "user_list")]
 pub async fn list_users(
-    #[inject] user_repo: UserRepository,
+    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
 ) -> ViewResult<Response> {
-    let users = user_repo.find_active().await?;
+    let users = User::objects()
+        .filter(User::is_active.eq(true))
+        .order_by(User::username.asc())
+        .all(&*db)
+        .await?;
+
     Ok(Response::new(StatusCode::OK)
         .with_header("Content-Type", "application/json")
         .with_body(json::to_vec(&users)?))
 }
 
 #[get("/users/by-email/{email}/", name = "user_by_email")]
-pub async fn find_by_email(
+pub async fn get_user_by_email(
     Path(email): Path<String>,
-    #[inject] user_repo: UserRepository,
+    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
 ) -> ViewResult<Response> {
-    let user = user_repo
-        .find_by_email(&email)
+    let user = User::objects()
+        .filter(User::email.eq(email))
+        .first(&*db)
         .await?
         .ok_or_else(|| AppError::NotFound("User not found".into()))?;
 
@@ -305,31 +264,53 @@ pub async fn find_by_email(
 }
 ```
 
-### Service Layer on Top of Repository
+### Injectable Services with Database Access
+
+An injectable service is appropriate when it owns reusable domain behavior
+beyond CRUD: transaction boundaries, cross-model orchestration, provider calls,
+external side effects, stable business operations, or stable test override
+points. The service may use direct ORM internally because its public contract is
+the domain operation, not a repository lookup.
 
 ```rust
 /// Use `#[injectable]` with `#[inject]` fields for automatic dependency resolution.
-#[injectable(scope = Singleton)]
-pub struct UserService {
+#[injectable(scope = "singleton")]
+pub struct UserRegistrationService {
     #[inject]
-    repo: UserRepository,
+    db: Depends<PrimaryDatabase, DatabaseConnection>,
     #[inject]
     email: EmailService,
 }
 
-impl UserService {
+impl UserRegistrationService {
     pub async fn register(&self, username: &str, email: &str) -> Result<User, ApiError> {
-        // Check for duplicates
-        if self.repo.find_by_email(email).await?.is_some() {
+        if User::objects()
+            .filter(User::email.eq(email))
+            .first(&*self.db)
+            .await?
+            .is_some()
+        {
             return Err(ApiError::conflict("Email already registered"));
         }
 
-        // Create user
-        let user = self.repo.create(username, email).await?;
+        let tx = self.db.begin().await?;
+        let user = User::objects()
+            .create(|u| {
+                u.username = username.to_string();
+                u.email = email.to_string();
+            })
+            .execute(&tx)
+            .await?;
+        AuditLog::objects()
+            .create(|entry| {
+                entry.user_id = user.id;
+                entry.action = "user_registered".to_string();
+            })
+            .execute(&tx)
+            .await?;
+        tx.commit().await?;
 
-        // Send welcome email
         self.email.send_welcome(&user).await?;
-
         Ok(user)
     }
 }
