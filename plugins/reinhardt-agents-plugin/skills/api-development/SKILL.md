@@ -30,6 +30,7 @@ Guide developers through building REST API endpoints using reinhardt-rest, reinh
 - Every endpoint MUST have appropriate authentication/authorization
 - Use `ModelSerializer` for standard CRUD operations
 - For model-backed DTOs in 0.2.x, prefer the generated `{Model}Info` type plus `Validate`/`#[validate(...)]` over hand-maintained duplicate field shapes
+- For user-facing writes that reference related models, accept representative values such as `title`, `name`, or `slug` and resolve them server-side; raw FK primary-key input is reserved for internal/admin-only or machine APIs
 - Use `reinhardt-query` for custom queries, NEVER raw SQL
 - Scoped endpoints must apply the same target scope to every backend path, including fallback filename, filesystem, and hybrid-search branches
 - `#[server_fn]` is for Pages client RPC; external workers and agent services should use explicit HTTP or gRPC endpoints with configured domains

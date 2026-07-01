@@ -69,6 +69,7 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] URL patterns follow RESTful conventions
 - [ ] Endpoint decorator paths are app-local; app/API prefixes such as `/api/writing` are composed in route modules or `*_urls.rs`
 - [ ] One-call top-level free helpers under app `server/` modules are inlined or justified by a reusable domain boundary, genuinely complex behavior, or expected additional call sites
+- [ ] User-facing forms and write DTOs do not ask for raw FK primary keys such as `Project ID` when a representative `title`, `name`, or `slug` can be resolved server-side
 - [ ] Error responses are consistent
 - [ ] Route names are unique across the application (duplicates cause startup failure)
 - [ ] Consider `url-resolver` feature for type-safe URL resolution **(0.1.x only — removed in 0.2.x)**

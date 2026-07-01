@@ -22,6 +22,8 @@ Run through this checklist after implementing a feature to verify all layers are
 - [ ] Field validation applied where needed
 - [ ] Nested serializers for related models (if applicable)
 - [ ] Custom DTOs use centralized `From`/`Into` conversions instead of repeated literal field mapping
+- [ ] User-facing relation inputs use representative fields (`title`, `name`, `slug`) instead of raw FK primary-key prompts unless the surface is internal/admin-only or no useful representative exists
+- [ ] Representative relation values are resolved to stored FKs server-side with clear not-found and ambiguous-value validation errors
 
 ## Service Layer
 
