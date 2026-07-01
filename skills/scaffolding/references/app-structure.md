@@ -335,6 +335,14 @@ state-transition helpers in app-local `server/` modules such as
 implementation-detail modules with `#[cfg(server)]` or `#[cfg(native)]`; leave
 unconditional `server` modules only for cross-target stubs.
 
+`server/` modules may hold app-local implementation details, but avoid adding a
+top-level free helper solely to move logic out of one `#[server_fn]`, service
+wrapper, or adjacent server flow. When there is exactly one production call
+site, inline the logic unless the helper defines a reusable domain contract,
+isolates genuinely complex behavior with a clear name, or is already expected
+to gain more call sites. This does not apply to struct-associated functions or
+trait/impl methods.
+
 **Migration from older generated layouts:**
 
 ```bash

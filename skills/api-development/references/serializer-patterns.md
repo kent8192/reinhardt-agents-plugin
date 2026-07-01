@@ -349,12 +349,22 @@ let email = EmailField::new()
 
 | Field Type | Representation | Example Output |
 |------------|---------------|----------------|
-| `PrimaryKeyRelatedField<T>` | Primary key | `{"author": 42}` |
+| `PrimaryKeyRelatedField<T>` | Primary key for internal/machine APIs or technical read fields | `{"author": 42}` |
 | `SlugRelatedField<T>` | Slug/unique text field | `{"category": "technology"}` |
 | `StringRelatedField<T>` | Display string (read-only) | `{"author": "john_doe"}` |
 | `HyperlinkedRelatedField<T>` | URL | `{"author": "/api/authors/42/"}` |
 | `IdentityField<T>` | Full nested object | `{"profile": {"id": 1, ...}}` |
 | `ManyRelatedField<T>` | Collection of related objects | `{"tags": [1, 2, 3]}` |
+
+For user-facing create/update flows, do not expose raw related-model primary
+keys as visible inputs when the related model has a stable representative field
+such as `title`, `name`, or `slug`. Prefer `SlugRelatedField<T>` when the
+representative value is already unique, or define an explicit write input such
+as `project_title` / `project_slug` and resolve it to the stored FK in the view
+or service before persistence. Return validation errors for not-found and
+ambiguous representative values. Keep `PrimaryKeyRelatedField<T>` for
+internal/admin-only surfaces, machine clients, or models without a useful
+representative value.
 
 ```rust
 use reinhardt_rest::serializers::{
@@ -367,7 +377,7 @@ use reinhardt_rest::serializers::{
 struct PostResponse {
     id: i64,
     title: String,
-    author: PrimaryKeyRelatedField<User>,      // {"author": 42}
+    author: PrimaryKeyRelatedField<User>,      // Internal/machine API shape: {"author": 42}
     category: SlugRelatedField<Category>,       // {"category": "tech"}
     tags: ManyRelatedField<Tag>,                // {"tags": [1, 2, 3]}
 }

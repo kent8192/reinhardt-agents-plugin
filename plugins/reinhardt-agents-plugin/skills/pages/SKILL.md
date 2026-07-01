@@ -40,6 +40,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - Prefer explicit imports over prelude (e.g., `use reinhardt::pages::component::Page;`) — see reinhardt-cloud dashboard for the canonical import style
 - Import app/framework types at the top of the module instead of repeating long fully qualified paths in components or server function signatures/bodies
 - Build static form structure with `form!` and dynamic form state with `use_form`
+- For user-facing relation inputs, show representative values such as `title`, `name`, or `slug`; do not ask users to type raw foreign-key primary keys unless the surface is internal/admin-only or no useful representative field exists
 - Configure `cfg_aliases` in `build.rs` for `wasm`/`native` and `server`/`client` aliases
 - Event handlers in `page!` are auto-handled across platforms (no manual `#[cfg(wasm)]` needed)
 - Use `watch {}` for reactive conditionals (not static `if` with extracted Signal values)

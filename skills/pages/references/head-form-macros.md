@@ -152,6 +152,36 @@ Keep dynamic concerns in the form boundary:
 | Selection | `CheckboxInput`, `RadioInput`, `RadioSelect`, `Select`, `SelectMultiple` |
 | Other | `FileInput`, `HiddenInput`, `ColorInput` |
 
+### Relation Inputs
+
+For user-facing forms, do not ask users to type raw foreign-key primary keys
+such as `Project ID` when the related model has a representative value such as
+`title`, `name`, `slug`, or another stable domain label. Raw PK fields are
+implementation details and are acceptable only for explicitly internal/admin
+tools, machine-only APIs, or models without a useful representative field.
+
+Prefer one of these patterns:
+
+- Ask for a representative value with a clear label, for example
+  `project_title: CharField { required, label: "Project title" }`.
+- Use a picker, autocomplete, or select that displays the representative value
+  while storing or submitting the resolved FK internally.
+- Resolve the representative value to the FK in the `#[server_fn]` before
+  creating or updating the record, and return clear validation errors when no
+  related record exists or when the value is ambiguous.
+
+```rust
+form! {
+    name: CreateSceneForm,
+    server_fn: create_scene,
+    fields: {
+        project_title: CharField { required, label: "Project title" },
+        title: CharField { required, label: "Scene title" },
+        submit: SubmitButton { label: "Create scene" },
+    },
+}
+```
+
 ### Field Properties
 
 | Property | Type | Example |
@@ -313,6 +343,11 @@ pub async fn me(
     Ok(UserInfo::from(&user))
 }
 ```
+
+When a `#[server_fn]` receives a visible representative relation value such as
+`project_title`, resolve it to the stored FK server-side before persistence.
+Return application-level validation errors for not-found and ambiguous matches
+instead of falling back to raw `project_id` entry in the user-facing form.
 
 Inject shared dependencies, but keep the endpoint's unique workflow visible in
 the `#[server_fn]` or a nearby private helper. Use DI for settings, provider

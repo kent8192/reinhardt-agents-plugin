@@ -30,6 +30,7 @@ Guide developers through building REST API endpoints using reinhardt-rest, reinh
 - Every endpoint MUST have appropriate authentication/authorization
 - Use `ModelSerializer` for standard CRUD operations
 - For model-backed DTOs in 0.2.x, prefer the generated `{Model}Info` type plus `Validate`/`#[validate(...)]` over hand-maintained duplicate field shapes
+- For user-facing writes that reference related models, accept representative values such as `title`, `name`, or `slug` and resolve them server-side; raw FK primary-key input is reserved for internal/admin-only or machine APIs
 - Use `reinhardt-query` for custom queries, NEVER raw SQL
 - Scoped endpoints must apply the same target scope to every backend path, including fallback filename, filesystem, and hybrid-search branches
 - `#[server_fn]` is for Pages client RPC; external workers and agent services should use explicit HTTP or gRPC endpoints with configured domains
@@ -39,6 +40,7 @@ Guide developers through building REST API endpoints using reinhardt-rest, reinh
 - Keep app `services/` modules limited to DI keys, providers, and service structs/functions; put provider adapters, prompt builders, parsers, converters, repository/database helpers, and pure helpers under app-local `server/` modules
 - Do not move the same endpoint control flow into `server/`, `service/`, or `services/` only to shorten a handler; extract only for a narrower contract, shared dependency, or independently testable invariant
 - Inline and delete single-use delegated helpers when they only pass through one endpoint's request, dependencies, and persistence/provider sequence
+- Do not add top-level free helpers under app `server/` modules for exactly one production call site; inline the logic unless the helper has a reusable domain contract, isolates genuinely complex behavior with a clear operational name, or is expected to gain more call sites
 - Keep endpoint decorator paths app-local; compose app/API prefixes in route modules or `*_urls.rs`, not inside handler paths or function bodies
 - Import request, DTO, and framework types at module scope instead of using long fully qualified paths inside handler or server function signatures/bodies
 - Preserve streamed text exactly unless normalization is part of the product requirement; do not collapse prose with `split_whitespace()`
