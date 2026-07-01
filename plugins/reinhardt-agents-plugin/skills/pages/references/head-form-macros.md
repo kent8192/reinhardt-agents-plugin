@@ -324,6 +324,13 @@ server-only types or providers, keep it in a server-only module or mark it
 `#[cfg(native)]`; only the `#[server_fn]` body is replaced by the WASM client
 stub.
 
+Move logic onto an injectable service method when it owns domain policy,
+lifecycle transitions, validation policy, or orchestration across
+request-scoped dependencies such as `DatabaseConnection`, settings, storage,
+queues, providers, or another app service. A `server/` free function is still
+appropriate for pure codecs, DTO conversion, error mapping, provider-local wire
+conversion, or a narrow private helper.
+
 Do not extract the same request flow into `server/`, `service/`, or `services/`
 only because the `#[server_fn]` is long. Extract only when the helper has a
 smaller contract, isolates a domain invariant, or is reused by another server
@@ -333,6 +340,10 @@ Inline and delete a helper that is called only by this `#[server_fn]` and only
 forwards the same request data, injected dependencies, persistence order, and
 provider sequence. Keep a private helper when it returns a narrower value or
 isolates a named invariant, as in the draft-building example below.
+
+When the service owns a domain rule, test the service boundary directly so a
+later `#[server_fn]` refactor cannot bypass lifecycle, validation, or
+orchestration policy.
 
 ```rust
 #[server_fn]

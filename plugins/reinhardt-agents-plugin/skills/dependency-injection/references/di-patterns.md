@@ -84,13 +84,16 @@ pub async fn generate_novel(
 
 For full-stack Pages apps, `services/` is the DI surface. Keep it limited to
 injectable keys, provider functions, service structs/functions, and stable
-application business operations that need settings, providers, repositories,
-external I/O, lifecycle scoping, or test overrides.
+application business operations that own domain policy, state transitions,
+validation policy, orchestration dependencies, settings, providers,
+repositories, external I/O, lifecycle scoping, or test overrides.
 
 Do **not** use `services/` as a general server-side utility bucket. Put pure
-helpers, prompt builders, parsing/conversion logic, provider implementation
-details, repository/database internals, and state-transition helpers in
-app-local `server/` modules instead.
+codecs, DTO conversion, error mapping, provider-local wire conversion, prompt
+builders, parsing/conversion logic, provider implementation details,
+repository/database internals, and narrow private helpers in app-local
+`server/` modules instead. These helpers may support a service, but they should
+not become the primary home for reusable business workflows.
 
 Recommended layout for an app such as `cocrea`:
 
@@ -112,6 +115,67 @@ DTOs, and call keyed services for shared business operations. Avoid constructing
 settings directly or calling free functions for business operations inside
 `#[server_fn]`; that hides dependencies from DI, makes tests harder to override,
 and encourages mixed-purpose utility-function clusters.
+
+When a helper needs request-scoped dependencies such as `DatabaseConnection`,
+settings, storage, queues, providers, or another app service, prefer an
+explicit keyed service dependency:
+
+```rust
+use reinhardt::di::{Depends, FactoryOutput, injectable, injectable_key};
+use reinhardt::pages::prelude::*;
+
+#[injectable_key]
+pub struct WritingJobServiceKey;
+
+pub struct WritingJobService {
+    db: Depends<PrimaryDatabase, DatabaseConnection>,
+    queue: Depends<WritingQueueKey, WritingQueue>,
+    storage: Depends<SourceStorageKey, SourceStorage>,
+}
+
+impl WritingJobService {
+    pub async fn start_generation(
+        &self,
+        project_id: Uuid,
+        input: StartGenerationRequest,
+    ) -> Result<WritingJobInfo, WritingError> {
+        input.validate_policy()?;
+        let source = self.storage.load_source(input.source_path()).await?;
+        let job = WritingJob::start(project_id, source.chunking_policy())?;
+        let saved = WritingJob::objects()
+            .create_with_conn(&*self.db, &job)
+            .await?;
+        self.queue.enqueue_generation(saved.id).await?;
+        Ok(WritingJobInfo::from_model(&saved))
+    }
+}
+
+#[injectable(scope = "request")]
+async fn writing_job_service(
+    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
+    #[inject] queue: Depends<WritingQueueKey, WritingQueue>,
+    #[inject] storage: Depends<SourceStorageKey, SourceStorage>,
+) -> FactoryOutput<WritingJobServiceKey, WritingJobService> {
+    FactoryOutput::new(WritingJobService { db, queue, storage })
+}
+
+#[server_fn]
+pub async fn start_generation(
+    project_id: Uuid,
+    input: StartGenerationRequest,
+    #[inject] jobs: Depends<WritingJobServiceKey, WritingJobService>,
+) -> Result<WritingJobInfo, ServerFnError> {
+    jobs.start_generation(project_id, input)
+        .await
+        .map_err(ServerFnError::from)
+}
+```
+
+The service method owns the lifecycle transition, source validation/chunking
+policy, and queue/storage orchestration. The `#[server_fn]` remains the
+request/response adapter. This is different from moving one endpoint body into
+`services/`: the service exposes a semantic domain operation and is injectable
+through the existing DI chain.
 
 ### Provider Identity and Duplicate Registration
 
@@ -264,6 +328,12 @@ generation flows, outline edits, and other one-off workflows in the endpoint
 function or in a small private helper next to that endpoint. Avoid facades such
 as `OutlineService`, `ManuscriptService`, or `DocumentService` when they only
 hide a single endpoint's control flow.
+
+Move the logic into an injectable service method when it owns a domain rule or
+workflow policy: job lifecycle transitions, source path and chunking validation,
+document input/excerpt handling, idempotency decisions, state-machine rules, or
+coordination across storage, queues, providers, and repositories. Test those
+rules at the service boundary so future endpoint refactors cannot bypass them.
 
 Moving the same script from `#[server_fn]` into `server/`, `service/`, or
 `services/` is not a cleanup by itself. Extract only when the new function or
