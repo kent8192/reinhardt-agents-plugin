@@ -350,6 +350,7 @@ ensure_project_owner(&project, current_user.id)?;
 
 let chunks = DocumentChunk::objects()
     .filter_by(DocumentChunk::field_document_id().eq(document_id))
+    .filter_by(DocumentChunk::field_project_id().eq(project_id))
     .order_by(&["position"])
     .all()
     .await?;

@@ -727,14 +727,14 @@ assert!(result.is_err());
 
 ### Preventing Circular Dependencies
 
-Extract shared logic into a third service:
+Extract shared reusable policy into a third service:
 
 ```rust
 // BAD: UserService ↔ OrderService (circular)
 
-// GOOD: Both depend on UserRepository (no cycle)
+// GOOD: Both depend on AccountPolicyService (no cycle)
 #[injectable_key]
-pub struct UserRepositoryKey;
+pub struct AccountPolicyServiceKey;
 
 #[injectable_key]
 pub struct UserServiceKey;
@@ -744,16 +744,16 @@ pub struct OrderServiceKey;
 
 #[injectable(scope = "singleton")]
 async fn create_user_service(
-    #[inject] repo: Depends<UserRepositoryKey, UserRepository>,
+    #[inject] policy: Depends<AccountPolicyServiceKey, AccountPolicyService>,
 ) -> FactoryOutput<UserServiceKey, UserService> {
-    FactoryOutput::new(UserService::from_repository(&*repo))
+    FactoryOutput::new(UserService::from_policy(&*policy))
 }
 
 #[injectable(scope = "singleton")]
 async fn create_order_service(
-    #[inject] repo: Depends<UserRepositoryKey, UserRepository>,
+    #[inject] policy: Depends<AccountPolicyServiceKey, AccountPolicyService>,
 ) -> FactoryOutput<OrderServiceKey, OrderService> {
-    FactoryOutput::new(OrderService::from_repository(&*repo))
+    FactoryOutput::new(OrderService::from_policy(&*policy))
 }
 ```
 
