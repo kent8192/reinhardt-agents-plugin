@@ -441,13 +441,38 @@ Router::new()
 In 0.2.x, prefer `reinhardt::pages::navigate` for SPA navigation instead of manually calling `window.location.set_href` or constructing `History` API calls:
 
 ```rust
-use reinhardt::pages::navigate;
+use reinhardt::pages::{NavigationType, navigate};
 
 // Preferred — uses the registered router internally
-navigate("/users/42/");
+navigate("/users/42/", NavigationType::Push)?;
 ```
 
 This function integrates with the router's subscription system and ensures all `on_path` / `on_path_pattern` listeners fire correctly.
+
+For button-triggered redirects inside route components, prefer the hook handle
+when you are already in a reactive context:
+
+```rust
+use reinhardt::pages::{NavigationType, use_router};
+
+let router = use_router();
+let open_project = use_callback(
+    {
+        let router = router.clone();
+        let selected_project_id = selected_project_id.clone();
+        move |_| {
+            let path = project_detail_path(selected_project_id.get());
+            let _ = router.navigate(path, NavigationType::Push);
+        }
+    },
+    (router.clone(), selected_project_id.clone()),
+);
+```
+
+`window.location.set_href` is an escape hatch for external URLs or a deliberate
+hard navigation fallback. It should not be the default for internal Pages SPA
+paths, because it bypasses link interception, route subscribers, and client-side
+state.
 
 ### `register_globally` for SPA Client Initialization
 

@@ -200,7 +200,19 @@ Events use `@event: handler` syntax. Handlers are auto-handled (active on WASM, 
 
 ### Handler Syntax
 
+Import framework types, app DTOs, route helpers, services, and shared
+components at the top of the module before the `page!` expression. Do not bury
+long `crate::apps::...` paths inside `page!`, event handlers, or small helper
+functions; concise imports keep formatter output readable and make review
+comments target the real UI behavior.
+
 ```rust
+use crate::apps::writing::client::components::version_picker::VersionPicker;
+use crate::apps::writing::server_fn::manuscript::{
+    generate_outline,
+    save_project_settings,
+};
+
 // Inline closure with event parameter
 button { @click: |e| { handle_click(e); } }
 
@@ -211,7 +223,19 @@ button { @click: |_| { do_something(); } }
 button { @click: handle_click }
 ```
 
-Closures must have 0 or 1 parameter (compile error if more).
+Closures must have 0 or 1 parameter (compile error if more). Prefer named
+`use_callback` handles for nontrivial work, and clone non-`Copy` callbacks or
+actions at the attribute use site when the render closure also needs them:
+
+```rust
+let save_click = use_callback(move |_| {
+    save_action.dispatch(current_form_values());
+}, (save_action.clone(), form_state.clone()));
+
+page!(|| {
+    button { @click: save_click.clone(), "Save" }
+})()
+```
 
 ## Child Nodes
 

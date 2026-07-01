@@ -82,6 +82,15 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] REST versioning configured via the `[rest_versioning]` settings fragment (rc.29+); flag any remaining `REINHARDT_VERSIONING_*` env-var reads or calls to `VersioningConfig::from_env`
 - [ ] Handler and server function signatures/bodies import request, DTO, and framework types instead of repeating long fully qualified paths
 
+### Pages Frontend
+
+- [ ] Button actions operate on the displayed/current entity: route params, form values, loaded DTOs, selected rows/versions, and server return values, not fixture IDs, sample constants, or canned text
+- [ ] Async mutations use `use_action`, async reads or derived text use `use_resource`, and event handlers use `use_callback` / `use_callback_with`; `spawn_local` is limited to low-level browser integration
+- [ ] Non-`Copy` callbacks/actions passed into `page!` render closures are cloned at the attribute use site when needed
+- [ ] Internal button-triggered redirects use `reinhardt::pages::navigate(..., NavigationType::Push)` or the current router handle API, not `window.location.set_href`
+- [ ] App-local i18n needed by Pages clients crosses the boundary through a registered `#[server_fn]` plus `use_resource` fallback, not duplicated client/server gettext code
+- [ ] Component examples import services, routes, serializers, server functions, and shared components at module scope instead of repeating full `crate::...` paths inside `page!` or event handlers
+
 ### Testing
 
 - [ ] All tests use `#[rstest]` (not `#[test]`)
