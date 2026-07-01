@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Incorporate the latest `cocrea` PR review lessons into skills: i18n-backed
   server prompts, DI service-method boundaries, centralized `From`/`Into` DTO
   conversion, generated model field filters, and i18n regression targets.
+- Clarify Pages service-boundary policy for domain rules, lifecycle
+  transitions, validation policy, request-scoped orchestration dependencies,
+  and pure `server/` helper functions.
 
 ## [0.3.1] - 2026-06-29
 

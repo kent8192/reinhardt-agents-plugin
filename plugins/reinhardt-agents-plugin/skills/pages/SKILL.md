@@ -53,8 +53,9 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - ALL code comments must be in English
 - Use `reinhardt-query` for any SQL construction, NEVER raw SQL
 - `#[server_fn]` functions should inject shared keyed services for application business logic (`Depends<K, T>`) instead of constructing settings directly and calling free functions
-- Prefer DI services over utility-function clusters for business operations; reserve utility functions for small pure transformations that do not need settings, providers, lifecycle scoping, or test overrides
-- Keep Pages app `services/` modules focused on injectable keys, provider functions, and service structs/functions; put prompt builders, provider adapters, parsers, converters, repository/database helpers, and pure helpers under app-local `server/` modules
+- Prefer DI services over utility-function clusters for business operations that own domain policy, state transitions, validation policy, orchestration dependencies, lifecycle scoping, or test overrides
+- Reserve utility functions for pure codecs, DTO conversion, error mapping, provider-local wire conversion, and narrow private transformations that do not need request-scoped dependencies
+- Keep Pages app `services/` modules focused on injectable keys, provider functions, and service structs/functions; put prompt builders, provider adapters, parsers, converters, repository/database internals, and narrow private helpers under app-local `server/` modules
 - Since 0.2.x, reactive expressions in `page!` are auto-wrapped — explicit `Page::reactive(...)` is no longer needed
 - Since 0.2.x, `use_effect`/`use_memo`/`use_callback` take explicit dependency arrays
 - In 0.3.x, use `use_resource(fetcher, deps)` for both mount-only and dependency-driven resources; replace `create_resource*`
@@ -63,6 +64,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - For `#[server_fn]`, keep endpoint-specific request flows visible; do not move the same logic into `server/`, `service/`, or `services/` unless the extraction creates a narrower contract, shared dependency, or independently testable invariant
 - Keep simple `Model::objects()` CRUD visible inside the `#[server_fn]` or nearby endpoint helper; avoid semantic wrappers such as `get_project_model`, `list_document_chunks`, or `document_path` when they only hide a direct ORM call
 - Inline and delete single-use helpers that only delegate one `#[server_fn]` section's request, dependencies, and persistence/provider sequence
+- Test service-boundary domain rules directly when a service owns lifecycle, validation, state-transition, or orchestration policy
 - Use 0.3 Pages primitives directly where relevant: `#[wasm_server_api]`, `Portal` / `mount_portal`, `ActivityBoundary`, `ViewTransitionBoundary`, and `FieldArray`
 - Keep shared app code cfg-clean across native and `wasm32-unknown-unknown`; rely on documented inert stubs instead of broad call-site `#[cfg]` workarounds
 
