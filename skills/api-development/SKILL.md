@@ -37,6 +37,7 @@ Guide developers through building REST API endpoints using reinhardt-rest, reinh
 - `#[server_fn]` is for Pages client RPC; external workers and agent services should use explicit HTTP or gRPC endpoints with configured domains
 - Server-side prompt endpoints and generated text APIs must use `reinhardt-i18n` / locale-aware settings for language-specific output
 - For Pages `#[server_fn]` business logic, inject shared keyed services with `Depends<K, T>` rather than constructing settings directly in the request boundary
+- In Pages component files, import DTOs, route helpers, serializers, server functions, and shared components at module scope; avoid repeated full `crate::...` paths inside `page!`, event handlers, and small helpers
 - Prefer DI services over utility-function clusters when endpoint or server-function behavior needs settings, providers, repositories, external I/O, lifecycle scoping, or test overrides
 - Keep app `services/` modules limited to DI keys, providers, and service structs/functions; put provider adapters, prompt builders, parsers, converters, repository/database helpers, and pure helpers under app-local `server/` modules
 - Do not move the same endpoint control flow into `server/`, `service/`, or `services/` only to shorten a handler; extract only for a narrower contract, shared dependency, or independently testable invariant

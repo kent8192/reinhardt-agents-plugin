@@ -349,6 +349,56 @@ When a `#[server_fn]` receives a visible representative relation value such as
 Return application-level validation errors for not-found and ambiguous matches
 instead of falling back to raw `project_id` entry in the user-facing form.
 
+### Server-fn-backed i18n Helpers
+
+When a Pages client needs app-local text that must be translated server-side,
+put the gettext boundary behind a small `#[server_fn]`. Do not duplicate
+client/server gettext implementations behind cfg gates when the intended
+boundary is "client asks server for translated copy".
+
+```rust
+use reinhardt::pages::server_fn::{ServerFnError, server_fn};
+
+use crate::apps::writing::server::i18n::gettext_for_locale;
+
+#[server_fn]
+pub async fn translate_writing_label(
+    locale: String,
+    key: String,
+) -> Result<String, ServerFnError> {
+    gettext_for_locale(&locale, &key).map_err(ServerFnError::application)
+}
+```
+
+Register the generated marker in the app or root server router, otherwise the
+WASM client stub has no endpoint to call:
+
+```rust
+UnifiedRouter::new().server(|s| {
+    s.server_fn(server_fn::i18n::translate_writing_label::marker)
+})
+```
+
+On the client, load the text with `use_resource` or an equivalent Pages hook
+and keep a stable fallback while loading or on error:
+
+```rust
+let title = use_resource(
+    {
+        let locale = locale.clone();
+        move || {
+            let locale = locale.get();
+            async move {
+                translate_writing_label(locale, "workspace.title".to_string())
+                    .await
+                    .unwrap_or_else(|_| "Workspace".to_string())
+            }
+        }
+    },
+    (locale.clone(),),
+);
+```
+
 Inject shared dependencies, but keep the endpoint's unique workflow visible in
 the `#[server_fn]` or a nearby private helper. Use DI for settings, provider
 registries, database access, queues, storage, and external adapters shared by

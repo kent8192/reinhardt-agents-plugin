@@ -168,6 +168,50 @@ match save_action.phase().get() {
 }
 ```
 
+### Async UI Handler Patterns
+
+Use `use_action` for button/form mutations whose pending, success, and error
+state should be visible in the component tree. Do not fire an async task and
+drop its result from a route component; the `Action` phase is the UI contract
+that disables controls, renders errors, and prevents duplicate submissions.
+
+Use `use_resource` for async reads and derived text, including labels,
+diagnostics, previews, or server-translated copy that depends on the current
+route, selected version, locale, or loaded DTO. Prefer a stable fallback while
+the `Resource` is loading or failed.
+
+Use `use_callback` / `use_callback_with` for event handlers that dispatch the
+current form values, selected rows, selected versions, or route parameters into
+an `Action`. Avoid fixture IDs such as `Uuid::nil()`, `"sample-project"`, or
+hardcoded version IDs once the route has real server state available.
+
+```rust
+let save_action = use_action(|input: SaveSettingsRequest| async move {
+    save_project_settings(input).await
+});
+
+let save_click = use_callback(
+    {
+        let save_action = save_action.clone();
+        let project_id = project_id.clone();
+        let form = form.clone();
+        move |_| {
+            save_action.dispatch(SaveSettingsRequest {
+                project_id: project_id.get(),
+                title: form.title(),
+                idea: form.idea(),
+                model: form.model(),
+            });
+        }
+    },
+    (save_action.clone(), project_id.clone(), form.clone()),
+);
+```
+
+Keep `spawn_local` for low-level browser integration where no hook owns the
+result, such as registering a raw DOM observer or adapting a JavaScript API.
+If the result affects app state, prefer `Action` or `Resource` instead.
+
 ### External Integration Hooks
 
 | Hook | Signature | Description |
