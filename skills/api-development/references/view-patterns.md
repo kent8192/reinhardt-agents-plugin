@@ -204,6 +204,38 @@ delegates the same request data, dependencies, persistence order, and provider
 sequence. Keep a helper when it returns a narrower domain value, isolates a
 named invariant, or has another caller.
 
+Keep simple `Model::objects()` CRUD at the handler call site. Local `NotFound`
+mapping, project/tenant ownership checks, ordering, and DTO conversion are still
+part of the endpoint flow when they are unique to that route. Do not introduce
+semantic wrappers such as `get_project_model`, `list_document_chunks`, or
+`document_path` when they only hide one direct ORM query or trivial field/path
+derivation.
+
+```rust
+// Avoid: this hides the model, filter, ownership guard, and NotFound behavior.
+let project = get_project_model(project_id).await?;
+let chunks = list_document_chunks(document_id).await?;
+let path = document_path(project_id, document_id);
+
+// Prefer: keep direct CRUD and endpoint-specific mapping visible.
+let project = Project::objects()
+    .get(project_id)
+    .await
+    .map_err(|_| AppError::NotFound("Project not found".into()))?;
+ensure_project_owner(&project, current_user.id)?;
+
+let chunks = DocumentChunk::objects()
+    .filter_by(DocumentChunk::field_document_id().eq(document_id))
+    .order_by(&["position"])
+    .all()
+    .await?;
+let response = DocumentChunksResponse::from_models(chunks);
+```
+
+Extract a helper/service only when it owns reusable domain behavior beyond
+simple CRUD, such as transaction boundaries, cross-model orchestration, provider
+calls, parsing/chunking, projection building, or nontrivial state transitions.
+
 ```rust
 use reinhardt::di::Depends;
 use reinhardt::views::prelude::*;
@@ -484,9 +516,10 @@ pub async fn get_user(Path(id): Path<i64>) -> ViewResult<Response> {
 }
 ```
 
-For ORM reads and counts, use `Model::objects()` or the app's service layer.
-Do not bypass the model manager with ad hoc low-level builders when the standard
-manager API expresses the query.
+For ORM reads and counts, use `Model::objects()` directly unless the app's
+service layer owns reusable domain behavior beyond the query. Do not bypass the
+model manager with ad hoc low-level builders when the standard manager API
+expresses the query.
 
 ## ModelViewSet / ReadOnlyModelViewSet (rc.23+)
 

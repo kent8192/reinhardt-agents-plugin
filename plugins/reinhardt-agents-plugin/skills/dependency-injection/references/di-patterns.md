@@ -281,6 +281,17 @@ persistence order, and provider sequence. A private helper is justified when it
 has a smaller contract, returns a reusable domain value, isolates a named
 invariant, or is called by more than one workflow.
 
+The same boundary applies to simple ORM CRUD. Do not register or inject a
+service whose only behavior is `Model::objects().get(...)`,
+`Model::objects().filter(...).all().await`, `create`, `update`, or `delete`.
+Names such as `get_project_model`, `list_document_chunks`, and `document_path`
+can make endpoint code less explicit when they hide the concrete model, filters,
+ownership guard, ordering, `NotFound` mapping, or DTO conversion. Keep those
+plain CRUD calls at the endpoint or `server_fn` call site. Introduce an
+injectable service only when it owns reusable behavior beyond CRUD, such as
+transaction boundaries, cross-model orchestration, provider calls,
+parsing/chunking, projection building, or nontrivial state transitions.
+
 ### Preferred: inject shared dependencies, keep the workflow visible
 
 ```rust
