@@ -364,6 +364,37 @@ only because the `#[server_fn]` is long. Extract only when the helper has a
 smaller contract, isolates a domain invariant, or is reused by another server
 function.
 
+Keep simple `Model::objects()` CRUD visible in the `#[server_fn]` when it is
+part of the request flow. Local `NotFound` mapping, project/tenant ownership
+guards, ordering, and DTO conversion may remain beside the call. Avoid semantic
+wrappers such as `get_project_model`, `list_document_chunks`, or `document_path`
+when they only hide one direct ORM call or trivial path/field derivation.
+
+```rust
+// Avoid: these names hide plain ORM CRUD and trivial formatting.
+let project = get_project_model(project_id).await?;
+let chunks = list_document_chunks(document_id).await?;
+let path = document_path(project_id, document_id);
+
+// Prefer: keep the concrete query visible in the server function.
+let project = Project::objects()
+    .get(project_id)
+    .await
+    .map_err(|_| ServerFnError::application("Project not found"))?;
+ensure_project_owner(&project, current_user.id)?;
+
+let chunks = DocumentChunk::objects()
+    .filter_by(DocumentChunk::field_document_id().eq(document_id))
+    .filter_by(DocumentChunk::field_project_id().eq(project_id))
+    .order_by(&["position"])
+    .all()
+    .await?;
+```
+
+Extract a service or helper only when it owns reusable behavior beyond simple
+CRUD, such as transaction boundaries, cross-model orchestration, provider calls,
+parsing/chunking, projection building, or nontrivial state transitions.
+
 Inline and delete a helper that is called only by this `#[server_fn]` and only
 forwards the same request data, injected dependencies, persistence order, and
 provider sequence. Keep a private helper when it returns a narrower value or

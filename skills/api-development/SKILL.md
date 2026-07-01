@@ -29,6 +29,7 @@ Guide developers through building REST API endpoints using reinhardt-rest, reinh
 
 - Every endpoint MUST have appropriate authentication/authorization
 - Use `ModelSerializer` for standard CRUD operations
+- Keep simple `Model::objects()` CRUD in the handler/server_fn; do not introduce semantic wrappers such as `get_project_model`, `list_document_chunks`, or `document_path` when they only hide a direct ORM call
 - For model-backed DTOs in 0.2.x, prefer the generated `{Model}Info` type plus `Validate`/`#[validate(...)]` over hand-maintained duplicate field shapes
 - For user-facing writes that reference related models, accept representative values such as `title`, `name`, or `slug` and resolve them server-side; raw FK primary-key input is reserved for internal/admin-only or machine APIs
 - Use `reinhardt-query` for custom queries, NEVER raw SQL

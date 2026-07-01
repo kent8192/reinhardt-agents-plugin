@@ -51,6 +51,67 @@ let updated = User::objects().bulk_update(&[user1, user2]).await?;
 let (user, created) = User::objects().get_or_create(...).await?;
 ```
 
+### Call-Site CRUD vs Semantic Wrappers
+
+Keep simple ORM CRUD visible where the endpoint or `server_fn` handles the
+request. A call site may still include local `NotFound` mapping, project/tenant
+ownership guards, ordering, and DTO conversion when those details are part of
+the endpoint flow.
+
+Avoid semantic wrappers whose only behavior is a `Model::objects()` call:
+
+```rust
+// Avoid: the helper name hides the concrete model, filters, and NotFound path.
+async fn get_project_model(project_id: Uuid) -> Result<Project, AppError> {
+    Project::objects()
+        .get(project_id)
+        .await
+        .map_err(|_| AppError::NotFound("Project not found".into()))
+}
+
+// Avoid: this only obscures a direct list query.
+async fn list_document_chunks(document_id: Uuid) -> Result<Vec<DocumentChunk>, AppError> {
+    DocumentChunk::objects()
+        .filter_by(DocumentChunk::field_document_id().eq(document_id))
+        .order_by(&["position"])
+        .all()
+        .await
+        .map_err(AppError::from)
+}
+```
+
+Prefer the concrete query at the call site:
+
+```rust
+#[get("/projects/{project_id}/documents/{document_id}/")]
+pub async fn get_document(
+    Path((project_id, document_id)): Path<(Uuid, Uuid)>,
+    CurrentUser(user): CurrentUser<User>,
+) -> ViewResult<Response> {
+    let project = Project::objects()
+        .get(project_id)
+        .await
+        .map_err(|_| AppError::NotFound("Project not found".into()))?;
+
+    ensure_project_owner(&project, user.id)?;
+
+    let chunks = DocumentChunk::objects()
+        .filter_by(DocumentChunk::field_document_id().eq(document_id))
+        .filter_by(DocumentChunk::field_project_id().eq(project_id))
+        .order_by(&["position"])
+        .all()
+        .await?;
+
+    Ok(json_response(DocumentChunksResponse::from_models(chunks)))
+}
+```
+
+Introduce a helper, custom manager, or service only when it owns reusable domain
+behavior beyond plain CRUD, such as transaction boundaries, cross-model
+orchestration, provider calls, parsing/chunking, projection building, or
+nontrivial state transitions. Do not add helpers such as `document_path` when the
+helper only returns a field or formats a value already obvious at the call site.
+
 ### Filtering
 
 ```rust
