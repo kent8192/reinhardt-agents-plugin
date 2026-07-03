@@ -227,6 +227,63 @@ If the result affects app state, prefer `Action` or `Resource` instead.
 |------|-------------|
 | `use_debug_value` | Custom label in dev tools (requires `debug-hooks` feature) |
 
+### Custom Hooks
+
+Custom hooks are plain Rust functions that group reusable hook wiring behind a
+`use_<domain>` name. Extract a custom hook when the same combination of local
+state, `use_effect` / `use_resource`, callbacks, and derived handles appears in
+more than one component, or when a second component is a foreseeable consumer.
+Keep these functions in a shared client module such as
+`src/apps/<app>/client/hooks.rs`.
+
+Return reactive handles, not detached values. A hook that returns
+`Signal<bool>`, `Resource<T, E>`, `Action<T, E>`, or `Callback<Args, Ret>` lets
+the caller compose the state in `page!` and `watch {}`. A hook that calls
+`.get()` and returns `bool` or `String` hides the reactive edge and usually
+forces duplicate effects in the caller.
+
+```rust
+use reinhardt::pages::prelude::*;
+
+pub fn use_online_status() -> Signal<bool> {
+    let (is_online, set_online) = use_state(browser_is_online());
+
+    use_debug_value(if is_online.get() { "Online" } else { "Offline" });
+
+    use_effect(
+        {
+            let set_online = set_online.clone();
+            move || {
+                let unsubscribe = subscribe_online_status({
+                    let set_online = set_online.clone();
+                    move |online| set_online(online)
+                });
+
+                Some(move || unsubscribe())
+            }
+        },
+        (),
+    );
+
+    is_online
+}
+```
+
+In this example, `browser_is_online` and `subscribe_online_status` are
+app-local browser adapters; the custom hook owns the state/effect/subscription
+contract while callers only read the returned `Signal<bool>`.
+
+Custom hooks SHOULD call `use_debug_value` with a compact status label or key
+state snapshot. This keeps extracted state visible in debug builds and makes
+the hook boundary easier to inspect.
+
+Dependency review needs one extra pass inside custom hooks. The `page!` macro's
+deps-exhaustiveness check only sees hook calls written textually inside the
+`page!` invocation. Hook calls inside `use_*` functions still require a deps
+argument at the type level, but reviewers must verify that every Signal read in
+the hook closure is represented in that deps tuple, or is intentionally read
+with `get_untracked` / `with_untracked`.
+
 ## Resource (WASM Only)
 
 Async data loading with reactive dependencies.

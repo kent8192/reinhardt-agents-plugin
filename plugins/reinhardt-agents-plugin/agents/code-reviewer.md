@@ -86,6 +86,7 @@ Specialized agent for reviewing reinhardt-web application code against project c
 
 - [ ] Button actions operate on the displayed/current entity: route params, form values, loaded DTOs, selected rows/versions, and server return values, not fixture IDs, sample constants, or canned text
 - [ ] Async mutations use `use_action`, async reads or derived text use `use_resource`, and event handlers use `use_callback` / `use_callback_with`; `spawn_local` is limited to low-level browser integration
+- [ ] Repeated inline hook wiring (state plus effect/resource plus callbacks) is extracted into a shared `use_*` custom hook that returns Signals or handles instead of raw values
 - [ ] Non-`Copy` callbacks/actions passed into `page!` render closures are cloned at the attribute use site when needed
 - [ ] Internal button-triggered redirects use `reinhardt::pages::navigate(..., NavigationType::Push)` or the current router handle API, not `window.location.set_href`
 - [ ] App-local i18n needed by Pages clients crosses the boundary through a registered `#[server_fn]` plus `use_resource` fallback, not duplicated client/server gettext code
