@@ -29,6 +29,7 @@ Specialized agent for reviewing reinhardt-web application code against project c
 ### Scaffolding & Naming
 
 - [ ] Project and app names do not start with `reinhardt_` or `reinhardt-` (reserved namespace)
+- [ ] Every user-facing endpoint, including a minimal service or benchmark, belongs to an app registered in `src/config/apps.rs`
 
 ### Dependencies
 
@@ -68,6 +69,7 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] Views have appropriate authentication
 - [ ] URL patterns follow RESTful conventions
 - [ ] Endpoint decorator paths are app-local; app/API prefixes such as `/api/writing` are composed in route modules or `*_urls.rs`
+- [ ] Application endpoint handlers live in `src/apps/<app>/views.rs` or an app-local equivalent; `src/config/urls.rs` only mounts app routers and framework-level routes and contains no application endpoint handlers
 - [ ] One-call top-level free helpers under app `server/` modules are inlined or justified by a reusable domain boundary, genuinely complex behavior, or expected additional call sites
 - [ ] User-facing forms and write DTOs do not ask for raw FK primary keys such as `Project ID` when a representative `title`, `name`, or `slug` can be resolved server-side
 - [ ] Error responses are consistent

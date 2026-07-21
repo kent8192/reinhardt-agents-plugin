@@ -217,6 +217,90 @@ pub fn get_installed_apps() -> Vec<String> {
 - The macro generates an `InstalledApp` enum with `all_apps()` and `path()` methods
 - App names in `installed_apps!` must match the `name` in `#[app_config]`
 
+## Django-Parity App Boundary
+
+Every web application needs an app boundary for its user-facing endpoints. This
+applies equally to a minimal service or benchmark with one handler: create or
+select the smallest appropriate app instead of placing application code in the
+project configuration.
+
+```text
+src/
+├── apps.rs
+├── apps/
+│   ├── status.rs               # App entry point and `#[app_config]`
+│   └── status/
+│       ├── views.rs             # Application endpoint handlers
+│       └── urls.rs              # Application router
+└── config/
+    ├── apps.rs                  # `installed_apps!` registration
+    └── urls.rs                  # Root composition only
+```
+
+For example, a one-endpoint RESTful health service keeps the app declaration,
+handler, and router in the `status` app:
+
+```rust
+// src/apps.rs
+pub mod status;
+
+// src/apps/status.rs
+use reinhardt::app_config;
+
+pub mod urls;
+pub mod views;
+
+#[app_config(name = "status", label = "status")]
+pub struct StatusConfig;
+```
+
+```rust
+// src/apps/status/views.rs
+use reinhardt::http::ViewResult;
+use reinhardt::{get, Response, StatusCode};
+
+#[get("/health/", name = "status_health")]
+pub async fn health_check() -> ViewResult<Response> {
+    Ok(Response::new(StatusCode::OK).with_body("ok"))
+}
+```
+
+```rust
+// src/apps/status/urls.rs
+use reinhardt::ServerRouter;
+
+use super::views;
+
+pub fn server_url_patterns() -> ServerRouter {
+    ServerRouter::new().endpoint(views::health_check)
+}
+```
+
+Register the app, then let the project-level router mount it:
+
+```rust
+// src/config/apps.rs
+use reinhardt::installed_apps;
+
+installed_apps! {
+    status: "status",
+}
+
+// src/config/urls.rs
+use reinhardt::prelude::*;
+use reinhardt::routes;
+
+#[routes]
+pub fn routes() -> UnifiedRouter {
+    UnifiedRouter::new()
+        .mount("/", crate::apps::status::urls::server_url_patterns())
+}
+```
+
+`src/config/urls.rs` is composition-only. It may mount app routers, register
+framework-level routes, and configure global router concerns, but it MUST NOT
+define application endpoint handlers such as `#[get]` or `#[post]` functions.
+
 ## Adding a New App
 
 Follow this procedure to add a new app to an existing project:

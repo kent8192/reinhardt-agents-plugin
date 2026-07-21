@@ -78,6 +78,9 @@ Guide developers through creating new reinhardt-web projects and adding apps wit
 - Use `pub use` for explicit re-exports, NEVER `pub use module::*`
 - In 0.3.x Pages apps, expect app-local split modules (`client/`, `server/`, `services/client.rs`, `services/server.rs`, `urls/client_router.rs`, `urls/server_router.rs`) and preserve generated empty directories with `.gitkeep`
 - Do not keep obsolete app-local `pages.rs`, `client/pages`, `urls/server_urls.rs`, or broad project-level `shared/forms.rs` / `shared/types.rs` unless the project still has hand-written cross-app DTOs there
+- Follow the Django-parity app boundary: every web application MUST create or select an app for user-facing endpoints, including minimal services and benchmarks with only one or two handlers
+- Define endpoint handlers in `src/apps/<app>/views.rs` or an app-local equivalent, and register their routes in `src/apps/<app>/urls.rs` or an app-local `urls/` module
+- Keep `src/config/urls.rs` composition-only: it may mount app routers and framework-level routes, but MUST NOT define application endpoint handlers directly; register every implementation app in `src/config/apps.rs`
 
 ## Cross-Domain References
 
