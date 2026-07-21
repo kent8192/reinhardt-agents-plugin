@@ -80,6 +80,29 @@ pub async fn generate_novel(
 - `#[injectable_factory]` is retained only as a deprecated 0.2 compatibility
   alias; do not use it for new 0.3.x code
 
+### Durable Queue Provider (0.4.x)
+
+For a queue used by more than one server function, enable `tasks-durable` and
+`di`, create the SQLite-backed queue once, and register the framework-provided
+key rather than declaring a lookalike application key. The provider contract is
+`FactoryOutput<DurableQueueKey, SharedDurableQueue>` and consumers receive
+`Depends<DurableQueueKey, SharedDurableQueue>`.
+
+Use singleton scope: a request-scoped provider would rebuild the store/queue
+and undermine durable coordination. Initialize `SqliteDurableJobStore` from a
+settings-owned SQLite URL during application setup, wrap it as a
+`SharedDurableQueue`, and surface initialization failures instead of silently
+falling back to an in-memory queue. Keep this durable-store setting distinct
+from a generic application database URL when that application uses a non-SQLite
+backend. Keep enqueue/status DTO assembly in each
+server function; put shared lifecycle policy, worker coordination, and retry
+decisions behind the injectable queue service.
+
+`DurableQueueKey` is exported only when both durable tasks and DI are enabled.
+Do not replace it with a custom `#[injectable_key]` for the same queue type,
+because doing so splits the dependency identity and makes test overrides less
+predictable.
+
 ### Pages Service-Layer Boundary
 
 For full-stack Pages apps, `services/` is the DI surface. Keep it limited to
