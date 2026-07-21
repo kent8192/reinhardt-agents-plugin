@@ -1,7 +1,7 @@
 ---
 name: scaffolding
 description: Use when creating a new reinhardt project or adding an app - guides feature flag selection, template type, database backend, and authentication setup
-versions: ["0.1.x", "0.2.x", "0.3.x"]
+versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.0-rc"]
 ---
 
 # Reinhardt Project Scaffolding

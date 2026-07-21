@@ -1,7 +1,7 @@
 ---
 name: testing
 description: Use when writing tests for reinhardt-web applications - provides rstest/AAA patterns, TestContainers setup, and API testing utilities
-versions: ["0.1.x", "0.2.x", "0.3.x"]
+versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.0-rc"]
 ---
 
 # Reinhardt Testing
@@ -46,9 +46,16 @@ Guide developers through writing high-quality tests using rstest, AAA pattern, r
 3. For Pages apps, verify both native and `wasm32-unknown-unknown` surfaces when shared modules rely on 0.3 inert stubs
 4. For generated projects, scaffold a fresh 0.3 Pages app and compare app-local layout expectations before changing fixtures
 
+### Shared DTO Validation (0.4.0-rc; #5543)
+
+1. Test shared `#[dto]` validation on both the native and `wasm32-unknown-unknown` targets
+2. In the browser-target test, construct invalid input, execute `Validate::validate`, and assert the expected `ValidationErrors::field_errors()` keys
+3. Treat a WASM compile check as a gate, not proof that validation executes; run a `#[wasm_bindgen_test]` acceptance test as well
+4. Cover named-field-only diagnostics and any migration from native-only `cfg_attr` validation when changing macro or shared DTO infrastructure
+
 ## Important Rules
 
-- **NEVER** use `#[test]` — always use `#[rstest]`
+- Use `#[rstest]` for native tests. Browser-target tests may use `#[wasm_bindgen_test]` (and pair it with `#[rstest]` when fixtures are needed) instead of a bare `#[test]`
 - **ONLY** use AAA labels: `// Arrange`, `// Act`, `// Assert`
 - **NEVER** use `// Setup`, `// Execute`, `// Verify` or BDD-style labels
 - AAA comments MAY be omitted when test body is 5 lines or fewer
@@ -59,6 +66,7 @@ Guide developers through writing high-quality tests using rstest, AAA pattern, r
 - Add focused regression tests for review-found bugs before broad happy-path expansion
 - In 0.3.x migrations, update stale fixtures that use `AuthUser`, `create_resource*`, `use_effect_event*`, raw `ServerRouter` registration, `DependsResult`, `DependsOption`, `pages.rs`, or `server_urls`
 - When generated `{Model}Info` relation fields change shape, update serializer/browser-test expectations intentionally rather than broadening assertions
+- **(0.4.0-rc; #5543)** Shared DTO validation coverage must execute in WASM and assert structured field errors; native-only tests and target compilation alone are insufficient
 
 ## Cross-Domain References
 
@@ -74,3 +82,4 @@ For the latest test utilities:
 2. Read `reinhardt/crates/reinhardt-test/src/fixtures/` for auth, admin, and E2E fixtures
 3. Read `reinhardt/crates/reinhardt-testkit/src/` for APIClient, APIRequestFactory, TestContainers, and migration fixtures
 4. Grep for `#[rstest]` in `reinhardt/tests/integration/` for real integration test examples
+5. Read `reinhardt/crates/reinhardt-core/macros/tests/dto_wasm_validation.rs` for the shared DTO WASM acceptance pattern

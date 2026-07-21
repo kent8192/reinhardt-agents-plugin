@@ -436,6 +436,38 @@ breakages were addressed inside `crates/reinhardt-test/src/msw/interceptor.rs`:
 
 These are upstream-only fixes — no consumer code change is required. (#4288)
 
+## Shared DTO Validation Across Native and WASM (0.4.0-rc; #5543)
+
+For a `#[dto]` payload shared by an API or `#[server_fn]` boundary and a WASM
+client, test both targets. A target compile check catches configuration drift,
+but it does not prove that field validation executes in the browser. In a
+`default-features = false` client, enable the `core` feature on the
+`reinhardt` facade before compiling the generated `Validate` implementation.
+
+Use a browser-target acceptance test that constructs invalid input, calls the
+facade trait, and checks structured keys rather than only checking that an error
+exists:
+
+```rust
+use rstest::rstest;
+use wasm_bindgen_test::wasm_bindgen_test;
+
+#[rstest]
+#[wasm_bindgen_test]
+fn invalid_signup_reports_field_errors() {
+    let errors = reinhardt::Validate::validate(&invalid_signup())
+        .expect_err("invalid signup must fail validation");
+    let field_errors = errors.field_errors();
+
+    assert!(field_errors.contains_key("email"));
+    assert!(field_errors.contains_key("username"));
+}
+```
+
+Keep shared field rules to `email`, `url`, `length`, and `range`. Also exercise
+the server boundary after deserialization: client validation is feedback only
+and does not replace authorization, cross-field, or business-rule checks.
+
 ## Test Placement Rules
 
 | Test Type | Location | When to Use |

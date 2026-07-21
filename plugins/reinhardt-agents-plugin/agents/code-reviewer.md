@@ -81,6 +81,8 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] OIDC providers other than the bundled four (Google, GitHub, Apple, Microsoft) are wired via `GenericOidcProvider` (rc.23+) — flag any from-scratch `impl OAuthProvider` for OIDC-compliant IdPs
 - [ ] REST versioning configured via the `[rest_versioning]` settings fragment (rc.29+); flag any remaining `REINHARDT_VERSIONING_*` env-var reads or calls to `VersioningConfig::from_env`
 - [ ] Handler and server function signatures/bodies import request, DTO, and framework types instead of repeating long fully qualified paths
+- [ ] **(0.4.0-rc; #5543)** Shared native/WASM write DTOs are named-field `#[dto]` structs with unconditional `#[validate(...)]` rules; serde and optional OpenAPI `Schema` derives remain explicit
+- [ ] **(0.4.0-rc; #5543)** Shared DTOs use the `reinhardt` facade with its `core` feature, not direct `reinhardt_core` or macro-crate dependencies; `#[dto]` appears above any legacy `Validate` derive it must normalize
 
 ### Pages Frontend
 
@@ -90,15 +92,17 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] Internal button-triggered redirects use `reinhardt::pages::navigate(..., NavigationType::Push)` or the current router handle API, not `window.location.set_href`
 - [ ] App-local i18n needed by Pages clients crosses the boundary through a registered `#[server_fn]` plus `use_resource` fallback, not duplicated client/server gettext code
 - [ ] Component examples import services, routes, serializers, server functions, and shared components at module scope instead of repeating full `crate::...` paths inside `page!` or event handlers
+- [ ] **(0.4.0-rc; #5543)** Client-side DTO validation is only feedback: the receiving `#[server_fn]` or handler revalidates after deserialization before authorization or business-rule processing
 
 ### Testing
 
-- [ ] All tests use `#[rstest]` (not `#[test]`)
+- [ ] Native tests use `#[rstest]`; browser-target tests use `#[wasm_bindgen_test]` (and `#[rstest]` when fixtures are needed)
 - [ ] AAA labels are standard (`// Arrange`, `// Act`, `// Assert`)
 - [ ] Assertions are strict (`assert_eq!` preferred)
 - [ ] Fixtures used for shared setup
 - [ ] `#[serial]` used for global state tests
 - [ ] DI override tests (`with_di_overrides!`, `register_override`) depend on the `testing` feature; keep `#[serial(di_registry)]` only for 0.1.x registry overrides or other global state because 0.2.x / 0.3.x use per-context registry isolation
+- [ ] **(0.4.0-rc; #5543)** Shared `#[dto]` validation has native and browser-target coverage; the WASM test executes `Validate::validate` and checks expected `field_errors()` keys rather than only compiling the target
 
 ### Documentation & Style
 

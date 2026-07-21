@@ -120,6 +120,29 @@ pub struct CreateUserRequest {
 }
 ```
 
+For a request type shared with a WASM client **(0.4.0-rc; #5543)**, use
+`#[dto]` to emit the shared `Validate` derive and retain the transport/OpenAPI
+derives explicitly. In a `default-features = false` client, enable the `core`
+feature on the `reinhardt` facade:
+
+```rust
+use reinhardt::dto;
+use serde::{Deserialize, Serialize};
+
+#[dto]
+#[derive(Debug, Clone, Serialize, Deserialize, Schema)]
+pub struct SharedCreateUserRequest {
+    #[validate(length(min = 3, max = 50))]
+    pub username: String,
+
+    #[validate(email)]
+    pub email: String,
+}
+```
+
+The handler still calls `body.validate()?` after deserialization. The shared
+client check improves feedback but is not a replacement for server validation.
+
 Response types use `Serialize` and `Schema`:
 
 ```rust

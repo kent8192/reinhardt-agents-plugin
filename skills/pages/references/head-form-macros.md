@@ -289,6 +289,34 @@ client_validators: {
 }
 ```
 
+### Shared DTO Validation (0.4.0-rc; #5543)
+
+For a named input type used by both a WASM form and a native `#[server_fn]` or
+HTTP handler, use `#[dto]` with unconditional field rules. This is separate
+from `client_validators`: the form DSL does not automatically invoke the Rust
+DTO's `Validate` implementation.
+
+```rust
+use reinhardt::dto;
+use serde::{Deserialize, Serialize};
+
+#[dto]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SignupInput {
+    #[validate(email)]
+    pub email: String,
+
+    #[validate(length(min = 8))]
+    pub password: String,
+}
+```
+
+`#[dto]` emits only Reinhardt's shared `Validate` derive. Keep transport
+derives explicit, use the client-compatible `email`, `url`, `length`, and
+`range` rules, and enable the `core` feature on the `reinhardt` facade in a
+`default-features = false` client. Call validation again on the server after deserialization.
+Use server-side validation for cross-field, authorization, and business rules.
+
 ## #[server_fn] Attribute Macro
 
 Generates RPC stubs for client-server communication. On WASM: HTTP client stub. On native: route handler.
