@@ -104,6 +104,19 @@ when it is not a Reinhardt relationship, such as an external-system identifier
 or an intentionally denormalized cache key; name it for that purpose and
 document the reason next to the field.
 
+The Semgrep hook audits every `*_id` field inside a `#[model]`, including one
+next to a relationship marker, because a duplicate scalar still needs review.
+For a valid external or denormalized exception, keep the reason on the field and
+add this narrow inline suppression:
+
+```rust
+#[field]
+pub source_system_record_id: String, // nosemgrep: reinhardt-no-scalar-fk-id -- Immutable external audit identifier.
+```
+
+Never use the suppression for a Reinhardt relationship; replace that scalar with
+the appropriate `#[rel(...)]` field instead.
+
 ## Rust Type to Database Type Mapping
 
 | Rust Type | Database Type | Notes |

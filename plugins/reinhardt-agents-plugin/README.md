@@ -132,7 +132,7 @@ The PostToolUse hook automatically scans code changes for these reinhardt-specif
 | `reinhardt-no-plain-test-attr` | WARNING | Detects plain `#[test]` without rstest (`#[rstest]` required) |
 | `reinhardt-non-english-comments` | WARNING | Detects non-English characters in code comments |
 | `reinhardt-no-raw-sql` | WARNING | Detects raw SQL queries (use `reinhardt-query` instead) |
-| `reinhardt-no-scalar-fk-id` | WARNING | Detects common scalar foreign-key-looking IDs inside `#[model]` structs |
+| `reinhardt-no-scalar-fk-id` | WARNING | Audits every scalar `*_id` field inside `#[model]` structs |
 | `reinhardt-aaa-labels` | WARNING | Detects non-standard test phase labels (only `// Arrange`, `// Act`, `// Assert` allowed) |
 
 ## Requirements
