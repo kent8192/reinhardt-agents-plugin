@@ -69,6 +69,25 @@ rules:
       exclude:
         - "**/migrations/**"
 
+  # WARNING: scalar IDs often hide an unmanaged relationship in a model.
+  - id: reinhardt-no-scalar-fk-id
+    patterns:
+      - pattern-inside: |
+          #[model(...)]
+          struct $MODEL {
+            ...
+          }
+      - pattern-regex: '(?m)^[\t ]*(?:pub(?:\([^)]*\))?[\t ]+)?(?:author|user|profile|article|account|owner|tenant|project|document|post|comment|organization|parent|child)_id[\t ]*:[\t ]*(?:(?:u|i)(?:8|16|32|64|128|size)|(?:uuid::)?Uuid|Option[\t ]*<[\t ]*(?:(?:u|i)(?:8|16|32|64|128|size)|(?:uuid::)?Uuid)[\t ]*>)[\t ]*,?[\t ]*(?://.*)?$'
+    message: >-
+      Scalar foreign-key-looking field inside a model. Prefer a relation marker;
+      retain a scalar ID only when it is intentionally denormalized or external,
+      and document why.
+    languages: [rust]
+    severity: WARNING
+    paths:
+      include:
+        - "*.rs"
+
   # WARNING: non-standard AAA test labels
   - id: reinhardt-aaa-labels
     patterns:

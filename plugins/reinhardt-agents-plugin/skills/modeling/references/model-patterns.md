@@ -63,6 +63,47 @@ Relation fields use `#[rel(...)]` instead. Do not mix relationship marker types
 with plain unmanaged foreign-key IDs unless the scalar ID is an intentional
 denormalized/cache field and is named accordingly.
 
+### Relationship Field Audit
+
+Before adding a `#[model]`, list its ForeignKey, OneToOne, and ManyToMany
+relationships. Each relationship must use a `#[rel(...)]` marker field rather
+than a scalar ID column.
+
+#### Anti-pattern
+
+```rust
+#[model(table_name = "articles")]
+#[derive(Debug, Clone)]
+pub struct Article {
+    #[field(primary_key = true)]
+    pub id: i64,
+
+    #[field]
+    pub author_id: i64,
+}
+```
+
+#### Preferred
+
+```rust
+#[model(table_name = "articles")]
+#[derive(Debug, Clone)]
+pub struct Article {
+    #[field(primary_key = true)]
+    pub id: i64,
+
+    #[rel(foreign_key, to = "User", related_name = "articles", on_delete = "CASCADE")]
+    pub author: ForeignKeyField<User>,
+}
+```
+
+After editing, scan every `#[model]` for suspicious `*_id` fields such as
+`author_id`, `user_id`, `profile_id`, and `article_id`. Replace any relationship
+with the appropriate `#[rel(...)]` field. A scalar `*_id` is acceptable only
+when it is not a Reinhardt relationship, such as an external-system identifier
+or an intentionally denormalized cache key; name it for that purpose and
+document the reason next to the field.
+
 ## Rust Type to Database Type Mapping
 
 | Rust Type | Database Type | Notes |
@@ -227,7 +268,7 @@ In 0.2.x, every `#[model]` automatically generates a `{Model}Info` companion str
 - **Opt-out:** Pass `info = false` to the model attribute: `#[model(info = false)]` to suppress Info struct generation entirely.
 - **Field exclusion:** Annotate individual fields with `#[field(skip_info = true)]` to exclude sensitive data (e.g., password hashes) from the Info struct.
 - **Serde derives:** Serde derives on the model are mirrored onto the Info struct.
-- **Relationship handling:** Marker types (e.g., `ForeignKeyField<T>`, `ManyToManyField<A, B>`) are excluded from the Info struct; FK `_id` fields (plain integer/UUID columns) are included.
+- **Relationship handling:** Marker types (e.g., `ForeignKeyField<T>`, `ManyToManyField<A, B>`) are excluded from the Info struct. Plain `*_id` fields are included only when they are intentionally denormalized or external scalar fields; they must not stand in for a Reinhardt relationship.
 
 ```rust
 // 0.2.x: Auto-generated UserInfo struct
@@ -310,8 +351,8 @@ pub struct TenantScopedManager;
 impl CustomManager<Project> for TenantScopedManager {
     async fn before_bulk_update(&self, models: &[Project]) -> Result<(), DbError> {
         // Reject cross-tenant bulk updates atomically.
-        let tenant = current_tenant_id()?;
-        if models.iter().any(|p| p.tenant_id != tenant) {
+        let tenant_partition = current_tenant_partition()?;
+        if models.iter().any(|p| p.tenant_partition != tenant_partition) {
             return Err(DbError::PermissionDenied);
         }
         Ok(())
@@ -324,8 +365,9 @@ pub struct Project {
     #[field(primary_key = true)]
     pub id: Option<Uuid>,
 
+    // This denormalized routing key is not a model relationship.
     #[field]
-    pub tenant_id: Uuid,
+    pub tenant_partition: Uuid,
 
     #[field(max_length = 200)]
     pub name: String,

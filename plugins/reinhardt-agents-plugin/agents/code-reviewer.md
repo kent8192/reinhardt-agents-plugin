@@ -39,7 +39,8 @@ Specialized agent for reviewing reinhardt-web application code against project c
 ### ORM & Queries
 
 - [ ] `reinhardt-query` used for all SQL construction (no raw SQL)
-- [ ] Proper relation design (ForeignKey, ManyToMany, OneToOne)
+- [ ] ForeignKey, OneToOne, and ManyToMany relationships use `#[rel(...)]` marker fields, not raw scalar `*_id` columns
+- [ ] Every retained relationship-shaped `*_id` scalar is explicitly documented as an external or intentionally denormalized non-relationship value
 - [ ] Nullable fields use `Option<T>`
 - [ ] Primary keys defined with `#[field(primary_key = true)]`
 - [ ] UUID primary keys use v7 (auto-handled by `#[model]` — flag any manual `Uuid::new_v4()` calls)

@@ -21,10 +21,12 @@ Guide developers through model definition, database operations, and migration ma
 ### Defining a Model
 
 1. Read `references/model-patterns.md` for field types and relation patterns
-2. Guide model struct definition with `#[model]` attribute
-3. Choose appropriate field types and constraints
-4. Define relations (ForeignKey, ManyToMany, OneToOne) if needed
-5. Implement `pub use` re-exports in the module entry file
+2. Before writing any `#[model]`, inventory every ForeignKey, OneToOne, and ManyToMany relationship; choose its `#[rel(...)]` marker field, target, and deletion behavior
+3. Guide model struct definition with `#[model]` attribute
+4. Choose appropriate scalar field types and constraints
+5. Define the inventoried relationships with `#[rel(...)]`
+6. After editing, audit every `*_id` field in each `#[model]`: replace relationship-shaped scalar IDs with `#[rel(...)]` marker fields, or document why a retained scalar is intentionally denormalized or external
+7. Implement `pub use` re-exports in the module entry file
 
 ### ORM Operations (Django-style)
 
@@ -66,7 +68,7 @@ Guide developers through model definition, database operations, and migration ma
 - Migration names are auto-generated from detected changes (`--name` is optional)
 - Field types map to Rust types (String, i32, i64, bool, Option<T>, DateTime<Utc>)
 - Put `#[field(...)]` on every scalar model field, even when no options are required
-- Use `#[rel(...)]` for model relationships; do not represent foreign keys as unmanaged scalar IDs unless the scalar is intentionally denormalized
+- Use `#[rel(...)]` for model relationships; do not represent foreign keys as unmanaged scalar IDs unless the scalar is intentionally denormalized or external, and document that non-relationship purpose next to the field
 - ALL model struct fields that can be NULL must use `Option<T>`
 - Scope unique or stable keys by their owning record (project, tenant, document, etc.) when data can be duplicated across parents
 - For ordered sibling records, validate reorder inputs contain every sibling exactly once before updating positions
