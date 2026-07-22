@@ -64,7 +64,7 @@ pub struct UserProfile {
 
 ## Validation
 
-### Shared DTO validation with `#[dto]` **(0.4.0-rc; #5543)**
+### Shared DTO validation with `#[dto]` **(0.4.0; #5543)**
 
 For a request or form DTO shared by native/server and WASM/client code, prefer
 [`#[dto]`](attribute-macros.md#dto) over manually deriving `Validate`. The
@@ -109,7 +109,7 @@ request.validate()?; // Returns Result<(), ValidationErrors>
 ```
 
 Use `Validate` directly on server-only request/input types and on versions
-through 0.3.x. For shared 0.4.0-rc DTOs, use `#[dto]` as described above. For
+through 0.3.x. For shared 0.4.0 DTOs, use `#[dto]` as described above. For
 response DTOs that match a model, prefer the `{Model}Info` companion generated
 by `#[model]` instead of creating a parallel serializer struct with the same
 fields.

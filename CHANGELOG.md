@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Document the 0.4.0-rc shared `#[dto]` validation contract from
+- Document the 0.4.0 shared `#[dto]` validation contract from
   [reinhardt-web PR #5543](https://github.com/kent8192/reinhardt-web/pull/5543)
   across macro, API, Pages, scaffolding, testing, and review guidance
   while preserving the existing 0.1.x–0.3.x native-only validation paths.

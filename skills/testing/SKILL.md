@@ -1,7 +1,7 @@
 ---
 name: testing
 description: Use when writing tests for reinhardt-web applications - provides rstest/AAA patterns, TestContainers setup, and API testing utilities
-versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.0-rc"]
+versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.0"]
 ---
 
 # Reinhardt Testing
@@ -46,7 +46,7 @@ Guide developers through writing high-quality tests using rstest, AAA pattern, r
 3. For Pages apps, verify both native and `wasm32-unknown-unknown` surfaces when shared modules rely on 0.3 inert stubs
 4. For generated projects, scaffold a fresh 0.3 Pages app and compare app-local layout expectations before changing fixtures
 
-### Shared DTO Validation (0.4.0-rc; #5543)
+### Shared DTO Validation (0.4.0; #5543)
 
 1. Test shared `#[dto]` validation on both the native and `wasm32-unknown-unknown` targets
 2. In the browser-target test, construct invalid input, execute `Validate::validate`, and assert the expected `ValidationErrors::field_errors()` keys
@@ -66,7 +66,7 @@ Guide developers through writing high-quality tests using rstest, AAA pattern, r
 - Add focused regression tests for review-found bugs before broad happy-path expansion
 - In 0.3.x migrations, update stale fixtures that use `AuthUser`, `create_resource*`, `use_effect_event*`, raw `ServerRouter` registration, `DependsResult`, `DependsOption`, `pages.rs`, or `server_urls`
 - When generated `{Model}Info` relation fields change shape, update serializer/browser-test expectations intentionally rather than broadening assertions
-- **(0.4.0-rc; #5543)** Shared DTO validation coverage must execute in WASM and assert structured field errors; native-only tests and target compilation alone are insufficient
+- **(0.4.0; #5543)** Shared DTO validation coverage must execute in WASM and assert structured field errors; native-only tests and target compilation alone are insufficient
 
 ## Cross-Domain References
 

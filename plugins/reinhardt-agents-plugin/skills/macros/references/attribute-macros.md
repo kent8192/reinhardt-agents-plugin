@@ -54,7 +54,7 @@ pub struct Post {
 
 ### `#[dto]`
 
-> **Version:** 0.4.0-rc ([reinhardt-web PR #5543](https://github.com/kent8192/reinhardt-web/pull/5543))
+> **Version:** 0.4.0 ([reinhardt-web PR #5543](https://github.com/kent8192/reinhardt-web/pull/5543))
 
 **Crate:** `reinhardt-core/macros`, re-exported through the `reinhardt` facade.
 

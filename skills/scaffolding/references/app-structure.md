@@ -311,7 +311,7 @@ pub mod client_router;
 - `#[cfg(server)]` — Server-mode-only routing (mode-gated, not platform-gated)
 - No annotation — Available on both platforms (DI service keys, service APIs, and shared DTOs that do not depend on native-only types)
 
-For a shared request or form DTO on the 0.4.0-rc line **(#5543)**, keep the type
+For a shared request or form DTO on the 0.4.0 line **(#5543)**, keep the type
 in an unconditional shared module and use `#[dto]` above explicit serde derives.
 It supplies `Validate` for both targets; keep field-level `#[validate(...)]`
 attributes unconditional and reserve server-only modules for validation rules

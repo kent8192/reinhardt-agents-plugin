@@ -289,7 +289,7 @@ client_validators: {
 }
 ```
 
-### Shared DTO Validation (0.4.0-rc; #5543)
+### Shared DTO Validation (0.4.0; #5543)
 
 For a named input type used by both a WASM form and a native `#[server_fn]` or
 HTTP handler, use `#[dto]` with unconditional field rules. This is separate

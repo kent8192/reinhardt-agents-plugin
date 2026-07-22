@@ -96,7 +96,7 @@ Checklist:
 
 ---
 
-## Shared Native/WASM Write DTOs (0.4.0-rc; #5543)
+## Shared Native/WASM Write DTOs (0.4.0; #5543)
 
 When an input payload is compiled by both a native API boundary and a WASM
 client, use `#[dto]` instead of making `Validate` native-only. The macro adds

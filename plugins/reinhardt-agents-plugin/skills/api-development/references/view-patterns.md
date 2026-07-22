@@ -120,17 +120,19 @@ pub struct CreateUserRequest {
 }
 ```
 
-For a request type shared with a WASM client **(0.4.0-rc; #5543)**, use
-`#[dto]` to emit the shared `Validate` derive and retain the transport/OpenAPI
-derives explicitly. In a `default-features = false` client, enable the `core`
-feature on the `reinhardt` facade:
+For a request type shared with a WASM client **(0.4.0; #5543)**, use
+`#[dto]` to emit the shared `Validate` derive and retain transport derives
+explicitly. It does not derive `Schema`: add that derive only in an
+OpenAPI-enabled native API build, not to the WASM client contract. In a
+`default-features = false` client, enable the `core` feature on the
+`reinhardt` facade:
 
 ```rust
 use reinhardt::dto;
 use serde::{Deserialize, Serialize};
 
 #[dto]
-#[derive(Debug, Clone, Serialize, Deserialize, Schema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SharedCreateUserRequest {
     #[validate(length(min = 3, max = 50))]
     pub username: String,

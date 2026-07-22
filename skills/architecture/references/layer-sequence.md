@@ -56,7 +56,7 @@ Define serializers for API input/output using `ModelSerializer` or custom serial
 **Steps:**
 
 1. Create serializer file or add to existing serializer module
-2. Define serializer struct with `#[derive(Serialize, Deserialize, Schema)]`; use `#[dto]` for a 0.4.0-rc input type shared with WASM
+2. Define serializer struct with `#[derive(Serialize, Deserialize, Schema)]`; use `#[dto]` for a 0.4.0 input type shared with WASM
 3. For CRUD: use `ModelSerializer` pattern
 4. For custom: define explicit fields
 
@@ -82,7 +82,7 @@ pub struct ProductCreateInput {
 ```
 
 For a named input payload that crosses between a WASM client and a native API
-boundary **(0.4.0-rc; #5543)**, use `#[dto]` instead of a native-only
+boundary **(0.4.0; #5543)**, use `#[dto]` instead of a native-only
 `Validate` derive. Transport and OpenAPI derives remain explicit, and a
 `default-features = false` client must enable the `core` feature on the
 `reinhardt` facade.
@@ -104,7 +104,7 @@ pub struct SharedProductCreateInput {
 - [ ] Read serializer defined (for API responses)
 - [ ] Write serializer/input defined (for API requests)
 - [ ] Validation rules applied where needed
-- [ ] Shared native/WASM input uses named-field `#[dto]` with unconditional `#[validate(...)]` rules when targeting 0.4.0-rc
+- [ ] Shared native/WASM input uses named-field `#[dto]` with unconditional `#[validate(...)]` rules when targeting 0.4.0
 - [ ] Nested serializers for relations (if applicable)
 
 ---

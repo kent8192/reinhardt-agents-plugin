@@ -26,7 +26,7 @@ Specialized agent for generating high-quality tests that comply with reinhardt t
 5. **Serial for global state**: Tests modifying shared state MUST use `#[serial(group_name)]`. **(0.2.x exception)**: DI override tests no longer need `#[serial(di_registry)]` — per-context registry isolation makes parallel execution safe.
 6. **Reinhardt component required**: Every test MUST use at least one reinhardt component.
 7. **Cleanup**: All test artifacts MUST be cleaned up.
-8. **Shared DTO coverage (0.4.0-rc; #5543)**: For `#[dto]` validation shared with WASM, generate a native test and a browser-target test that calls `Validate::validate` and asserts specific `field_errors()` keys.
+8. **Shared DTO coverage (0.4.0; #5543)**: For `#[dto]` validation shared with WASM, generate a native test and a browser-target test that calls `Validate::validate` and asserts specific `field_errors()` keys.
 
 ## Test Placement
 

@@ -1,7 +1,7 @@
 ---
 name: pages
 description: Use when building WASM frontend pages with reinhardt-pages - covers page!/head!/form! macros, reactive hooks (Signal/Effect/useState), routing, SSR/hydration, server functions, and API client
-versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.0-rc"]
+versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.0"]
 ---
 
 # Reinhardt Pages (WASM Frontend)
@@ -32,7 +32,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 
 1. **Define Form** — read `references/head-form-macros.md` (form! section)
 2. **Add Server Function** — read `references/head-form-macros.md` (`#[server_fn]` section)
-3. **(0.4.0-rc; #5543)** Define shared native/WASM input DTOs with `#[dto]` — read `../macros/references/attribute-macros.md`
+3. **(0.4.0; #5543)** Define shared native/WASM input DTOs with `#[dto]` — read `../macros/references/attribute-macros.md`
 4. **Embed in Page** — read `references/page-macro.md`
 5. **Test** — read `references/testing-guide.md`
 
@@ -42,8 +42,8 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - Import app/framework types at the top of the module instead of repeating long fully qualified paths in components or server function signatures/bodies
 - In route-backed UI, wire buttons and actions to route params, form values, loaded DTOs, selected rows/versions, and server return values; never leave demo fixture IDs, sample constants, or canned text in production route actions
 - Build static form structure with `form!` and dynamic form state with `use_form`
-- **(0.4.0-rc; #5543)** For a named form or `#[server_fn]` payload shared with WASM, use `#[dto]` above explicit serde derives and keep `#[validate(...)]` field attributes unconditional; `#[dto]` supplies only `Validate`
-- **(0.4.0-rc; #5543)** Rust DTO validation and `form!`'s `client_validators` are separate mechanisms. Client DTO checks improve feedback, but the server function must revalidate before applying authorization or business rules
+- **(0.4.0; #5543)** For a named form or `#[server_fn]` payload shared with WASM, use `#[dto]` above explicit serde derives and keep `#[validate(...)]` field attributes unconditional; `#[dto]` supplies only `Validate`
+- **(0.4.0; #5543)** Rust DTO validation and `form!`'s `client_validators` are separate mechanisms. Client DTO checks improve feedback, but the server function must revalidate before applying authorization or business rules
 - For user-facing relation inputs, show representative values such as `title`, `name`, or `slug`; do not ask users to type raw foreign-key primary keys unless the surface is internal/admin-only or no useful representative field exists
 - Configure `cfg_aliases` in `build.rs` for `wasm`/`native` and `server`/`client` aliases
 - Event handlers in `page!` are auto-handled across platforms (no manual `#[cfg(wasm)]` needed)

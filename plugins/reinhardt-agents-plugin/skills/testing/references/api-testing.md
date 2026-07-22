@@ -436,7 +436,7 @@ breakages were addressed inside `crates/reinhardt-test/src/msw/interceptor.rs`:
 
 These are upstream-only fixes — no consumer code change is required. (#4288)
 
-## Shared DTO Validation Across Native and WASM (0.4.0-rc; #5543)
+## Shared DTO Validation Across Native and WASM (0.4.0; #5543)
 
 For a `#[dto]` payload shared by an API or `#[server_fn]` boundary and a WASM
 client, test both targets. A target compile check catches configuration drift,

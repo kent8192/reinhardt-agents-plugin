@@ -1,7 +1,7 @@
 ---
 name: macros
 description: Use when working with reinhardt procedural macros - covers attribute macros (#[model], #[user], #[inject], HTTP decorators), derive macros, and function-like macros (guard!, installed_apps!, path!)
-versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.0-rc"]
+versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.0"]
 ---
 
 # Reinhardt Macros
@@ -43,7 +43,7 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 
 ### Validation DTOs
 
-1. **(0.4.0-rc; #5543)** Use `#[dto]` with unconditional `#[validate(...)]` field attributes for named-field request or form DTOs shared by native and WASM builds
+1. **(0.4.0; #5543)** Use `#[dto]` with unconditional `#[validate(...)]` field attributes for named-field request or form DTOs shared by native and WASM builds
 2. Keep `Debug`, `Clone`, `serde::Serialize`, `serde::Deserialize`, and any OpenAPI `Schema` derive explicit: `#[dto]` supplies only Reinhardt's shared `Validate` derive
 3. For native-only input types and versions through 0.3.x, use `#[derive(Validate)]` with `#[validate(...)]` attributes
 4. Prefer generated `{Model}Info` types for model-shaped response DTOs; only hand-write serializer structs when the API shape intentionally differs from the model
@@ -68,8 +68,8 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 - `#[model]` auto-derives `Model`, `Serialize`, `Deserialize`, `Clone`, `Debug`
 - Every scalar field inside `#[model]` should have `#[field]` or `#[field(...)]`; relationship fields should have `#[rel(...)]`
 - For native-only request validation and 0.1.x–0.3.x code, use `#[derive(Validate)]` / `#[validate(...)]` instead of duplicating validation logic in services
-- **(0.4.0-rc; #5543)** Shared native/WASM DTOs use `#[dto]` above explicit derives; it adds `reinhardt::Validate`, accepts named-field structs only, and does not add serde or `Schema` derives
-- **(0.4.0-rc; #5543)** Keep shared DTO rules limited to `email`, `url`, `length`, and `range`; client validation improves UX but handlers and `#[server_fn]` endpoints must revalidate before applying business rules
+- **(0.4.0; #5543)** Shared native/WASM DTOs use `#[dto]` above explicit derives; it adds `reinhardt::Validate`, accepts named-field structs only, and does not add serde or `Schema` derives
+- **(0.4.0; #5543)** Keep shared DTO rules limited to `email`, `url`, `length`, and `range`; client validation improves UX but handlers and `#[server_fn]` endpoints must revalidate before applying business rules
 - `#[user]` auto-implements `BaseUser` and `AuthIdentity` traits on native targets and is inert on WASM in 0.3.x
 - HTTP decorators (`#[get]`, etc.) accept `name` and `use_inject` options
 - Register 0.3 endpoint-macro handlers with `ServerRouter::endpoint(...)`; do not use removed raw `ServerRouter::function` / `.route` registration
@@ -106,4 +106,4 @@ For the latest macro definitions:
 8. Read `reinhardt/crates/reinhardt-urls/routers-macros/src/lib.rs` for path! macro
 9. Read `reinhardt/crates/reinhardt-grpc/macros/src/lib.rs` for #[grpc_handler]
 10. Read `reinhardt/crates/reinhardt-graphql/macros/src/lib.rs` for #[graphql_handler]
-11. Read `reinhardt/crates/reinhardt-core/macros/src/dto.rs` for the 0.4.0-rc shared DTO validation contract
+11. Read `reinhardt/crates/reinhardt-core/macros/src/dto.rs` for the 0.4.0 shared DTO validation contract

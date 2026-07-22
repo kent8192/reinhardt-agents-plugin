@@ -20,7 +20,7 @@ Run through this checklist after implementing a feature to verify all layers are
 - [ ] Read serializer defined (API response)
 - [ ] Write serializer / input type defined (API request)
 - [ ] Field validation applied where needed
-- [ ] Shared native/WASM input uses named-field `#[dto]` with unconditional `#[validate(...)]` rules when targeting 0.4.0-rc
+- [ ] Shared native/WASM input uses named-field `#[dto]` with unconditional `#[validate(...)]` rules when targeting 0.4.0
 - [ ] Nested serializers for related models (if applicable)
 - [ ] Custom DTOs use centralized `From`/`Into` conversions instead of repeated literal field mapping
 - [ ] User-facing relation inputs use representative fields (`title`, `name`, `slug`) instead of raw FK primary-key prompts unless the surface is internal/admin-only or no useful representative exists
