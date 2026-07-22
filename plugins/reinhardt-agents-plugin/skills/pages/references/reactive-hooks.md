@@ -161,10 +161,11 @@ let save_action = use_action(|data: FormData| async move {
 save_action.dispatch(form_data);
 
 // Check state
-match save_action.phase().get() {
+match save_action.phase() {
     ActionPhase::Idle => { /* ready */ },
     ActionPhase::Pending => { /* loading */ },
-    ActionPhase::Resolved(result) => { /* done */ },
+    ActionPhase::Success(result) => { /* done */ },
+    ActionPhase::Error(error) => { /* show error */ },
 }
 ```
 
@@ -309,13 +310,63 @@ Async data loading with reactive dependencies.
     let current_user = use_resource(fetch_current_user, ());
 
     // Check state
-    match user.state().get() {
+    match user.get() {
         ResourceState::Loading => { /* show spinner */ },
-        ResourceState::Ready(data) => { /* render data */ },
+        ResourceState::Success(data) => { /* render data */ },
         ResourceState::Error(err) => { /* show error */ },
     }
 }
 ```
+
+### Resource and Action Composition (0.4.0-alpha.1+)
+
+When a screen initially loads a value with `use_resource` and its mutations
+return the same value type, compose them with `Resource::latest_after` instead
+of maintaining a screen-local struct that decides which result to render. A
+successful action value overrides the resource; pending and failed actions leave
+the underlying resource state in control. Each later `latest_after` call has
+higher priority than the earlier ones.
+
+```rust
+// Each operation returns Result<Vec<Project>, AppError>.
+let projects = use_resource(move || list_projects(team_id), ());
+let refresh = use_action(refresh_projects);
+let create = use_action(create_project_and_list);
+
+let current_projects = projects
+    .latest_after(&refresh)
+    .latest_after(&create)
+    .refetch_on_success();
+
+match current_projects.state_with_empty(Vec::is_empty) {
+    LatestResourceState::Loading => { /* show spinner */ },
+    LatestResourceState::Empty => { /* show empty state */ },
+    LatestResourceState::Success(projects) => { /* render projects */ },
+    LatestResourceState::Error(error) => { /* show resource error */ },
+}
+```
+
+The fluent form above is equivalent to the builder when actions are collected
+or configured separately:
+
+```rust
+let current_projects = use_latest_resource_value(projects.clone())
+    .with_action(&refresh)
+    .with_action(&create)
+    .refetch_on_success()
+    .build();
+```
+
+Both forms accept an owned `Action` or `&Action`. Use
+`refetch_on_success()` only when the resource must be reloaded after a tracked
+action enters success: it reacts to that transition, not an action that was
+already successful when the composed handle was created. Use `get()` or
+`state()` for the composed `ResourceState`, `state_with_empty(...)` for an
+explicit empty-state policy, and `resource_state()` when the unmodified resource
+state is required. Keep the returned `LatestResourceValue` alive for as long as
+`refetch_on_success()` behavior is needed. Its `error()` reports the remaining
+resource error; render a mutation failure from the corresponding `Action::error()`
+separately.
 
 ## Platform Event Type
 

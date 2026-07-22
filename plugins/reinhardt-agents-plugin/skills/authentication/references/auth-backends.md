@@ -7,7 +7,7 @@
 | JWT | `JwtAuth` | `auth-jwt` | `Authorization: Bearer <token>` | No | APIs, mobile, SPAs |
 | Session | `SessionAuthentication<B>` | `auth-session` | Cookie (`sessionid`) | Yes | Web apps, admin panel |
 | Token | `TokenAuthentication` | `auth-token` | `Authorization: Token <key>` | Yes (DB) | Persistent API keys, service accounts |
-| Basic | `BasicAuthentication` | (always available) | `Authorization: Basic <b64>` | No | Development, simple integrations |
+| Basic | `HttpBasicAuth` | `argon2-hasher` or `bcrypt-hasher` | `Authorization: Basic <b64>` | No | Development, simple integrations |
 | Remote User | `RemoteUserAuthentication` | (always available) | Proxy header | No | Reverse proxy auth (nginx) |
 | Social/OAuth2 | `SocialAuthBackend` | `social` | OAuth2 redirect flow | Depends | Google, GitHub, Apple, Microsoft |
 
@@ -297,10 +297,11 @@ pub struct TokenAuthConfig {
 
 ## Basic Authentication
 
-Always available (no feature flag).
+Enable `argon2-hasher` or `bcrypt-hasher`; either feature includes the basic
+authentication implementation.
 
 ```rust
-pub struct BasicAuthentication { /* ... */ }
+use reinhardt::auth::HttpBasicAuth;
 
 pub struct BasicAuthConfig {
     pub realm: String,
@@ -308,6 +309,32 @@ pub struct BasicAuthConfig {
 ```
 
 HTTP header: `Authorization: Basic base64(username:password)`
+
+### Password Policy **(0.4.x)**
+
+`HttpBasicAuth::new()` stores passwords with its default Argon2id policy.
+Use `with_policy` when this in-memory backend must accept a legacy format while
+rewriting valid credentials to the preferred hasher:
+
+```rust
+// Cargo.toml: features = ["argon2-hasher", "bcrypt-hasher"]
+use reinhardt::auth::{
+    Argon2Hasher, BcryptHasher, HttpBasicAuth, PasswordHashPolicy,
+};
+
+let policy = PasswordHashPolicy::new(Argon2Hasher::default())
+    .with_legacy(BcryptHasher::default());
+let auth = HttpBasicAuth::with_policy(policy);
+
+// Use the fallible API when provisioning must surface policy errors.
+auth.try_add_user("alice", "secret123")?;
+```
+
+`try_add_user` leaves the user store unchanged when the policy rejects an
+input. `add_user` intentionally ignores that error, so use it only when a
+silent no-op is acceptable. On successful authentication, `HttpBasicAuth`
+updates a stale or legacy hash under its lock; callers should not bypass that
+policy by writing plaintext or precomputed hashes into its user store.
 
 ---
 
@@ -346,7 +373,7 @@ pub struct CompositeAuthentication { /* ... */ }
 let auth = CompositeAuthentication::new()
     .with_backend(JwtAuth::new(secret.as_bytes()))
     .with_backend(TokenAuthentication::with_config(token_config))
-    .with_backend(BasicAuthentication::new());
+    .with_backend(HttpBasicAuth::new());
 ```
 
 ---
@@ -371,7 +398,8 @@ pub enum AuthenticationError {
 ## Security Best Practices
 
 1. **Always use HTTPS in production** — Set `cookie_secure: true` for session cookies
-2. **Use `argon2-hasher`** — Most resistant to brute-force attacks
+2. **Use `argon2-hasher` for new passwords** — `bcrypt-hasher` is an opt-in
+   policy hasher when an application explicitly selects bcrypt
 3. **Short JWT access token lifetimes** — 15 minutes recommended; use refresh tokens
 4. **Never store secrets in code** — Use environment variables
 5. **Enable CORS carefully** — Only whitelist known origins, never `*` in production

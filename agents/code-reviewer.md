@@ -36,9 +36,20 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] Delion plugins depend on `reinhardt` facade, not `reinhardt-dentdelion` directly
 - [ ] No circular dependency chains
 
+### Authentication & Password Hashing
+
+- [ ] New passwords use an explicit preferred hasher (normally Argon2id); a deployed algorithm change uses `PasswordHashPolicy` with deliberate preferred-then-legacy ordering
+- [ ] Login-time upgrades use `check_password_with_policy_update` (or `check_password_with_update`) and persist only `PasswordCheck::ValidUpdated`
+- [ ] A rehash write is conditional on the prior password hash or a row version; a lost race reloads and rechecks rather than overwriting a concurrent reset or password change
+- [ ] Valid legacy or stale credentials remain valid when an opportunistic replacement hash cannot be generated
+- [ ] `bcrypt-hasher` is explicitly enabled when `BcryptHasher` is selected as a preferred or legacy policy hasher, and its 72-byte input limit is handled before registration or login policy changes
+- [ ] `HttpBasicAuth` has its required hasher feature enabled and uses `with_policy` and `try_add_user` when policy errors must be surfaced; code does not bypass its managed hash store
+
 ### ORM & Queries
 
-- [ ] `reinhardt-query` used for all SQL construction (no raw SQL)
+- [ ] `reinhardt-query` used for all SQL construction (no raw SQL), except an
+  explicit trusted `generated_sql` body when a generated column requires
+  backend-specific syntax
 - [ ] Proper relation design (ForeignKey, ManyToMany, OneToOne)
 - [ ] Nullable fields use `Option<T>`
 - [ ] Primary keys defined with `#[field(primary_key = true)]`
@@ -46,6 +57,11 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] Custom managers wired via `#[model(manager = ...)]` (rc.23+); veto hooks (`before_save` / `before_delete` / `before_bulk_update`) return early on policy violations rather than mutating state
 - [ ] **(0.2.x)** No usage of removed `HasCustomManager` trait or `custom_manager()` method — use `type Objects` associated type on `Model` instead
 - [ ] **(0.2.x)** `{Model}Info` companion struct considered for cross-layer DTOs; sensitive fields marked with `#[field(skip_info = true)]`
+- [ ] **(0.4.x)** Generated columns prefer portable `generated = SchemaExpr::...`; raw SQL uses explicit `generated_sql`, never the former raw-string `generated` form
+- [ ] **(0.4.x)** Generated columns use exactly one storage mode, do not combine typed and raw forms, and do not use defaults or auto-increment; virtual storage is limited to MySQL/SQLite
+- [ ] **(0.4.x)** Generated fields are absent from create/update DTOs, bulk writes, and `QuerySet::update_fields` assignments, while remaining available for read/filter use
+- [ ] **(0.4.x)** Generated-column migrations preserve typed expression/storage metadata, review replacement/dependency/index effects, and execute on every target backend (including SQLite table-recreation paths and PostgreSQL/CockroachDB chain restrictions)
+- [ ] **(0.4.x)** Direct `ColumnDefinition` literals set `generated: None` for ordinary columns
 
 ### Dependency Injection
 
@@ -90,7 +106,10 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] Non-`Copy` callbacks/actions passed into `page!` render closures are cloned at the attribute use site when needed
 - [ ] Internal button-triggered redirects use `reinhardt::pages::navigate(..., NavigationType::Push)` or the current router handle API, not `window.location.set_href`
 - [ ] App-local i18n needed by Pages clients crosses the boundary through a registered `#[server_fn]` plus `use_resource` fallback, not duplicated client/server gettext code
+- [ ] **(0.4.0-alpha.1+)** A screen that renders a `Resource` after compatible mutations uses `Resource::latest_after(...)` or `use_latest_resource_value(...)` with deliberate action ordering, rather than a custom per-screen result-precedence handle; only action successes override the resource, mutation errors remain separate, and the composed handle is retained while `refetch_on_success()` is needed
 - [ ] Component examples import services, routes, serializers, server functions, and shared components at module scope instead of repeating full `crate::...` paths inside `page!` or event handlers
+- [ ] **(0.4.0-alpha.1+)** Every route-backed `#[component]` uses a unique string-literal `name = "public-route-name"`; flag positional second arguments, bare identifier shorthand, and `name = identifier`
+- [ ] Framework or generated-template changes cover the named component form, rejected legacy forms, and generated Pages-app behavior with focused pass, compile-fail, and scaffold E2E tests
 
 ### Testing
 
