@@ -22,8 +22,10 @@ Before analysis, determine the version families involved:
 - **0.1.x family**: `0.1.0-rc.*`, `0.1.0`, `0.1.1`, `0.1.2`, `0.1.3` — legacy stable series
 - **0.2.x family**: `0.2.0-rc.*`, `0.2.0`, and later `0.2.*` patches — stable 0.2 line with breaking changes from 0.1.x
 - **0.3.x family**: `0.3.0-alpha.*`, `0.3.0-rc.*`, `0.3.0`, and later `0.3.*` patches — current major stable line
+- **0.4.x family**: `0.4.0-alpha.*` and later `0.4.*` builds — current development line; identify its target release tag and source branch before reporting compatibility
 - **Cross-family upgrade** (0.1.x → 0.2.x): Flag as a **major version migration** with extensive breaking changes. Use the migration skill's "Major Version Upgrade: 0.1.x → 0.2.x" section and `reinhardt/instructions/MIGRATION_0.2.md` for the comprehensive migration path.
 - **Cross-family upgrade** (0.2.x → 0.3.x): Flag as a **major version migration**. Use `../skills/migration/references/0.3-upgrade.md` and prefer `reinhardt/instructions/MIGRATION_0.3.md` when the local source checkout is available.
+- **Cross-family upgrade** (0.3.x → 0.4.x): Flag as a development-line breaking migration. Derive required work from the target CHANGELOG, crate changelogs, and linked PR/Issue contracts rather than assuming a stable migration guide exists.
 
 ## Analysis Steps
 
@@ -44,6 +46,12 @@ before CHANGELOG extraction when it exists. If it is unavailable, read
 `../skills/migration/references/0.3-upgrade.md` and treat it as the fallback
 source map for removed APIs, Pages layout changes, DI identity changes, routing
 changes, model-info relation shape changes, and migration verification.
+
+For 0.3.x → 0.4.x upgrades, inspect each target-release breaking entry and
+linked PR/Issue before proposing edits. In 0.4.0-alpha.1+, scan route-backed
+components for `#[component(PATH, NAME)]`: rewrite positional string names as
+`name = "..."`, and replace identifier shorthand with an explicitly chosen
+public route-name string.
 
 ### Step 2: GitHub Context Enrichment
 
@@ -145,3 +153,4 @@ Return a structured report in this format:
 - For 0.1.x → 0.2.x upgrades, also check `reinhardt/announcements/v0.2.0-rc.N.md` for 0.2.x-series release notes
 - For 0.2.x → 0.3.x upgrades, include ALL removed APIs and layout migrations from `MIGRATION_0.3.md` or `0.3-upgrade.md`, even when the app scan only finds a subset
 - For 0.2.x → 0.3.x upgrades, explicitly scan for `AuthUser`, `create_resource*`, `use_effect_event*`, raw `ServerRouter` function/route registration, `FunctionHandler`, `DependsResult`, `DependsOption`, `pages.rs`, `server_urls`, `client/pages`, and broad `src/shared/forms.rs` / `src/shared/types.rs` usage
+- For 0.3.x → 0.4.x upgrades, explicitly scan `*.rs` application code for route-backed `#[component]` declarations with a positional second argument or identifier shorthand. Report every hit with the required `name = "..."` replacement and verify that the chosen public route name remains unique.

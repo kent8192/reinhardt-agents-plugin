@@ -1,7 +1,7 @@
 ---
 name: authentication
 description: Use when configuring authentication in reinhardt-web applications - covers auth backends (JWT, Session, Token, OAuth2/Social), user models, password hashing, and session management
-versions: ["0.1.x", "0.2.x", "0.3.x"]
+versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.x"]
 ---
 
 # Reinhardt Authentication
@@ -34,6 +34,22 @@ Guide developers through authentication setup using reinhardt-auth, including ba
 4. Choose password hasher (Argon2 recommended for production)
 5. Register user model in app configuration
 
+### Planning a Password Hash Upgrade **(0.4.x)**
+
+1. Select one preferred hasher for newly created passwords (normally
+   `Argon2Hasher` with the `argon2-hasher` feature).
+2. Build `PasswordHashPolicy` with that preferred hasher, then add each
+   deployed legacy format with `with_legacy(...)` in its required verification
+   order.
+3. At login, call `BaseUser::check_password_with_policy_update` on a mutable
+   user. It recognizes valid legacy or stale preferred hashes and returns a
+   `PasswordCheck` status.
+4. Persist the changed user only after `PasswordCheck::ValidUpdated`; use a
+   conditional or optimistic update based on the prior password hash or record
+   version so a rehash cannot overwrite a concurrent password change.
+5. Cover current hashes, each legacy format, stale parameters, invalid
+   credentials, rehash failures, and concurrent password updates in tests.
+
 ### Setting Up Auth Extractors
 
 1. Read `../authorization/references/extractors.md` for `AuthInfo` and `CurrentUser<T>`
@@ -57,14 +73,26 @@ Guide developers through authentication setup using reinhardt-auth, including ba
 
 ## Important Rules
 
-- **ALWAYS** use `argon2-hasher` feature for production password hashing
+- **ALWAYS** use `argon2-hasher` for newly created production password hashes
+- **NEVER** replace a deployed password algorithm without a
+  `PasswordHashPolicy` that can verify the stored legacy hashes
+- `PasswordHashPolicy` verifies its preferred hasher first and then legacy
+  hashers in registration order; valid legacy or stale hashes may produce a
+  replacement hash
+- `check_password_with_policy_update` changes only the in-memory user value.
+  Persist only `PasswordCheck::ValidUpdated`, using a conditional write when
+  authentication can race with password changes or resets
+- Do not reject a valid login solely because its opportunistic rehash fails
+- `BcryptHasher` is opt-in through `bcrypt-hasher`, may be selected as either
+  a preferred or legacy policy hasher, and has a 72-byte password limit
 - **NEVER** store secrets (JWT keys, OAuth client secrets) in code — use environment variables
 - `AuthInfo` is lightweight (reads from request extensions) — use when you only need user ID
 - `CurrentUser<T>` loads the full user model from DB — use when you need user fields
 - `AuthUser<T>` is removed in 0.3.x — migrate old code to `CurrentUser<T>`
 - Register `SessionMiddleware` once for cookie-backed session apps; use `CookieSessionAuthMiddleware` only for direct custom `AsyncSessionBackend` integration
 - In 0.3.x, `#[user]` is inert on WASM, so shared user model declarations should stay visible to browser builds without broad call-site `#[cfg]` workarounds
-- Feature flags: `auth-jwt`, `auth-session`, `auth-token`, `auth-oauth`, `argon2-hasher`, `social`
+- Feature flags: `auth-jwt`, `auth-session`, `auth-token`, `auth-oauth`,
+  `argon2-hasher`, `bcrypt-hasher`, `social`
 - JWT access token lifetime should be short (15 min recommended); use refresh tokens for longer sessions
 - Session cookies MUST use `HttpOnly`, `SameSite`, and `Secure` (in production)
 
@@ -81,8 +109,12 @@ For the latest auth API:
 
 1. Read `reinhardt/crates/reinhardt-auth/src/lib.rs` for module structure and re-exports
 2. Read `reinhardt/crates/reinhardt-auth/src/core/base_user.rs` for BaseUser trait
-3. Read `reinhardt/crates/reinhardt-auth/src/jwt.rs` for JWT types
-4. Read `reinhardt/crates/reinhardt-auth/src/rest_authentication.rs` for REST auth backends
-5. Read `reinhardt/crates/reinhardt-auth/src/social.rs` for social auth module
-6. Read `reinhardt/crates/reinhardt-auth/src/sessions/` for session backends
-7. Grep for `#[user]` in `reinhardt/tests/` for real user model examples
+3. Read `reinhardt/crates/reinhardt-auth/src/core/hasher.rs` for password
+   policies and hasher contracts
+4. Read `reinhardt/crates/reinhardt-auth/src/basic.rs` for `HttpBasicAuth`
+   policy behavior
+5. Read `reinhardt/crates/reinhardt-auth/src/jwt.rs` for JWT types
+6. Read `reinhardt/crates/reinhardt-auth/src/rest_authentication.rs` for REST auth backends
+7. Read `reinhardt/crates/reinhardt-auth/src/social.rs` for social auth module
+8. Read `reinhardt/crates/reinhardt-auth/src/sessions/` for session backends
+9. Grep for `#[user]` in `reinhardt/tests/` for real user model examples

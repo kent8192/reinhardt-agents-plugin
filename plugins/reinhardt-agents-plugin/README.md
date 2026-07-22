@@ -55,16 +55,20 @@ claude install kent8192/reinhardt-agents-plugin
 
 ## Supported Versions
 
-This plugin is aligned with the reinhardt-web 0.3.0 release line and keeps
+This plugin is aligned with the reinhardt-web 0.3.0 release line, with
+explicitly marked guidance for the current 0.4.x development line. It keeps
 older-version guidance only for projects that are still migrating:
 
 | Version | Status | Source |
 |---------|--------|--------|
+| **0.4.x** | Development guidance | `develop/0.4.0` contracts |
 | **0.3.0** | Target stable line | `develop/0.3.0` announcements and `MIGRATION_0.3.md` |
 | **0.2.x** | Legacy migration source | `reinhardt-web-v0.2.x` releases |
 | **0.1.x** | Legacy migration source | `reinhardt-web-v0.1.3` and earlier tags |
 
-Skills use inline version markers — `**(0.1.x)**` / `**(0.2.x)**` / `**(0.3.x)**` — where APIs diverge between versions. Check your project's `Cargo.toml` to determine which version family applies.
+Skills use inline version markers — `**(0.1.x)**` / `**(0.2.x)**` /
+`**(0.3.x)**` / `**(0.4.x)**` — where APIs diverge between versions. Check
+your project's `Cargo.toml` to determine which version family applies.
 
 ## Features
 
