@@ -2,42 +2,70 @@
 
 ## Basic Syntax
 
-The `page!` macro creates anonymous components with closure-style DSL. It returns a closure — invoke it with `()` to get a `Page`:
+The `page!` macro has a direct body form for ordinary `Page`-returning
+functions and explicit closure forms for reusable factories.
+
+### 0.4.x: Direct Page Bodies
+
+Use `page!({ ... })` for application screens and ordinary functions that
+return a `Page`. It returns the `Page` immediately, so there is no trailing
+`()`. Free value identifiers from the surrounding Rust scope are implicitly
+captured and cloned into generated reactive and event closures. Every captured
+value must implement `Clone`.
+
+The direct form is `page!({ ... })`: do not add a `move` keyword to the macro
+syntax. It supports captures used in expressions, attributes, event handlers,
+component props and children, macro arguments, `#head`, and keyed `for` loops.
 
 ```rust
 use reinhardt::pages::component::Page;
 use reinhardt::pages::page;
 
-// No parameters — note the double call: page!(|| { ... })()
-pub fn hello_page() -> Page {
-    page!(|| {
-        div { "Hello, World!" }
-    })()
-}
-
-// With parameters — pass arguments in the second call
 pub fn greeting_page(name: String) -> Page {
-    page!(|name: String| {
+    page!({
         div { class: "greeting", { name } }
-    })(name)
+    })
 }
 ```
 
-### Component Composition (Layout Pattern)
+`Signal`, `Action`, `Resource`, `Callback`, `Page`, and typical application
+handles are normally cheap to clone. A non-`Clone` capture is a compile error;
+keep it outside the page body or pass a cloneable handle instead.
+
+### Reusable Page Factories (Strict)
+
+Use `page!(|| { ... })` or `page!(|props: Props| { ... })` only when a caller
+needs a factory that it will invoke later. These forms return a closure and
+retain strict capture validation: every value used in the body must be a
+declared closure parameter or a local binding inside the body.
+
+```rust
+let greeting_factory = page!(|name: String| {
+    div { class: "greeting", { name } }
+});
+
+let greeting = greeting_factory("Ada".to_string());
+```
+
+Migrate an existing body-only page that used surrounding values to
+`page!({ ... })`. If that page was intentionally a no-argument factory, make
+the factory explicit with `page!(|| { ... })` instead.
+
+### Component Composition (Layout Pattern, 0.4.x)
 
 Wrap content in a layout by accepting `Page` as a parameter:
 
 ```rust
 pub fn auth_layout(title: &str, form_content: Page) -> Page {
     let title = title.to_string();
-    page!(|title: String, form_content: Page| {
+    page!({
         div { class: "min-h-screen flex items-center justify-center bg-gray-50",
             div { class: "w-full max-w-md",
                 h2 { class: "text-xl font-semibold mb-6", { title } }
                 { form_content }
             }
         }
-    })(title, form_content)
+    })
 }
 
 // Usage:
@@ -49,7 +77,8 @@ pub fn login_page() -> Page {
 
 ## Head Directive (SSR)
 
-Inject head content using `#head` for server-side rendering:
+**(0.4.x)** Inject head content using `#head` for server-side rendering with a
+direct page body:
 
 ```rust
 let page_head = head!(|| {
@@ -58,14 +87,14 @@ let page_head = head!(|| {
     link { rel: "stylesheet", href: resolve_static("css/main.css") }
 });
 
-page! {
+page!(
     #head: page_head,
-    || {
+    {
         div { class: "container",
             h1 { "Welcome Home" }
         }
     }
-}()
+)
 ```
 
 ## HTML Elements
@@ -228,13 +257,14 @@ Closures must have 0 or 1 parameter (compile error if more). Prefer named
 actions at the attribute use site when the render closure also needs them:
 
 ```rust
+// 0.4.x direct body
 let save_click = use_callback(move |_| {
     save_action.dispatch(current_form_values());
 }, (save_action.clone(), form_state.clone()));
 
-page!(|| {
+page!({
     button { @click: save_click.clone(), "Save" }
-})()
+})
 ```
 
 ## Child Nodes
@@ -309,8 +339,8 @@ ul {
 Use `watch` for Signal-dependent reactive rendering. Unlike static `if` conditions evaluated once at render time, `watch` blocks re-evaluate when Signal dependencies change.
 
 ```rust
-// watch with if
-page!(|error: Signal<Option<String>>| {
+// 0.4.x direct body with watch
+page!({
     div {
         watch {
             if error.get().is_some() {
@@ -318,7 +348,7 @@ page!(|error: Signal<Option<String>>| {
             }
         }
     }
-})(error.clone())
+})
 
 // watch with match
 watch {
@@ -414,13 +444,13 @@ URL attributes (`href`, `src`, `action`, `formaction`) block dangerous schemes: 
 | `ul`, `ol` | Can only contain `li` |
 | `dl` | Can only contain `dt`, `dd`, and `div` |
 
-## Complete Example
+## Complete Example (0.4.x)
 
 ```rust
 use reinhardt::pages::prelude::*;
 
 fn todo_app(todos: Signal<Vec<String>>, filter: Signal<String>) -> Page {
-    page!(|todos: Signal<Vec<String>>, filter: Signal<String>| {
+    page!({
         div {
             class: "todo-app",
 
@@ -457,6 +487,6 @@ fn todo_app(todos: Signal<Vec<String>>, filter: Signal<String>) -> Page {
                 { format!("{} items", todos.get().len()) }
             }
         }
-    })(todos, filter)
+    })
 }
 ```
