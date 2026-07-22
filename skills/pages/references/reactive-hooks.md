@@ -150,11 +150,7 @@ use_effect(
 |------|-----------|-------------|
 | `use_transition` | `use_transition() -> TransitionState` | Non-blocking state updates |
 | `use_action` | `use_action(action_fn) -> Action<T, E>` | Async action with loading/error state |
-| `use_action_state` | `use_action_state(action_fn) -> ActionStateBuilder<...>` **(0.4.x only)** | Configure action lifecycle callbacks and optional success reset before building an `Action` |
-
-`use_action` and its `Idle`, `Pending`, `Success`, and `Error` phases are
-available across 0.1.x–0.4.x. `use_action_state` is available only in 0.4.x.
-| `use_form_action` | `use_form_action(&form, action_fn) -> FormAction<...>` | **(0.4.x)** Validated typed async submit action for a `use_form` runtime |
+| `use_action_state` | *(deprecated)* | Use `use_action` instead |
 
 ```rust
 let save_action = use_action(|data: FormData| async move {
@@ -165,118 +161,51 @@ let save_action = use_action(|data: FormData| async move {
 save_action.dispatch(form_data);
 
 // Check state
-match save_action.phase() {
+match save_action.phase().get() {
     ActionPhase::Idle => { /* ready */ },
     ActionPhase::Pending => { /* loading */ },
-    ActionPhase::Success(result) => { /* done */ },
-    ActionPhase::Error(error) => { /* show error */ },
+    ActionPhase::Resolved(result) => { /* done */ },
 }
 ```
 
-### Action-State Builder (0.4.x)
-
-`use_action_state` is not deprecated. It configures the same `Action` handle
-as `use_action`, but makes lifecycle callbacks and a success reset explicit
-before calling `.build()`. Use `use_action` when direct dispatch and phase
-inspection are enough; use the builder when completion behavior is part of the
-component contract. Neither hook replaces `form!` / `use_form` validation.
-
-Both hooks allocate scope-owned reactive state. Normal component rendering
-provides that scope; low-level native tests must create the action inside
-`ReactiveScope::run(|| { ... })`.
-
-```rust,ignore
-let save_action = use_action_state(|input: SaveSettingsRequest| async move {
-    save_project_settings(input).await
-})
-.on_success(|project| {
-    show_saved_toast(project);
-})
-.on_error(|error| {
-    show_save_error(error);
-})
-.build();
-
-let success_view = save_action.render_result(|project| render_saved_project(project));
-let error_view = save_action.render_error(|error| render_save_error(error));
-```
-
-`last_result` and `last_error` are aliases for values in the current
-`Success` or `Error` phase, not historical caches. Use `render_result` and
-`render_error` when a matching phase can be mapped directly into UI. Do not
-enable `reset_on_success()` when the normal UI must render `last_result` or
-`render_result`: after success callbacks run, the action returns to `Idle`.
-Reserve it for callback-owned completion behavior such as navigation, a toast,
-or resetting a form.
-
-**(0.4.x)** `Action::on_success` and `Action::on_error` append callbacks for
-WASM action completion. They are useful for follow-up UI work that belongs after
-the action's result or error state is available:
-
-```rust
-let save_action = use_action(|input: SaveSettingsRequest| async move {
-    save_project_settings(input).await
-})
-.on_success(|_result| {
-    // Refresh related UI state.
-})
-.on_error(|error| {
-    // Record or surface the error.
-});
-```
-
-Native actions intentionally do not poll async futures, so these callbacks do
-not run on native targets. Keep completion assertions in WASM/browser tests;
-native tests can assert validation, dispatch, and synchronous state only.
-
-> **Generated forms (0.4.x):** When an action dispatches values from a
-> `form!` / `use_form` runtime, use `use_form_action` instead of manually
-> validating, collecting values, and calling `Action::dispatch`. It keeps the
-> form pending, success, and error lifecycle aligned with the action; see the
-> `use_form_action` section in `head-form-macros.md` for the full example.
-
 ### Async UI Handler Patterns
 
-Use `use_action` or `use_action_state` for button/form mutations whose pending,
-success, and error state should be visible in the component tree. Do not fire
-an async task and drop its result from a route component; the `Action` phase
-is the UI contract that disables controls, renders errors, and prevents
-duplicate submissions.
-For a `form!` / `use_form` runtime, use **(0.4.x)** `use_form_action` for the
-common validated typed submit flow. It dispatches generated current values only
-after validation and owns the corresponding form submit lifecycle.
+Use `use_action` for button/form mutations whose pending, success, and error
+state should be visible in the component tree. Do not fire an async task and
+drop its result from a route component; the `Action` phase is the UI contract
+that disables controls, renders errors, and prevents duplicate submissions.
 
 Use `use_resource` for async reads and derived text, including labels,
 diagnostics, previews, or server-translated copy that depends on the current
 route, selected version, locale, or loaded DTO. Prefer a stable fallback while
 the `Resource` is loading or failed.
 
-For an event attribute that only dispatches an `Action`, use `dispatching` for
-a fixed cloneable payload or `dispatching_with` to read current form values,
-selected rows, versions, or route parameters at event time. Use
-`use_callback` / `use_callback_with` only when the handler has additional
-behavior. Avoid fixture IDs such as `Uuid::nil()`, `"sample-project"`, or
+Use `use_callback` / `use_callback_with` for event handlers that dispatch the
+current form values, selected rows, selected versions, or route parameters into
+an `Action`. Avoid fixture IDs such as `Uuid::nil()`, `"sample-project"`, or
 hardcoded version IDs once the route has real server state available.
-
-For a generated form, call `FormAction::submit()` instead of rebuilding a typed
-request from individual fields. For a non-generated settings editor, an explicit
-request is still appropriate:
 
 ```rust
 let save_action = use_action(|input: SaveSettingsRequest| async move {
     save_project_settings(input).await
 });
 
-let save_click = save_action.dispatching_with({
-    let project_id = project_id.clone();
-    let form = form.clone();
-    move || SaveSettingsRequest {
-        project_id: project_id.get(),
-        title: form.title(),
-        idea: form.idea(),
-        model: form.model(),
-    }
-});
+let save_click = use_callback(
+    {
+        let save_action = save_action.clone();
+        let project_id = project_id.clone();
+        let form = form.clone();
+        move |_| {
+            save_action.dispatch(SaveSettingsRequest {
+                project_id: project_id.get(),
+                title: form.title(),
+                idea: form.idea(),
+                model: form.model(),
+            });
+        }
+    },
+    (save_action.clone(), project_id.clone(), form.clone()),
+);
 ```
 
 Keep `spawn_local` for low-level browser integration where no hook owns the
@@ -296,66 +225,7 @@ If the result affects app state, prefer `Action` or `Resource` instead.
 
 | Hook | Description |
 |------|-------------|
-| `use_debug_value` | Custom debug label (always available; debug output requires `debug-hooks` and is a no-op in production) |
-
-### Custom Hooks (0.2.x+)
-
-Custom hooks are plain Rust functions that group reusable hook wiring behind a
-`use_<domain>` name. Extract a custom hook when the same combination of local
-state, `use_effect` / `use_resource`, callbacks, and derived handles appears in
-more than one component, or when a second component is a foreseeable consumer.
-Keep these functions in a shared client module such as
-`src/apps/<app>/client/hooks.rs`.
-
-Return reactive handles, not detached values. A hook that returns
-`Signal<bool>`, `Resource<T, E>`, `Action<T, E>`, or `Callback<Args, Ret>` lets
-the caller compose the state directly in `page!`. A hook that calls
-`.get()` and returns `bool` or `String` hides the reactive edge and usually
-forces duplicate effects in the caller.
-
-```rust
-use reinhardt::pages::prelude::*;
-
-pub fn use_online_status() -> Signal<bool> {
-    let (is_online, set_online) = use_state(browser_is_online());
-
-    use_debug_value(if is_online.get() { "Online" } else { "Offline" });
-
-    use_effect(
-        {
-            let set_online = set_online.clone();
-            move || {
-                let unsubscribe = subscribe_online_status({
-                    let set_online = set_online.clone();
-                    move |online| set_online(online)
-                });
-
-                Some(move || unsubscribe())
-            }
-        },
-        (),
-    );
-
-    is_online
-}
-```
-
-In this example, `browser_is_online` and `subscribe_online_status` are
-app-local browser adapters; the custom hook owns the state/effect/subscription
-contract while callers only read the returned `Signal<bool>`.
-
-The example uses the explicit dependency argument introduced in 0.2.x. On
-0.1.x, use the same effect closure without the trailing `()` dependency
-argument. Custom hooks SHOULD call `use_debug_value` with a compact status label
-or key state snapshot. The hook is always available; enabling `debug-hooks`
-activates its debug output, while production builds treat it as a no-op.
-
-Dependency review needs one extra pass inside custom hooks. The `page!` macro's
-deps-exhaustiveness check only sees hook calls written textually inside the
-`page!` invocation. Hook calls inside `use_*` functions still require a deps
-argument at the type level, but reviewers must verify that every Signal read in
-the hook closure is represented in that deps tuple, or is intentionally read
-with `get_untracked` / `with_untracked`.
+| `use_debug_value` | Custom label in dev tools (requires `debug-hooks` feature) |
 
 ## Resource (WASM Only)
 
@@ -380,63 +250,13 @@ Async data loading with reactive dependencies.
     let current_user = use_resource(fetch_current_user, ());
 
     // Check state
-    match user.get() {
+    match user.state().get() {
         ResourceState::Loading => { /* show spinner */ },
-        ResourceState::Success(data) => { /* render data */ },
+        ResourceState::Ready(data) => { /* render data */ },
         ResourceState::Error(err) => { /* show error */ },
     }
 }
 ```
-
-### Resource and Action Composition (0.4.0-alpha.1+)
-
-When a screen initially loads a value with `use_resource` and its mutations
-return the same value type, compose them with `Resource::latest_after` instead
-of maintaining a screen-local struct that decides which result to render. A
-successful action value overrides the resource; pending and failed actions leave
-the underlying resource state in control. Each later `latest_after` call has
-higher priority than the earlier ones.
-
-```rust
-// Each operation returns Result<Vec<Project>, AppError>.
-let projects = use_resource(move || list_projects(team_id), ());
-let refresh = use_action(refresh_projects);
-let create = use_action(create_project_and_list);
-
-let current_projects = projects
-    .latest_after(&refresh)
-    .latest_after(&create)
-    .refetch_on_success();
-
-match current_projects.state_with_empty(Vec::is_empty) {
-    LatestResourceState::Loading => { /* show spinner */ },
-    LatestResourceState::Empty => { /* show empty state */ },
-    LatestResourceState::Success(projects) => { /* render projects */ },
-    LatestResourceState::Error(error) => { /* show resource error */ },
-}
-```
-
-The fluent form above is equivalent to the builder when actions are collected
-or configured separately:
-
-```rust
-let current_projects = use_latest_resource_value(projects.clone())
-    .with_action(&refresh)
-    .with_action(&create)
-    .refetch_on_success()
-    .build();
-```
-
-Both forms accept an owned `Action` or `&Action`. Use
-`refetch_on_success()` only when the resource must be reloaded after a tracked
-action enters success: it reacts to that transition, not an action that was
-already successful when the composed handle was created. Use `get()` or
-`state()` for the composed `ResourceState`, `state_with_empty(...)` for an
-explicit empty-state policy, and `resource_state()` when the unmodified resource
-state is required. Keep the returned `LatestResourceValue` alive for as long as
-`refetch_on_success()` behavior is needed. Its `error()` reports the remaining
-resource error; render a mutation failure from the corresponding `Action::error()`
-separately.
 
 ## Platform Event Type
 
@@ -533,18 +353,19 @@ change. This rendering mechanism is distinct from hooks.
 | Side effects (API calls, logging, subscriptions) | `use_effect` |
 | Expensive cached computations | `use_memo` |
 | Async actions with loading/error state | `use_action` |
-| Validated typed submit from `form!` / `use_form` (**0.4.x**) | `use_form_action` |
 | State management | `use_state`, `use_reducer` |
 | DOM refs and measurements | `use_ref`, `use_layout_effect` |
 
-For forms, use `form!` for static expressions such as fields, labels, validation
-rules, action/server_fn, and submit button shape. Use `use_form` for dynamic
-states such as current values, dirty/touched markers, validation results, submit
-phase, and reset/submit actions. Use Signals, hooks, and direct reactive
-`page!` expressions for surrounding display state, not as a second
-implementation of the form runtime. When generated form values invoke a typed async mutation, use **(0.4.x)**
-`use_form_action` so validation, dispatch, and submit lifecycle state remain in
-that boundary.
+For forms, use `form!` for a hand-defined static schema, or (in
+0.4.0) use a `ClientForm`-derived companion when a supported DTO is the
+canonical request contract. Both use `use_form` for current values,
+dirty/touched markers, validation results, submit phase, and reset/submit
+actions. For a generated client-form submit, let the form runtime own its
+validation and async lifecycle; bind pending, success, and error UI to form
+state instead of recreating it with a separate action. Use Signals, hooks, and
+direct reactive `page!` expressions for surrounding display state, not as a
+second implementation of the form runtime. See [DTO-Derived Client Form
+Bindings](client-form-bindings.md).
 
 ### Example: Direct Rendering Replaces Manual Effect Rendering
 
@@ -680,14 +501,3 @@ unconditionally wrapped in `Page::reactive` — no explicit wrapper is needed.
 - `create_resource_with_deps(fetcher, deps)` is removed; use `use_resource(fetcher, deps)`.
 - `use_effect_event` and `use_effect_event_with` are removed; use `use_callback` / `use_callback_with` or read non-dependency values with `.get_untracked()` inside the effect.
 - Shared Pages modules should rely on documented inert native/WASM stubs instead of broad call-site `#[cfg]` workarounds.
-
-## Version Differences (0.4.x)
-
-- `use_action_state` is a supported builder around `use_action`, not a
-  deprecated API. Use `.build()` after adding lifecycle callbacks or
-  `reset_on_success()`.
-- `Action::dispatching` and `Action::dispatching_with` create typed event
-  callbacks without a hand-written dispatch-only `use_callback`.
-- `Action::last_result`, `last_error`, `render_result`, and `render_error`
-  inspect only the current action phase. They are cleared by
-  `reset_on_success()` after success callbacks run.

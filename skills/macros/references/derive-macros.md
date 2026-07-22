@@ -125,6 +125,74 @@ fields.
 
 ---
 
+## DTO-Derived Client Forms (0.4.0)
+
+### `#[derive(ClientForm)]`
+
+**Crate:** `reinhardt-pages/macros`
+
+Generate a typed `use_form` companion from a non-generic, named request DTO.
+The default generated names are `<Request>ClientForm`,
+`<Request>ClientFormValues`, and `<Request>ClientFormField`. This is opt-in and
+does not replace `form!` for independently designed or unsupported UI schemas.
+
+```rust,ignore
+#[reinhardt::dto]
+#[derive(Clone, serde::Serialize, serde::Deserialize, ClientForm)]
+#[client_form(name = ProjectEditorForm, validate, server_fn = crate::server::save_project)]
+pub struct ProjectRequest {
+    pub title: Option<String>,
+    pub visibility: Visibility,
+    #[client_form(skip)]
+    pub tenant_id: Option<String>,
+}
+```
+
+| `#[client_form(...)]` option | Effect |
+|------------------------------|--------|
+| `name = FormStem` | Overrides the generated companion name stem. |
+| `validate` | Maps DTO `Validate` errors to generated form field/form errors. |
+| `server_fn = path` | Generates a typed async submit helper for WASM. It requires DTO `Serialize`, a matching marker request, `DeserializeOwned` response, and `Display + From<ServerFnError>` error types. |
+| Field `skip` | Keeps an `Option<T>` or `Default` field out of the editable form while preserving its hidden/default value. |
+
+Supported editable fields are strings, optional strings, primitive numeric
+types, booleans, and `ClientFormChoices` enums with their supported `Option`
+forms. Whitespace-only optional strings reconstruct as `None`. Collections,
+maps, generic fields, generic DTOs, and unsupported nested shapes intentionally
+fail to derive.
+
+For an exported DTO, every editable field must be public. A generated
+`server_fn` helper cannot use serde-skipped request fields because the browser
+payload must deserialize exactly like the native request. The `form.submit(...)`
+helper is WASM-only; use the shared `use_form` async runtime directly in native
+tests.
+
+### `#[derive(ClientFormChoices)]`
+
+**Crate:** `reinhardt-pages/macros`
+
+Generate typed choices for a fieldless, externally tagged enum used by
+`ClientForm`. Choice strings must have matching serde serialization and
+deserialization names. Matching variant rename values and `snake_case`,
+`kebab-case`, or `camelCase` `rename_all` rules are supported; data variants,
+tagged/untagged representations, directional renames that produce different
+wire names, and colliding aliases or choice strings are rejected at compile time.
+
+```rust,ignore
+#[derive(Clone, Default, PartialEq, ClientFormChoices)]
+#[serde(rename_all = "snake_case")]
+pub enum Visibility {
+    #[default]
+    Private,
+    TeamOnly,
+}
+```
+
+See `../../pages/references/client-form-bindings.md` for the runtime, validation,
+submission, and testing workflow.
+
+---
+
 ## API Documentation
 
 ### `#[derive(Schema)]`

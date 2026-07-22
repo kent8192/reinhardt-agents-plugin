@@ -1,7 +1,7 @@
 ---
 name: pages
-description: Use when building WASM frontend pages with reinhardt-pages - covers page!/head!/form! macros, reactive hooks (Signal/Effect/useState), routing, SSR/hydration, server functions, and API client
-versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.x"]
+description: Use when building WASM frontend pages with reinhardt-pages - covers page!/head!/form! macros, DTO-derived ClientForm bindings, reactive hooks (Signal/Effect/useState), routing, SSR/hydration, server functions, and API client
+versions: ["0.4.0"]
 ---
 
 # Reinhardt Pages (WASM Frontend)
@@ -11,10 +11,10 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 ## When to Use
 
 - User creates or modifies WASM frontend components
-- User works with `page!`, `head!`, `form!` macros or `#[server_fn]`
+- User works with `page!`, `head!`, `form!`, `ClientForm`, or `ClientFormChoices` macros, or `#[server_fn]`
 - User sets up reactive state with Signal, Effect, Memo, or hooks
 - User configures client-side routing, SSR, or hydration
-- User mentions: "page", "head", "form", "server_fn", "Signal", "useState", "useEffect", "watch", "SSR", "hydration", "WASM", "frontend", "router", "ApiQuerySet", "Table", "prelude", "component"
+- User mentions: "page", "head", "form", "ClientForm", "ClientFormChoices", "DTO form", "server_fn", "Signal", "useState", "useEffect", "watch", "SSR", "hydration", "WASM", "frontend", "router", "ApiQuerySet", "Table", "prelude", "component"
 
 ## Workflow
 
@@ -30,24 +30,20 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 
 ### Creating a Form
 
-1. **Define Form** — read `references/head-form-macros.md` (form! section)
-2. **Add Server Function** — read `references/head-form-macros.md` (`#[server_fn]` section)
-3. **(0.4.x)** Compose typed async submission — read the `use_form_action`
-   section of `references/head-form-macros.md` and `references/reactive-hooks.md`
-4. **(0.4.0; #5543)** Define shared native/WASM input DTOs with `#[dto]` — read `../macros/references/attribute-macros.md`
-5. **Embed in Page** — read `references/page-macro.md`
-6. **Test** — read `references/testing-guide.md`
+1. **Choose the source of truth** — use `form!` for a hand-defined UI schema, or (in 0.4.0) derive `ClientForm` when a supported named request DTO is the canonical form contract; read `references/head-form-macros.md`.
+2. **Build DTO-derived forms** — read `references/client-form-bindings.md` for `ClientForm`, `ClientFormChoices`, validation, hidden fields, and generated submit helpers.
+3. **Add Server Function** — read `references/head-form-macros.md` (`#[server_fn]` section).
+4. **Embed in Page** — read `references/page-macro.md`.
+5. **Test** — read `references/testing-guide.md`.
 
 ## Important Rules
 
 - Prefer explicit imports over prelude (e.g., `use reinhardt::pages::component::Page;`) — see reinhardt-cloud dashboard for the canonical import style
 - Import app/framework types at the top of the module instead of repeating long fully qualified paths in components or server function signatures/bodies
 - In route-backed UI, wire buttons and actions to route params, form values, loaded DTOs, selected rows/versions, and server return values; never leave demo fixture IDs, sample constants, or canned text in production route actions
-- Build static form structure with `form!` and dynamic form state with `use_form`;
-  **(0.4.x)** compose `use_form_action` when that generated runtime dispatches a
-  typed async mutation
-- **(0.4.0; #5543)** For a named form or `#[server_fn]` payload shared with WASM, use `#[dto]` above explicit serde derives and keep `#[validate(...)]` field attributes unconditional; `#[dto]` supplies only `Validate`
-- **(0.4.0; #5543)** Rust DTO validation and `form!`'s `client_validators` are separate mechanisms. Client DTO checks improve feedback, but the server function must revalidate before applying authorization or business rules
+- Build static form structure with `form!` and dynamic form state with `use_form`
+- **(0.4.0)** When a non-generic named request DTO is the canonical browser payload and its fields fit the generated contract, prefer opt-in `#[derive(ClientForm)]` over duplicating field tokens and request assembly by hand. `ClientForm` shares the `use_form` runtime and does not alter existing `form!` behavior.
+- **(0.4.0)** Use `ClientFormChoices` only for externally tagged, fieldless enums whose serialized and deserialized choice names agree. Keep serde-skipped request fields out of generated `server_fn` submit helpers so browser and native payloads stay compatible.
 - For user-facing relation inputs, show representative values such as `title`, `name`, or `slug`; do not ask users to type raw foreign-key primary keys unless the surface is internal/admin-only or no useful representative field exists
 - Configure `cfg_aliases` in `build.rs` for `wasm`/`native` and `server`/`client` aliases
 - Event handlers in `page!` are auto-handled across platforms (no manual `#[cfg(wasm)]` needed)
@@ -66,20 +62,11 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - Keep Pages app `services/` modules focused on injectable keys, provider functions, and service structs/functions; put prompt builders, provider adapters, parsers, converters, repository/database internals, and narrow private helpers under app-local `server/` modules
 - Since 0.2.x, reactive expressions in `page!` are auto-wrapped — explicit `Page::reactive(...)` is no longer needed
 - Since 0.2.x, `use_effect`/`use_memo`/`use_callback` take explicit dependency arrays
-- Use `use_action` for straightforward async mutations. In 0.4.x, use `use_action_state(...).on_success(...).on_error(...).reset_on_success().build()` when lifecycle behavior belongs to the UI contract; construct either inside a component or other active reactive scope
-- For an event attribute that only dispatches an action, use `action.dispatching(payload)` for a fixed cloneable payload or `action.dispatching_with(|| payload)` to read current values at event time. Use `use_callback` / `use_callback_with` when the handler has additional behavior
-- Use `use_resource` for async reads or derived text; keep `spawn_local` as an escape hatch for low-level browser integration only
-- When the same hook wiring (state plus effect/resource plus callbacks) appears in, or is foreseeable across, more than one component, extract it into a custom `use_*` function instead of duplicating it inline inside `#[component]` bodies
-- Custom hooks MUST follow the `use_<domain>` naming convention, live in a shared client module such as `src/apps/<app>/client/hooks.rs`, and return Signals, Resources, Actions, Callbacks, or other handles rather than detached raw values
-- Custom hooks SHOULD call `use_debug_value` so DevTools/debug logs show the hook state under a recognizable label
-- For a generated `use_form` runtime, use **(0.4.x)** `use_form_action` for validated typed submits rather than recreating its dispatch and lifecycle handling.
+- Use `use_action` for async mutations, `use_resource` for async reads or derived text, and `use_callback` / `use_callback_with` for event handlers; keep `spawn_local` as an escape hatch for low-level browser integration only
 - In 0.3.x, use `use_resource(fetcher, deps)` for both mount-only and dependency-driven resources; replace `create_resource*`
 - In 0.3.x, replace `use_effect_event*` with `use_callback*` or `.get_untracked()` inside the effect
-- In `0.4.0-alpha.1+`, when a `Resource` and compatible mutation `Action` results render the same domain value, use `Resource::latest_after(&action)` or `use_latest_resource_value(resource)` instead of a per-screen precedence handle; later added actions have higher priority, and only successful actions override the resource
-- Call `LatestResourceValue::refetch_on_success()` only when the server-backed resource must refresh after a tracked action transitions into success, and retain the returned handle for that behavior's lifetime; it does not refetch merely because an action was already successful when the handle was created
 - Route internal button-triggered redirects through `reinhardt::pages::navigate(..., NavigationType::Push)` or the current router handle API; use `window.location.set_href` only for external URLs or hard-navigation fallbacks
 - For app-local server-side translations needed by Pages clients, expose a small `#[server_fn]`, register its marker in the app/server router, and load it with `use_resource` plus a stable fallback instead of duplicating gettext logic behind client/server cfg gates
-- In 0.4.0-alpha.1+, route-backed `#[component]` wrappers must use `#[component("/path/", name = "public-route-name")]`: `name` is a required string literal that becomes ClientRouter route metadata. Never use a positional route name or bare identifier shorthand
 - Put route-backed `#[component]` wrappers under `src/apps/<app>/client/components/`, not in app-local `pages.rs` or `client/pages`
 - For `#[server_fn]`, keep endpoint-specific request flows visible; do not move the same logic into `server/`, `service/`, or `services/` unless the extraction creates a narrower contract, shared dependency, or independently testable invariant
 - Keep simple `Model::objects()` CRUD visible inside the `#[server_fn]` or nearby endpoint helper; avoid semantic wrappers such as `get_project_model`, `list_document_chunks`, or `document_path` when they only hide a direct ORM call
@@ -100,12 +87,11 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 
 For the latest API definitions:
 
-1. Read `reinhardt/crates/reinhardt-pages/macros/src/lib.rs` for macro definitions (page!, head!, form!, #[server_fn])
+1. Read `reinhardt/crates/reinhardt-pages/macros/src/lib.rs` for macro definitions (page!, head!, form!, #[server_fn], ClientForm, ClientFormChoices)
 2. Read `reinhardt/crates/reinhardt-pages/src/prelude.rs` for exported types
 3. Read `reinhardt/crates/reinhardt-pages/src/reactive.rs` for reactive system
 4. Read `reinhardt/crates/reinhardt-pages/src/router.rs` for routing
 5. Read `reinhardt/crates/reinhardt-pages/src/api.rs` for API client
 6. Read `reinhardt/crates/reinhardt-pages/src/tables.rs` for table component
 7. Read `reinhardt/crates/reinhardt-pages/src/testing.rs` for test utilities
-8. Read `reinhardt/crates/reinhardt-pages/src/reactive/hooks/async_action.rs` for current `Action`, `use_action`, and `use_action_state` behavior
-9. Read `reinhardt/crates/reinhardt-pages/macros/src/component.rs` for route-backed `#[component]` parsing and diagnostics
+8. Read `reinhardt/crates/reinhardt-pages/macros/src/client_form.rs` and `client_form_choices.rs` for the current DTO-derived form contract
