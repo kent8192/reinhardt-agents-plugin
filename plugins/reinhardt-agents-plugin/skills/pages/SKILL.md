@@ -44,7 +44,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - For user-facing relation inputs, show representative values such as `title`, `name`, or `slug`; do not ask users to type raw foreign-key primary keys unless the surface is internal/admin-only or no useful representative field exists
 - Configure `cfg_aliases` in `build.rs` for `wasm`/`native` and `server`/`client` aliases
 - Event handlers in `page!` are auto-handled across platforms (no manual `#[cfg(wasm)]` needed)
-- Use `watch {}` for reactive conditionals (not static `if` with extracted Signal values)
+- Write reactive `{expr}`, `if`, `match`, and `for` blocks directly inside `page!`; the macro auto-wraps them, so do not use removed `watch {}` blocks or manual `Page::reactive(...)` wrappers
 - Use route reverse helpers for `href`, `action`, and `formaction` when named routes exist; avoid hardcoded paths
 - Use `reinhardt-i18n` for language-specific UI text, server-provided prompts, and generated copy, including Japanese output
 - Boolean attributes require expressions, not literals (`disabled: is_disabled`, NOT `disabled: true`)
