@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Align Pages, macro, scaffolding, migration, architecture, and review guidance
   with reinhardt-web #5558: route-backed `#[component]` declarations require
   an explicit named route argument in the 0.4.x development line.
+- Align model, macro, migration, and code-review guidance with the typed
+  generated-column contract delivered by reinhardt-web #5586 and #5615.
 
 ## [0.3.2] - 2026-07-01
 
