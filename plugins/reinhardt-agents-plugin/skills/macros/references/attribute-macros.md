@@ -52,6 +52,60 @@ pub struct Post {
 
 **Generated:** `Model` trait implementation with `fn objects() -> Manager<Self>`, field accessors, table name derivation.
 
+### `#[dto]`
+
+> **Version:** 0.4.0 ([reinhardt-web PR #5543](https://github.com/kent8192/reinhardt-web/pull/5543))
+
+**Crate:** `reinhardt-core/macros`, re-exported through the `reinhardt` facade.
+
+Use `#[dto]` for a named-field request or form payload that must compile on
+both native/server and WASM/client targets. It emits the shared
+`reinhardt::Validate` derive and keeps `#[validate(...)]` field attributes
+available on both targets.
+
+```rust
+use reinhardt::dto;
+use serde::{Deserialize, Serialize};
+
+#[dto]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SignupRequest {
+    #[validate(email(message = "Enter a valid email address"))]
+    pub email: String,
+
+    #[validate(length(min = 3, max = 64))]
+    pub username: String,
+}
+```
+
+`#[dto]` adds only `Validate`. Keep `Debug`, `Clone`, `Serialize`,
+`Deserialize`, and (when generating OpenAPI) `Schema` derives explicit. Enable
+the `core` feature on the `reinhardt` facade for shared validation and depend
+on `serde` with its `derive` feature when the DTO is serialized. Do not reach
+past the facade to `reinhardt_core` or the macro crate.
+
+The shared validation rules are `email`, `url`, `length`, and `range`. Keep
+custom, cross-field, authorization, and business-rule checks on the server;
+client-side validation is an early UX check and does not replace revalidation
+in an HTTP handler or `#[server_fn]` endpoint.
+
+**Contract and migration rules:**
+
+- `#[dto]` accepts only structs with named fields. Tuple structs, unit structs,
+  enums, unions, and `#[dto(...)]` arguments are compile errors.
+- Put `#[dto]` above `#[derive(Validate)]` or
+  `#[cfg_attr(native, derive(Validate))]` when retaining either form. Attribute
+  macros can inspect only attributes that appear below them; the former is
+  treated as shared and the latter is normalized to the shared derive.
+- Rewrite legacy field-level native-only validation gates as unconditional
+  `#[validate(...)]` attributes before sharing the DTO. `#[dto]` normalizes the
+  legacy derive, not field attributes.
+- Use only the listed shared rules in a client-visible DTO. Unsupported rules
+  intentionally fail at compile time rather than silently becoming
+  server-only.
+- Assert structured failures through `ValidationErrors::field_errors()` in a
+  browser-target test as well as testing the server boundary.
+
 ### Field Attributes (`#[field(...)]`)
 
 | Attribute | Type | Description |
