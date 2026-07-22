@@ -21,12 +21,14 @@ Guide developers through model definition, database operations, and migration ma
 ### Defining a Model
 
 1. Read `references/model-patterns.md` for field types and relation patterns
-2. Guide model struct definition with `#[model]` attribute
-3. Choose appropriate field types and constraints
-4. For 0.4.x generated columns, use the typed `SchemaExpr` contract in
+2. Before writing any `#[model]`, inventory every ForeignKey, OneToOne, and ManyToMany relationship; choose its `#[rel(...)]` marker field, target, and deletion behavior
+3. Guide model struct definition with `#[model]` attribute
+4. Choose appropriate scalar field types and constraints
+5. For 0.4.x generated columns, use the typed `SchemaExpr` contract in
    `references/model-patterns.md` before choosing a raw SQL escape hatch
-5. Define relations (ForeignKey, ManyToMany, OneToOne) if needed
-6. Implement `pub use` re-exports in the module entry file
+6. Define the inventoried relationships with `#[rel(...)]`
+7. After editing, audit every `*_id` field in each `#[model]`: replace relationship-shaped scalar IDs with `#[rel(...)]` marker fields, or document why a retained scalar is intentionally denormalized or external and add a narrow inline `nosemgrep: reinhardt-no-scalar-fk-id -- <reason>` exception
+8. Implement `pub use` re-exports in the module entry file
 
 ### ORM Operations (Django-style)
 
@@ -73,7 +75,7 @@ Guide developers through model definition, database operations, and migration ma
 - Migration names are auto-generated from detected changes (`--name` is optional)
 - Field types map to Rust types (String, i32, i64, bool, Option<T>, DateTime<Utc>)
 - Put `#[field(...)]` on every scalar model field, even when no options are required
-- Use `#[rel(...)]` for model relationships; do not represent foreign keys as unmanaged scalar IDs unless the scalar is intentionally denormalized
+- Use `#[rel(...)]` for model relationships; do not represent foreign keys as unmanaged scalar IDs unless the scalar is intentionally denormalized or external, and document that non-relationship purpose next to the field with a narrow `nosemgrep: reinhardt-no-scalar-fk-id -- <reason>` exception
 - ALL model struct fields that can be NULL must use `Option<T>`
 - **(0.4.x)** Prefer `generated = SchemaExpr::...` for generated columns. Use
   `generated_sql = "..."` only for trusted backend-specific expressions that
