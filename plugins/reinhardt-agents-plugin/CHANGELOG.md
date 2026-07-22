@@ -13,6 +13,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   bodies, implicit `Clone` captures, and strict closure factories from
   reinhardt-web #5574.
 
+## [0.4.0] - 2026-07-22
+
+### Added
+
+- Add a Codex marketplace manifest that installs the synchronized packaged
+  plugin from this repository.
+
+### Changed
+
+- Bump the Claude Code and Codex plugin manifests to 0.4.0.
+
 ## [0.3.2] - 2026-07-01
 
 ### Added

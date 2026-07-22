@@ -1,7 +1,7 @@
 {
   "name": "reinhardt-agents-plugin",
   "interface": {
-    "displayName": "Reinhardt"
+    "displayName": "Reinhardt Agents Plugin"
   },
   "plugins": [
     {
@@ -12,9 +12,9 @@
       },
       "policy": {
         "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
+        "authentication": "NONE"
       },
-      "category": "Coding"
+      "category": "Engineering"
     }
   ]
 }
