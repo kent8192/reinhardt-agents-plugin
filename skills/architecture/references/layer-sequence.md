@@ -83,16 +83,17 @@ pub struct ProductCreateInput {
 
 For a named input payload that crosses between a WASM client and a native API
 boundary **(0.4.0; #5543)**, use `#[dto]` instead of a native-only
-`Validate` derive. Transport and OpenAPI derives remain explicit, and a
-`default-features = false` client must enable the `core` feature on the
-`reinhardt` facade.
+`Validate` derive. Transport derives remain explicit; put any OpenAPI
+`Schema` derive on a native-only representation rather than the shared client
+contract. A `default-features = false` client must enable the `core` feature on
+the `reinhardt` facade.
 
 ```rust
 use reinhardt::dto;
 use serde::{Deserialize, Serialize};
 
 #[dto]
-#[derive(Debug, Clone, Serialize, Deserialize, Schema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SharedProductCreateInput {
     #[validate(length(min = 1, max = 200))]
     pub name: String,
