@@ -56,7 +56,7 @@ Define serializers for API input/output using `ModelSerializer` or custom serial
 **Steps:**
 
 1. Create serializer file or add to existing serializer module
-2. Define serializer struct with `#[derive(Serialize, Deserialize, Schema)]`
+2. Define serializer struct with `#[derive(Serialize, Deserialize, Schema)]`; use `#[dto]` for a 0.4.0 input type shared with WASM
 3. For CRUD: use `ModelSerializer` pattern
 4. For custom: define explicit fields
 
@@ -81,11 +81,31 @@ pub struct ProductCreateInput {
 }
 ```
 
+For a named input payload that crosses between a WASM client and a native API
+boundary **(0.4.0; #5543)**, use `#[dto]` instead of a native-only
+`Validate` derive. Transport derives remain explicit; put any OpenAPI
+`Schema` derive on a native-only representation rather than the shared client
+contract. A `default-features = false` client must enable the `core` feature on
+the `reinhardt` facade.
+
+```rust
+use reinhardt::dto;
+use serde::{Deserialize, Serialize};
+
+#[dto]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SharedProductCreateInput {
+    #[validate(length(min = 1, max = 200))]
+    pub name: String,
+}
+```
+
 **Checklist:**
 
 - [ ] Read serializer defined (for API responses)
 - [ ] Write serializer/input defined (for API requests)
 - [ ] Validation rules applied where needed
+- [ ] Shared native/WASM input uses named-field `#[dto]` with unconditional `#[validate(...)]` rules when targeting 0.4.0
 - [ ] Nested serializers for relations (if applicable)
 
 ---
@@ -367,27 +387,35 @@ Add async side-effects for post-commit operations.
 
 **Steps:**
 
-1. Connect signal receiver for model events
-2. Implement receiver as idempotent async function
-3. Optionally enqueue background tasks
+1. Connect a receiver for the required model or transaction event
+2. Implement the receiver as an idempotent async function
+3. After a successful transaction commit, enqueue ordinary work or a durable job
 
 **Example:**
 
 ```rust
-use reinhardt::signals::{post_save, connect_receiver};
+use std::sync::Arc;
+
+use reinhardt::core::{
+    connect_receiver,
+    signals::transaction::{self, TransactionContext},
+};
 
 // In app setup
 connect_receiver!(
-    post_save::<Product>(),
-    |product: Arc<Product>, _ctx| async move {
-        // Enqueue notification task
-        let task = NotifyProductCreated::new(product.id.unwrap());
-        TaskQueue::enqueue(task).await?;
+    transaction::on_commit(),
+    |_ctx: Arc<TransactionContext>| async move {
+        // Call the app-owned queue service after the write commits.
         Ok(())
     },
-    dispatch_uid = "product_post_save_notify"
+    dispatch_uid = "product_on_commit_notify"
 );
 ```
+
+Use ordinary `TaskQueue` work for short-lived fire-and-forget behavior. For
+restart-safe operations or UI-visible status/retry/cancellation, enable
+`tasks-durable` and enqueue a `JobSpec` through a long-lived `DurableQueue`.
+The durable enqueue must also occur after the domain write commits.
 
 **Checklist:**
 
@@ -397,6 +425,7 @@ connect_receiver!(
 - [ ] Arguments are serializable (IDs, not model instances)
 - [ ] No cascading signal triggers
 - [ ] Tests verify receiver behavior in isolation
+- [ ] Durable jobs use `tasks-durable`, persist through a shared queue, and expose status through snapshots/events when clients need progress
 
 ---
 

@@ -78,19 +78,18 @@ async fn test_order_confirmation_is_idempotent() {
 To verify a signal actually triggers the receiver, use `SignalSpy`:
 
 ```rust
-use reinhardt::signals::middleware::SignalSpy;
+use reinhardt::core::signals::{SignalSpy, post_save};
 
 #[rstest]
 #[tokio::test]
 async fn test_post_save_triggers_receiver() {
     // Arrange
-    let spy = SignalSpy::new();
+    let spy = SignalSpy::<Product>::new();
     let signal = post_save::<Product>();
-    // Connect spy as middleware
-    // ... (see middleware module docs)
+    signal.add_middleware(spy.clone());
 
     // Act
-    signal.send(Arc::new(product)).await;
+    signal.send(product).await.unwrap();
 
     // Assert
     assert_eq!(spy.call_count(), 1);
@@ -161,23 +160,80 @@ async fn test_order_creation_enqueues_task(
 
 ---
 
-## Test Backend for Tasks
+## Testing Durable Job Queues (0.4.x)
 
-Use `ImmediateBackend` in tests to execute tasks synchronously:
+`ImmediateBackend` and `DummyBackend` test ordinary `TaskQueue` behavior; they
+do not prove persistence, claims, or lifecycle events. Test durable jobs with a
+real `SqliteDurableJobStore` and one focused lifecycle per test:
+
+```rust
+use reinhardt::tasks::{
+    DurableQueue, JobEventKind, JobSpec, JobState, SqliteDurableJobStore,
+};
+use rstest::*;
+use serde_json::json;
+
+#[rstest]
+#[tokio::test]
+async fn durable_job_records_lifecycle_events() {
+    // Arrange
+    let store = SqliteDurableJobStore::new("sqlite::memory:").await.unwrap();
+    let queue = DurableQueue::new(store);
+    let queued = queue.enqueue(JobSpec::new("send_email")).await.unwrap();
+
+    // Act
+    let claim = queue.claim_next().await.unwrap().unwrap();
+    let completed = queue.succeed(claim, &json!({"sent": true})).await.unwrap();
+    let events = queue.events(queued.id).await.unwrap();
+
+    // Assert
+    assert_eq!(completed.state, JobState::Succeeded);
+    assert_eq!(events.len(), 3);
+    assert_eq!(events[0].kind, JobEventKind::Enqueued);
+    assert_eq!(events[1].kind, JobEventKind::Claimed);
+    assert_eq!(events[2].kind, JobEventKind::Succeeded);
+}
+```
+
+Cover these durable-specific contracts:
+
+1. `Queued` → `Running` → terminal state, returned `JobSnapshot`, and ordered events
+2. Retry scheduling and exhaustion, including `retry_after` and attempt count
+3. Queued and running cancellation; a running cancellation request is a flag, not an immediate terminal state
+4. Lease renewal, expired-claim recovery, and stale-claim completion conflicts
+5. Restart persistence by creating a new queue over the same file-backed store
+
+For isolated tests, `SqliteDurableJobStore::new("sqlite::memory:")` creates the
+store safely. When constructing from a pool, do not use a private in-memory
+SQLite pool with multiple connections; use a shared-memory or file-backed store
+instead.
+
+---
+
+## Test Backend for Ordinary Tasks
+
+Use `DummyBackend` or `ImmediateBackend` only when the unit test needs a
+successful ordinary-queue enqueue without a real broker:
 
 ```rust
 // In test setup
-let backend = ImmediateBackend::new();
-let queue = TaskQueue::new(backend);
+let backend = DummyBackend::new();
+let queue = TaskQueue::new();
+let _task_id = queue.enqueue(Box::new(task), &backend).await?;
 ```
 
-Or use `DummyBackend` to capture enqueued tasks without executing:
+Both built-in backends discard the supplied task and return an ID; the current
+`ImmediateBackend` does not invoke `TaskExecutor` or retain work for later
+assertions. Test task execution by calling `TaskExecutor::execute` directly,
+and use a custom `TaskBackend` test double when an assertion needs to inspect
+the enqueued task or backend state.
+
+For an equivalent no-op backend in a focused enqueue test:
 
 ```rust
-let backend = DummyBackend::new();
-let queue = TaskQueue::new(backend);
-// ... enqueue tasks ...
-// Assert on what was enqueued
+let backend = ImmediateBackend::new();
+let queue = TaskQueue::new();
+let _task_id = queue.enqueue(Box::new(task), &backend).await?;
 ```
 
 ---
@@ -189,4 +245,5 @@ let queue = TaskQueue::new(backend);
 3. **AAA pattern** with standard labels
 4. **Mock external dependencies** — don't send real emails/webhooks in tests
 5. **Test error paths** — not found, already processed, network failure
-6. **Use `ImmediateBackend` or `DummyBackend`** — never connect to real Redis/SQS in unit tests
+6. **Use `ImmediateBackend` or `DummyBackend` only for ordinary enqueue acceptance** — neither executes nor captures tasks; use a custom backend when behavior must be asserted
+7. **Use `SqliteDurableJobStore` for durable jobs** — ordinary backends cannot prove durable persistence or lifecycle transitions

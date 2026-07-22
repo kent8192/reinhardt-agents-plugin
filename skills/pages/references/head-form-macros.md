@@ -79,7 +79,8 @@ and reset/submit actions.
 Keep dynamic concerns in the form boundary:
 
 - Field values, validation, disabled state, and submit phase belong to form state.
-- Derived display around the form can use `watch {}` or memoized values.
+- Derived display around the form can use direct reactive `page!` expressions
+  or memoized values.
 - **(0.4.x)** When a generated runtime submits a typed async mutation, use
   `use_form_action` to sequence validation and current-value dispatch. Do not
   reproduce `handle_submit`, `get_values`, and `use_action.dispatch` in a
@@ -337,6 +338,34 @@ client_validators: {
     ],
 }
 ```
+
+### Shared DTO Validation (0.4.0; #5543)
+
+For a named input type used by both a WASM form and a native `#[server_fn]` or
+HTTP handler, use `#[dto]` with unconditional field rules. This is separate
+from `client_validators`: the form DSL does not automatically invoke the Rust
+DTO's `Validate` implementation.
+
+```rust
+use reinhardt::dto;
+use serde::{Deserialize, Serialize};
+
+#[dto]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SignupInput {
+    #[validate(email)]
+    pub email: String,
+
+    #[validate(length(min = 8))]
+    pub password: String,
+}
+```
+
+`#[dto]` emits only Reinhardt's shared `Validate` derive. Keep transport
+derives explicit, use the client-compatible `email`, `url`, `length`, and
+`range` rules, and enable the `core` feature on the `reinhardt` facade in a
+`default-features = false` client. Call validation again on the server after deserialization.
+Use server-side validation for cross-field, authorization, and business rules.
 
 ## #[server_fn] Attribute Macro
 

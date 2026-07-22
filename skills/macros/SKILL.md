@@ -1,7 +1,7 @@
 ---
 name: macros
 description: Use when working with reinhardt procedural macros - covers attribute macros (#[model], #[user], #[inject], HTTP decorators), derive macros, and function-like macros (guard!, installed_apps!, path!)
-versions: ["0.1.x", "0.2.x", "0.3.x"]
+versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.x"]
 ---
 
 # Reinhardt Macros
@@ -12,7 +12,7 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 
 - User uses or asks about any `#[attribute]` or `derive()` macro
 - User defines models, views, routes, or injectable services
-- User mentions: "macro", "#[model]", "#[user]", "#[inject]", "#[get]", "#[post]", "#[routes]", "#[component]", "#[settings]", "#[admin]", "#[app_config]", "#[hook]", "guard!", "installed_apps!", "path!", "#[derive(Schema)]", "#[derive(Model)]", "#[derive(Validate)]", "#[server_fn]", "#[wasm_server_api]", "#[permission_required]", "#[injectable]", "#[injectable_key]", "#[use_inject]"
+- User mentions: "macro", "#[model]", "#[dto]", "#[user]", "#[inject]", "#[get]", "#[post]", "#[routes]", "#[component]", "#[settings]", "#[admin]", "#[app_config]", "#[hook]", "guard!", "installed_apps!", "path!", "#[derive(Schema)]", "#[derive(Model)]", "#[derive(Validate)]", "#[server_fn]", "#[wasm_server_api]", "#[permission_required]", "#[injectable]", "#[injectable_key]", "#[use_inject]"
 
 ## Workflow
 
@@ -27,7 +27,9 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 1. Use `#[model(app_label = "...")]` to define a database model
 2. Use `#[field(...)]` attributes on every scalar field, including unconstrained fields
 3. Use `#[rel(...)]` attributes for relationships
-4. Optionally use `#[user(...)]` for user model with auth traits
+4. For 0.4.x generated columns, use typed `generated = SchemaExpr::...` and
+   review `references/attribute-macros.md` before selecting storage
+5. Optionally use `#[user(...)]` for user model with auth traits
 
 > **0.3.x note:** `#[model]` still auto-generates `{Model}Info`; relation fields now use `RelationInfo<T>` / `ManyToManyInfo<Source, Target>` payloads.
 
@@ -37,15 +39,16 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 2. Use `#[api_view]` for function-based API views
 3. Use `#[action]` for custom ViewSet actions
 4. Use `#[routes]` for URL pattern registration
-5. Use `#[component]` for 0.3 route-backed Pages components
+5. Use `#[component]` for route-backed Pages components; in 0.4.0-alpha.1+, write `#[component("/path/", name = "public-route-name")]`
 
 > **0.2.x note:** `#[url_patterns]` is removed in 0.2.x — use `#[routes]` for all URL registration.
 
 ### Validation DTOs
 
-1. Use `#[derive(Validate)]` with `#[validate(...)]` attributes for request DTOs
-2. Prefer generated `{Model}Info` types for model-shaped response DTOs
-3. Only hand-write serializer structs when the API shape intentionally differs from the model
+1. **(0.4.0; #5543)** Use `#[dto]` with unconditional `#[validate(...)]` field attributes for named-field request or form DTOs shared by native and WASM builds
+2. Keep `Debug`, `Clone`, `serde::Serialize`, `serde::Deserialize`, and any OpenAPI `Schema` derive explicit: `#[dto]` supplies only Reinhardt's shared `Validate` derive
+3. For native-only input types and versions through 0.3.x, use `#[derive(Validate)]` with `#[validate(...)]` attributes
+4. Prefer generated `{Model}Info` types for model-shaped response DTOs; only hand-write serializer structs when the API shape intentionally differs from the model
 
 ### DI Integration
 
@@ -66,10 +69,16 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 - ALL macros are re-exported through the `reinhardt` facade crate
 - `#[model]` auto-derives `Model`, `Serialize`, `Deserialize`, `Clone`, `Debug`
 - Every scalar field inside `#[model]` should have `#[field]` or `#[field(...)]`; relationship fields should have `#[rel(...)]`
-- Use `#[derive(Validate)]` / `#[validate(...)]` for request validation instead of duplicating validation logic in services
+- **(0.4.x)** Generated columns use `generated = SchemaExpr::...` by default;
+  reserve `generated_sql` for trusted backend-specific expressions and keep
+  generated fields out of write inputs
+- For native-only request validation and 0.1.x–0.3.x code, use `#[derive(Validate)]` / `#[validate(...)]` instead of duplicating validation logic in services
+- **(0.4.0; #5543)** Shared native/WASM DTOs use `#[dto]` above explicit derives; it adds `reinhardt::Validate`, accepts named-field structs only, and does not add serde or `Schema` derives
+- **(0.4.0; #5543)** Keep shared DTO rules limited to `email`, `url`, `length`, and `range`; client validation improves UX but handlers and `#[server_fn]` endpoints must revalidate before applying business rules
 - `#[user]` auto-implements `BaseUser` and `AuthIdentity` traits on native targets and is inert on WASM in 0.3.x
 - HTTP decorators (`#[get]`, etc.) accept `name` and `use_inject` options
 - Register 0.3 endpoint-macro handlers with `ServerRouter::endpoint(...)`; do not use removed raw `ServerRouter::function` / `.route` registration
+- **(0.4.0-alpha.1+)** Route-backed `#[component]` declarations require a string-literal `name = "..."`; positional names and bare identifiers are rejected
 - `guard!` precedence: `!` > `&` > `|` — use parentheses for clarity
 - `installed_apps!` validates app names at compile time
 - `path!` validates URL patterns at compile time (must start with `/`, snake_case params)
@@ -87,6 +96,7 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 - For auth user model: `../authentication/references/user-models.md`
 - For view patterns: `../api-development/references/view-patterns.md`
 - For pages frontend: `../pages/references/page-macro.md`
+- For shared DTO validation: `references/attribute-macros.md`
 
 ## Dynamic References
 
@@ -102,3 +112,4 @@ For the latest macro definitions:
 8. Read `reinhardt/crates/reinhardt-urls/routers-macros/src/lib.rs` for path! macro
 9. Read `reinhardt/crates/reinhardt-grpc/macros/src/lib.rs` for #[grpc_handler]
 10. Read `reinhardt/crates/reinhardt-graphql/macros/src/lib.rs` for #[graphql_handler]
+11. Read `reinhardt/crates/reinhardt-core/macros/src/dto.rs` for the 0.4.0 shared DTO validation contract

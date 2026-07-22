@@ -12,6 +12,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Document the 0.4.x typed form-action contract from
   [reinhardt-web PR #5556](https://github.com/kent8192/reinhardt-web/pull/5556)
   across Pages examples, async-hook guidance, and the code-review checklist.
+- Document the 0.4.0 shared `#[dto]` validation contract from
+  [reinhardt-web PR #5543](https://github.com/kent8192/reinhardt-web/pull/5543)
+  across macro, API, Pages, scaffolding, testing, and review guidance
+  while preserving the existing 0.1.x–0.3.x native-only validation paths.
+
+### Changed
+
+- Align Pages, macro, scaffolding, migration, architecture, and review guidance
+  with reinhardt-web #5558: route-backed `#[component]` declarations require
+  an explicit named route argument in the 0.4.x development line.
+- Align model, macro, migration, and code-review guidance with the typed
+  generated-column contract delivered by reinhardt-web #5586 and #5615.
 
 ## [0.3.2] - 2026-07-01
 
