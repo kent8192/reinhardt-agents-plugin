@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Align Pages action guidance, handler examples, and review checks with the
+  0.4.x `use_action_state` and `Action` helpers from reinhardt-web #5557.
+
 ## [0.3.2] - 2026-07-01
 
 ### Added

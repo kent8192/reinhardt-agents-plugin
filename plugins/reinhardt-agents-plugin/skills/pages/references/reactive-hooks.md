@@ -150,7 +150,7 @@ use_effect(
 |------|-----------|-------------|
 | `use_transition` | `use_transition() -> TransitionState` | Non-blocking state updates |
 | `use_action` | `use_action(action_fn) -> Action<T, E>` | Async action with loading/error state |
-| `use_action_state` | *(deprecated)* | Use `use_action` instead |
+| `use_action_state` | `use_action_state(action_fn) -> ActionStateBuilder<...>` | **(0.4.x)** Configure action lifecycle callbacks and optional success reset before building an `Action` |
 
 ```rust
 let save_action = use_action(|data: FormData| async move {
@@ -161,28 +161,68 @@ let save_action = use_action(|data: FormData| async move {
 save_action.dispatch(form_data);
 
 // Check state
-match save_action.phase().get() {
+match save_action.phase() {
     ActionPhase::Idle => { /* ready */ },
     ActionPhase::Pending => { /* loading */ },
-    ActionPhase::Resolved(result) => { /* done */ },
+    ActionPhase::Success(result) => { /* done */ },
+    ActionPhase::Error(error) => { /* failed */ },
 }
 ```
 
+### Action-State Builder (0.4.x)
+
+`use_action_state` is not deprecated. It configures the same `Action` handle
+as `use_action`, but makes lifecycle callbacks and a success reset explicit
+before calling `.build()`. Use `use_action` when direct dispatch and phase
+inspection are enough; use the builder when completion behavior is part of the
+component contract. Neither hook replaces `form!` / `use_form` validation.
+
+Both hooks allocate scope-owned reactive state. Normal component rendering
+provides that scope; low-level native tests must create the action inside
+`ReactiveScope::run(|| { ... })`.
+
+```rust,ignore
+let save_action = use_action_state(|input: SaveSettingsRequest| async move {
+    save_project_settings(input).await
+})
+.on_success(|project| {
+    show_saved_toast(project);
+})
+.on_error(|error| {
+    show_save_error(error);
+})
+.build();
+
+let success_view = save_action.render_result(|project| render_saved_project(project));
+let error_view = save_action.render_error(|error| render_save_error(error));
+```
+
+`last_result` and `last_error` are aliases for values in the current
+`Success` or `Error` phase, not historical caches. Use `render_result` and
+`render_error` when a matching phase can be mapped directly into UI. Do not
+enable `reset_on_success()` when the normal UI must render `last_result` or
+`render_result`: after success callbacks run, the action returns to `Idle`.
+Reserve it for callback-owned completion behavior such as navigation, a toast,
+or resetting a form.
+
 ### Async UI Handler Patterns
 
-Use `use_action` for button/form mutations whose pending, success, and error
-state should be visible in the component tree. Do not fire an async task and
-drop its result from a route component; the `Action` phase is the UI contract
-that disables controls, renders errors, and prevents duplicate submissions.
+Use `use_action` or `use_action_state` for button/form mutations whose pending,
+success, and error state should be visible in the component tree. Do not fire
+an async task and drop its result from a route component; the `Action` phase
+is the UI contract that disables controls, renders errors, and prevents
+duplicate submissions.
 
 Use `use_resource` for async reads and derived text, including labels,
 diagnostics, previews, or server-translated copy that depends on the current
 route, selected version, locale, or loaded DTO. Prefer a stable fallback while
 the `Resource` is loading or failed.
 
-Use `use_callback` / `use_callback_with` for event handlers that dispatch the
-current form values, selected rows, selected versions, or route parameters into
-an `Action`. Avoid fixture IDs such as `Uuid::nil()`, `"sample-project"`, or
+For an event attribute that only dispatches an `Action`, use `dispatching` for
+a fixed cloneable payload or `dispatching_with` to read current form values,
+selected rows, versions, or route parameters at event time. Use
+`use_callback` / `use_callback_with` only when the handler has additional
+behavior. Avoid fixture IDs such as `Uuid::nil()`, `"sample-project"`, or
 hardcoded version IDs once the route has real server state available.
 
 ```rust
@@ -190,22 +230,16 @@ let save_action = use_action(|input: SaveSettingsRequest| async move {
     save_project_settings(input).await
 });
 
-let save_click = use_callback(
-    {
-        let save_action = save_action.clone();
-        let project_id = project_id.clone();
-        let form = form.clone();
-        move |_| {
-            save_action.dispatch(SaveSettingsRequest {
-                project_id: project_id.get(),
-                title: form.title(),
-                idea: form.idea(),
-                model: form.model(),
-            });
-        }
-    },
-    (save_action.clone(), project_id.clone(), form.clone()),
-);
+let save_click = save_action.dispatching_with({
+    let project_id = project_id.clone();
+    let form = form.clone();
+    move || SaveSettingsRequest {
+        project_id: project_id.get(),
+        title: form.title(),
+        idea: form.idea(),
+        model: form.model(),
+    }
+});
 ```
 
 Keep `spawn_local` for low-level browser integration where no hook owns the
@@ -491,3 +525,14 @@ In 0.2.x, `{expr}`, `if`, and `for` inside `page!` are unconditionally wrapped i
 - `create_resource_with_deps(fetcher, deps)` is removed; use `use_resource(fetcher, deps)`.
 - `use_effect_event` and `use_effect_event_with` are removed; use `use_callback` / `use_callback_with` or read non-dependency values with `.get_untracked()` inside the effect.
 - Shared Pages modules should rely on documented inert native/WASM stubs instead of broad call-site `#[cfg]` workarounds.
+
+## Version Differences (0.4.x)
+
+- `use_action_state` is a supported builder around `use_action`, not a
+  deprecated API. Use `.build()` after adding lifecycle callbacks or
+  `reset_on_success()`.
+- `Action::dispatching` and `Action::dispatching_with` create typed event
+  callbacks without a hand-written dispatch-only `use_callback`.
+- `Action::last_result`, `last_error`, `render_result`, and `render_error`
+  inspect only the current action phase. They are cleared by
+  `reset_on_success()` after success callbacks run.

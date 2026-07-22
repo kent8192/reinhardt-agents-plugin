@@ -85,7 +85,8 @@ Specialized agent for reviewing reinhardt-web application code against project c
 ### Pages Frontend
 
 - [ ] Button actions operate on the displayed/current entity: route params, form values, loaded DTOs, selected rows/versions, and server return values, not fixture IDs, sample constants, or canned text
-- [ ] Async mutations use `use_action`, async reads or derived text use `use_resource`, and event handlers use `use_callback` / `use_callback_with`; `spawn_local` is limited to low-level browser integration
+- [ ] Async mutations use `use_action` for direct dispatch/phase inspection or **(0.4.x)** `use_action_state` when lifecycle callbacks or reset behavior belong to the UI contract; async reads or derived text use `use_resource`, and neither action hook replaces `form!` / `use_form` validation
+- [ ] **(0.4.x)** Dispatch-only action attributes use `dispatching` for fixed cloneable payloads or `dispatching_with` for current/non-cloneable payloads; reserve `use_callback` / `use_callback_with` for handlers with additional work, and do not pair `reset_on_success` with normal success UI based on `last_result` or `render_result`
 - [ ] Non-`Copy` callbacks/actions passed into `page!` render closures are cloned at the attribute use site when needed
 - [ ] Internal button-triggered redirects use `reinhardt::pages::navigate(..., NavigationType::Push)` or the current router handle API, not `window.location.set_href`
 - [ ] App-local i18n needed by Pages clients crosses the boundary through a registered `#[server_fn]` plus `use_resource` fallback, not duplicated client/server gettext code
