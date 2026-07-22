@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Document `0.4.0-alpha.1+` DTO-derived client form bindings across Pages,
+  macro, testing, and review guidance, including `ClientForm`,
+  `ClientFormChoices`, shared DTO validation, and generated submit lifecycle
+  checks. (#57)
+
 ## [0.3.2] - 2026-07-01
 
 ### Added

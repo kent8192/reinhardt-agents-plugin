@@ -1,7 +1,7 @@
 ---
 name: architecture
 description: Use when implementing a complete feature across all reinhardt layers - guides the full workflow from model to API to tests with completion checklist
-versions: ["0.1.x", "0.2.x", "0.3.x"]
+versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.0-alpha.1"]
 ---
 
 # Reinhardt Feature Development Architecture
@@ -65,6 +65,7 @@ Read `references/error-mapping.md` for the standard mapping from service-layer e
 - For 0.3.x auth, use `CurrentUser<T>` for full user extraction and remove legacy `AuthUser<T>`
 - For 0.3.x model-facing APIs, review generated `{Model}Info` relation fields and avoid assuming flattened `*_id` payloads
 - For Pages features, place route-backed `#[component]` wrappers under `src/apps/<app>/client/components/` and keep client/server modules split
+- For 0.4.0-alpha.1+ Pages forms, choose `ClientForm` only when a supported named DTO is the canonical request contract; otherwise keep the explicit `form!` boundary
 
 ## Cross-Domain References
 

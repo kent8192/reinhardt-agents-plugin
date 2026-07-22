@@ -1,7 +1,7 @@
 ---
 name: macros
-description: Use when working with reinhardt procedural macros - covers attribute macros (#[model], #[user], #[inject], HTTP decorators), derive macros, and function-like macros (guard!, installed_apps!, path!)
-versions: ["0.1.x", "0.2.x", "0.3.x"]
+description: Use when working with reinhardt procedural macros - covers attribute macros (#[model], #[dto], #[user], #[inject], HTTP decorators), derive macros including ClientForm, and function-like macros (guard!, installed_apps!, path!)
+versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.0-alpha.1"]
 ---
 
 # Reinhardt Macros
@@ -12,7 +12,7 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 
 - User uses or asks about any `#[attribute]` or `derive()` macro
 - User defines models, views, routes, or injectable services
-- User mentions: "macro", "#[model]", "#[user]", "#[inject]", "#[get]", "#[post]", "#[routes]", "#[component]", "#[settings]", "#[admin]", "#[app_config]", "#[hook]", "guard!", "installed_apps!", "path!", "#[derive(Schema)]", "#[derive(Model)]", "#[derive(Validate)]", "#[server_fn]", "#[wasm_server_api]", "#[permission_required]", "#[injectable]", "#[injectable_key]", "#[use_inject]"
+- User mentions: "macro", "#[model]", "#[dto]", "#[client_form]", "#[user]", "#[inject]", "#[get]", "#[post]", "#[routes]", "#[component]", "#[settings]", "#[admin]", "#[app_config]", "#[hook]", "guard!", "installed_apps!", "path!", "#[derive(Schema)]", "#[derive(Model)]", "#[derive(Validate)]", "#[derive(ClientForm)]", "ClientFormChoices", "#[server_fn]", "#[wasm_server_api]", "#[permission_required]", "#[injectable]", "#[injectable_key]", "#[use_inject]"
 
 ## Workflow
 
@@ -43,9 +43,10 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 
 ### Validation DTOs
 
-1. Use `#[derive(Validate)]` with `#[validate(...)]` attributes for request DTOs
-2. Prefer generated `{Model}Info` types for model-shaped response DTOs
-3. Only hand-write serializer structs when the API shape intentionally differs from the model
+1. In 0.4.0-alpha.1+, use `#[dto]` on a named request DTO that must validate on both native and WASM; it emits or normalizes `Validate`, but does not replace explicit `Clone` or serde derives.
+2. Use `#[derive(ClientForm)]` only when that named DTO is the canonical supported client form contract; configure `name`, `validate`, and `server_fn` through `#[client_form(...)]`.
+3. Prefer generated `{Model}Info` types for model-shaped response DTOs.
+4. Only hand-write serializer structs when the API shape intentionally differs from the model.
 
 ### DI Integration
 
@@ -67,6 +68,7 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 - `#[model]` auto-derives `Model`, `Serialize`, `Deserialize`, `Clone`, `Debug`
 - Every scalar field inside `#[model]` should have `#[field]` or `#[field(...)]`; relationship fields should have `#[rel(...)]`
 - Use `#[derive(Validate)]` / `#[validate(...)]` for request validation instead of duplicating validation logic in services
+- **(0.4.0-alpha.1+)** `#[dto]` is limited to named structs and keeps validation cross-target; `ClientForm` additionally requires a non-generic named struct with supported scalar or choice fields. See `references/attribute-macros.md` and `references/derive-macros.md`.
 - `#[user]` auto-implements `BaseUser` and `AuthIdentity` traits on native targets and is inert on WASM in 0.3.x
 - HTTP decorators (`#[get]`, etc.) accept `name` and `use_inject` options
 - Register 0.3 endpoint-macro handlers with `ServerRouter::endpoint(...)`; do not use removed raw `ServerRouter::function` / `.route` registration
@@ -96,9 +98,10 @@ For the latest macro definitions:
 2. Read `reinhardt/crates/reinhardt-di/macros/src/lib.rs` for DI macros (#[injectable], #[injectable_key])
 3. Read `reinhardt/crates/reinhardt-auth/macros/src/lib.rs` for guard! macro
 4. Read `reinhardt/crates/reinhardt-db-macros/src/lib.rs` for #[document] macro
-5. Read `reinhardt/crates/reinhardt-pages/macros/src/lib.rs` for #[server_fn], page!, head!, form!
-6. Read `reinhardt/crates/reinhardt-query/macros/src/lib.rs` for #[derive(Iden)]
-7. Read `reinhardt/crates/reinhardt-rest/openapi-macros/src/lib.rs` for #[derive(Schema)]
-8. Read `reinhardt/crates/reinhardt-urls/routers-macros/src/lib.rs` for path! macro
-9. Read `reinhardt/crates/reinhardt-grpc/macros/src/lib.rs` for #[grpc_handler]
-10. Read `reinhardt/crates/reinhardt-graphql/macros/src/lib.rs` for #[graphql_handler]
+5. Read `reinhardt/crates/reinhardt-pages/macros/src/lib.rs` for #[server_fn], page!, head!, form!, ClientForm, and ClientFormChoices
+6. Read `reinhardt/crates/reinhardt-pages/macros/src/client_form.rs` and `client_form_choices.rs` for the current DTO-derived form contract
+7. Read `reinhardt/crates/reinhardt-query/macros/src/lib.rs` for #[derive(Iden)]
+8. Read `reinhardt/crates/reinhardt-rest/openapi-macros/src/lib.rs` for #[derive(Schema)]
+9. Read `reinhardt/crates/reinhardt-urls/routers-macros/src/lib.rs` for path! macro
+10. Read `reinhardt/crates/reinhardt-grpc/macros/src/lib.rs` for #[grpc_handler]
+11. Read `reinhardt/crates/reinhardt-graphql/macros/src/lib.rs` for #[graphql_handler]

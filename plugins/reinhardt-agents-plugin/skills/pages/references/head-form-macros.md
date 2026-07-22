@@ -1,4 +1,4 @@
-# head!, form!, and #[server_fn] Reference
+# head!, form!, DTO-derived ClientForm, and #[server_fn] Reference
 
 ## head! Macro
 
@@ -82,6 +82,21 @@ Keep dynamic concerns in the form boundary:
 - Derived display around the form can use `watch {}` or memoized values.
 - Server submission should target the configured `server_fn` or `action`; do not
   manually duplicate the request payload in an unrelated event handler.
+
+### DTO-Derived Client Forms (0.4.0-alpha.1+)
+
+`ClientForm` is an opt-in alternative source for a form whose canonical request
+schema is already a supported, named DTO. It generates a typed companion that
+uses the same `use_form` runtime; it does not change the `form!` DSL or its
+existing behavior.
+
+- Use `form!` when the UI needs an independent static schema, collections,
+  file inputs, or custom field behavior outside the generated DTO contract.
+- Use `#[derive(ClientForm)]` when duplicating field tokens and request assembly
+  would make a named request DTO drift from its client form.
+- Read [DTO-Derived Client Form Bindings](client-form-bindings.md) before using
+  `#[client_form(validate)]`, `server_fn = ...`, generated choices, or hidden
+  DTO fields.
 
 ### Form-Level Attributes
 

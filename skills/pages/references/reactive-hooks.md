@@ -354,11 +354,15 @@ The `page!` macro's `watch` block provides **reactive rendering** that automatic
 | State management | `use_state`, `use_reducer` |
 | DOM refs and measurements | `use_ref`, `use_layout_effect` |
 
-For forms, use `form!` for static expressions such as fields, labels, validation
-rules, action/server_fn, and submit button shape. Use `use_form` for dynamic
-states such as current values, dirty/touched markers, validation results, submit
-phase, and reset/submit actions. Use Signals, hooks, and `watch {}` for the
-surrounding display state, not as a second implementation of the form runtime.
+For forms, use `form!` for a hand-defined static schema, or (in
+0.4.0-alpha.1+) use a `ClientForm`-derived companion when a supported DTO is the
+canonical request contract. Both use `use_form` for current values,
+dirty/touched markers, validation results, submit phase, and reset/submit
+actions. For a generated client-form submit, let the form runtime own its
+validation and async lifecycle; bind pending, success, and error UI to form
+state instead of recreating it with a separate action. Use Signals, hooks, and
+`watch {}` for surrounding display state, not as a second implementation of the
+form runtime. See [DTO-Derived Client Form Bindings](client-form-bindings.md).
 
 ### Example: watch Replaces Manual Effect Rendering
 

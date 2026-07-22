@@ -1,7 +1,7 @@
 ---
 name: pages
-description: Use when building WASM frontend pages with reinhardt-pages - covers page!/head!/form! macros, reactive hooks (Signal/Effect/useState), routing, SSR/hydration, server functions, and API client
-versions: ["0.1.x", "0.2.x", "0.3.x"]
+description: Use when building WASM frontend pages with reinhardt-pages - covers page!/head!/form! macros, DTO-derived ClientForm bindings, reactive hooks (Signal/Effect/useState), routing, SSR/hydration, server functions, and API client
+versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.0-alpha.1"]
 ---
 
 # Reinhardt Pages (WASM Frontend)
@@ -11,10 +11,10 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 ## When to Use
 
 - User creates or modifies WASM frontend components
-- User works with `page!`, `head!`, `form!` macros or `#[server_fn]`
+- User works with `page!`, `head!`, `form!`, `ClientForm`, or `ClientFormChoices` macros, or `#[server_fn]`
 - User sets up reactive state with Signal, Effect, Memo, or hooks
 - User configures client-side routing, SSR, or hydration
-- User mentions: "page", "head", "form", "server_fn", "Signal", "useState", "useEffect", "watch", "SSR", "hydration", "WASM", "frontend", "router", "ApiQuerySet", "Table", "prelude", "component"
+- User mentions: "page", "head", "form", "ClientForm", "ClientFormChoices", "DTO form", "server_fn", "Signal", "useState", "useEffect", "watch", "SSR", "hydration", "WASM", "frontend", "router", "ApiQuerySet", "Table", "prelude", "component"
 
 ## Workflow
 
@@ -30,10 +30,11 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 
 ### Creating a Form
 
-1. **Define Form** — read `references/head-form-macros.md` (form! section)
-2. **Add Server Function** — read `references/head-form-macros.md` (`#[server_fn]` section)
-3. **Embed in Page** — read `references/page-macro.md`
-4. **Test** — read `references/testing-guide.md`
+1. **Choose the source of truth** — use `form!` for a hand-defined UI schema, or (in 0.4.0-alpha.1+) derive `ClientForm` when a supported named request DTO is the canonical form contract; read `references/head-form-macros.md`.
+2. **Build DTO-derived forms** — read `references/client-form-bindings.md` for `ClientForm`, `ClientFormChoices`, validation, hidden fields, and generated submit helpers.
+3. **Add Server Function** — read `references/head-form-macros.md` (`#[server_fn]` section).
+4. **Embed in Page** — read `references/page-macro.md`.
+5. **Test** — read `references/testing-guide.md`.
 
 ## Important Rules
 
@@ -41,6 +42,8 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - Import app/framework types at the top of the module instead of repeating long fully qualified paths in components or server function signatures/bodies
 - In route-backed UI, wire buttons and actions to route params, form values, loaded DTOs, selected rows/versions, and server return values; never leave demo fixture IDs, sample constants, or canned text in production route actions
 - Build static form structure with `form!` and dynamic form state with `use_form`
+- **(0.4.0-alpha.1+)** When a non-generic named request DTO is the canonical browser payload and its fields fit the generated contract, prefer opt-in `#[derive(ClientForm)]` over duplicating field tokens and request assembly by hand. `ClientForm` shares the `use_form` runtime and does not alter existing `form!` behavior.
+- **(0.4.0-alpha.1+)** Use `ClientFormChoices` only for externally tagged, fieldless enums whose serialized and deserialized choice names agree. Keep serde-skipped request fields out of generated `server_fn` submit helpers so browser and native payloads stay compatible.
 - For user-facing relation inputs, show representative values such as `title`, `name`, or `slug`; do not ask users to type raw foreign-key primary keys unless the surface is internal/admin-only or no useful representative field exists
 - Configure `cfg_aliases` in `build.rs` for `wasm`/`native` and `server`/`client` aliases
 - Event handlers in `page!` are auto-handled across platforms (no manual `#[cfg(wasm)]` needed)
@@ -84,10 +87,11 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 
 For the latest API definitions:
 
-1. Read `reinhardt/crates/reinhardt-pages/macros/src/lib.rs` for macro definitions (page!, head!, form!, #[server_fn])
+1. Read `reinhardt/crates/reinhardt-pages/macros/src/lib.rs` for macro definitions (page!, head!, form!, #[server_fn], ClientForm, ClientFormChoices)
 2. Read `reinhardt/crates/reinhardt-pages/src/prelude.rs` for exported types
 3. Read `reinhardt/crates/reinhardt-pages/src/reactive.rs` for reactive system
 4. Read `reinhardt/crates/reinhardt-pages/src/router.rs` for routing
 5. Read `reinhardt/crates/reinhardt-pages/src/api.rs` for API client
 6. Read `reinhardt/crates/reinhardt-pages/src/tables.rs` for table component
 7. Read `reinhardt/crates/reinhardt-pages/src/testing.rs` for test utilities
+8. Read `reinhardt/crates/reinhardt-pages/macros/src/client_form.rs` and `client_form_choices.rs` for the current DTO-derived form contract

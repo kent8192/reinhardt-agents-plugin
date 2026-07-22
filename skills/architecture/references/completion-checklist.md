@@ -55,6 +55,13 @@ Run through this checklist after implementing a feature to verify all layers are
 - [ ] Error mapping verified (service errors → HTTP responses)
 - [ ] Request validation via serializer/input types
 
+## Pages Form Layer (if applicable)
+
+- [ ] `form!` is used for a distinct static UI schema; **(0.4.0-alpha.1+)** a `ClientForm` companion is used only when a non-generic named request DTO is the canonical supported form contract
+- [ ] `ClientForm` DTOs keep typed request conversion, optional-string normalization, validation, and hidden/default values in one contract instead of duplicating them in page handlers
+- [ ] `ClientFormChoices` wire values agree with serde, and generated `server_fn` submit DTOs do not contain serde-skipped request fields
+- [ ] Pending, success, and error UI derives from the `use_form` runtime; validation failure cannot dispatch the server function
+
 ## Admin Layer
 
 - [ ] Model registered with `#[admin]` macro

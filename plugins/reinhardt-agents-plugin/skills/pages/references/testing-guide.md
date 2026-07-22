@@ -61,6 +61,34 @@ Full integration tests with real server and WASM frontend.
 use reinhardt::pages::testing::e2e;
 ```
 
+## DTO-Derived Client Form Coverage (0.4.0-alpha.1+)
+
+For a `ClientForm`-derived DTO, test the generated contract instead of only the
+page that happens to render it. Keep the native checks focused on the shared
+form runtime; the generated `form.submit(&runtime)` helper itself is a WASM
+client API.
+
+| Behavior | Required assertion |
+|----------|--------------------|
+| Request conversion | `new()` / `with_defaults()` and `to_request()` preserve typed scalar values; whitespace-only `Option<String>` becomes `None`. |
+| Choices | `ClientFormChoices` emits the exact serde wire values and default choice; invalid enum shapes or conflicting names fail at compile time. |
+| Hidden values | `#[client_form(skip)]` or serde-skipped defaults stay preserved through refresh and request reconstruction. |
+| Validation | `#[client_form(validate)]` maps DTO field errors into the corresponding field state, and validation failure does not call the submit closure. |
+| Async lifecycle | Success, operation error, already-pending, and cancellation leave pending/success/error state coherent; do not convert operation errors into validation errors. |
+| Cross-target DTOs | Shared `#[dto]` validation and `field_errors()` behavior work on both native and `wasm32-unknown-unknown`. |
+
+For framework changes, mirror the focused upstream gates where applicable:
+
+```bash
+cargo test -p reinhardt-pages --test client_form_integration --all-features
+cargo test -p reinhardt-pages --test use_form_integration --all-features
+cargo test -p reinhardt-pages --test ui --all-features
+cargo check -p reinhardt-pages --target wasm32-unknown-unknown --all-features
+```
+
+Application changes should use the equivalent focused tests for their own DTO,
+server function, and browser form surface.
+
 ## MockServiceWorker API
 
 ### Setup & Lifecycle

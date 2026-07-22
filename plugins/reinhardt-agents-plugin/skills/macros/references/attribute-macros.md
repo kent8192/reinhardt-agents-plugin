@@ -52,6 +52,30 @@ pub struct Post {
 
 **Generated:** `Model` trait implementation with `fn objects() -> Manager<Self>`, field accessors, table name derivation.
 
+### `#[dto]` (0.4.0-alpha.1+)
+
+**Crate:** `reinhardt-core/macros`
+
+Mark a named request DTO whose validation must work on both native and WASM
+targets. `#[dto]` accepts no arguments, adds `Validate` if it is absent, and
+normalizes legacy `#[cfg_attr(native, derive(Validate))]` usage into the shared
+validation contract. It does **not** add `Clone`, `Serialize`, or `Deserialize`;
+derive those explicitly when the DTO crosses a transport boundary.
+
+```rust,ignore
+#[reinhardt::dto]
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
+pub struct CreateProjectRequest {
+    #[validate(length(min = 1))]
+    pub name: String,
+}
+```
+
+`#[dto]` only accepts structs with named fields. Tuple structs, unit structs,
+enums, and unions must use another explicit validation boundary. When this DTO
+is also the canonical client form payload, add `#[derive(ClientForm)]` and see
+[the ClientForm derive reference](derive-macros.md#dto-derived-client-forms-040-alpha1).
+
 ### Field Attributes (`#[field(...)]`)
 
 | Attribute | Type | Description |

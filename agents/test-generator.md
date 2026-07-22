@@ -15,6 +15,7 @@ Specialized agent for generating high-quality tests that comply with reinhardt t
 - Parameterized testing with `#[case]`
 - Async test patterns with `#[tokio::test]`
 - Serial test grouping with `#[serial(group)]`
+- DTO-derived `ClientForm` coverage for defaults, validation mapping, typed choices, and async submit state
 
 ## Mandatory Rules
 
@@ -34,6 +35,21 @@ Specialized agent for generating high-quality tests that comply with reinhardt t
 | Integration tests (within-crate) | `#[cfg(test)]` in functional crate |
 | Integration tests (cross-crate) | `tests/` directory |
 | E2E tests | `tests/` directory |
+
+## DTO-Derived Client Form Coverage (0.4.0-alpha.1+)
+
+When generating tests for `ClientForm`, cover the generated DTO contract as
+well as page rendering:
+
+- `new()` / `with_defaults()` / `to_request()` preserve values, including
+  whitespace-to-`None` conversion for `Option<String>`.
+- `ClientFormChoices` emits serde-compatible wire values and hidden/default
+  fields survive refresh.
+- DTO validation errors reach the intended field state and block submission.
+- Async submit covers success, operation error, already-pending, and
+  cancellation without leaving the runtime pending.
+- Native tests use `runtime.submit_async(...)`; generated `form.submit(...)`
+  is a WASM-client helper.
 
 ## Output Format
 
