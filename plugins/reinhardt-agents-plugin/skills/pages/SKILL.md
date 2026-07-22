@@ -66,14 +66,13 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - Keep Pages app `services/` modules focused on injectable keys, provider functions, and service structs/functions; put prompt builders, provider adapters, parsers, converters, repository/database internals, and narrow private helpers under app-local `server/` modules
 - Since 0.2.x, reactive expressions in `page!` are auto-wrapped — explicit `Page::reactive(...)` is no longer needed
 - Since 0.2.x, `use_effect`/`use_memo`/`use_callback` take explicit dependency arrays
-- Use `use_action` for async mutations outside a generated `use_form` runtime,
-  **(0.4.x)** `use_form_action` for validated generated-form submits,
-  `use_resource` for async reads or derived text, and `use_callback` /
-  `use_callback_with` for event handlers; keep `spawn_local` as an escape hatch
-  for low-level browser integration only
+- Use `use_action` for straightforward async mutations. In 0.4.x, use `use_action_state(...).on_success(...).on_error(...).reset_on_success().build()` when lifecycle behavior belongs to the UI contract; construct either inside a component or other active reactive scope
+- For an event attribute that only dispatches an action, use `action.dispatching(payload)` for a fixed cloneable payload or `action.dispatching_with(|| payload)` to read current values at event time. Use `use_callback` / `use_callback_with` when the handler has additional behavior
+- Use `use_resource` for async reads or derived text; keep `spawn_local` as an escape hatch for low-level browser integration only
 - When the same hook wiring (state plus effect/resource plus callbacks) appears in, or is foreseeable across, more than one component, extract it into a custom `use_*` function instead of duplicating it inline inside `#[component]` bodies
 - Custom hooks MUST follow the `use_<domain>` naming convention, live in a shared client module such as `src/apps/<app>/client/hooks.rs`, and return Signals, Resources, Actions, Callbacks, or other handles rather than detached raw values
 - Custom hooks SHOULD call `use_debug_value` so DevTools/debug logs show the hook state under a recognizable label
+- For a generated `use_form` runtime, use **(0.4.x)** `use_form_action` for validated typed submits rather than recreating its dispatch and lifecycle handling.
 - In 0.3.x, use `use_resource(fetcher, deps)` for both mount-only and dependency-driven resources; replace `create_resource*`
 - In 0.3.x, replace `use_effect_event*` with `use_callback*` or `.get_untracked()` inside the effect
 - In `0.4.0-alpha.1+`, when a `Resource` and compatible mutation `Action` results render the same domain value, use `Resource::latest_after(&action)` or `use_latest_resource_value(resource)` instead of a per-screen precedence handle; later added actions have higher priority, and only successful actions override the resource
@@ -108,4 +107,5 @@ For the latest API definitions:
 5. Read `reinhardt/crates/reinhardt-pages/src/api.rs` for API client
 6. Read `reinhardt/crates/reinhardt-pages/src/tables.rs` for table component
 7. Read `reinhardt/crates/reinhardt-pages/src/testing.rs` for test utilities
-8. Read `reinhardt/crates/reinhardt-pages/macros/src/component.rs` for route-backed `#[component]` parsing and diagnostics
+8. Read `reinhardt/crates/reinhardt-pages/src/reactive/hooks/async_action.rs` for current `Action`, `use_action`, and `use_action_state` behavior
+9. Read `reinhardt/crates/reinhardt-pages/macros/src/component.rs` for route-backed `#[component]` parsing and diagnostics

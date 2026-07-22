@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   an explicit named route argument in the 0.4.x development line.
 - Align model, macro, migration, and code-review guidance with the typed
   generated-column contract delivered by reinhardt-web #5586 and #5615.
+- Align Pages action guidance, handler examples, and review checks with the
+  0.4.x `use_action_state` and `Action` helpers from reinhardt-web #5557.
 
 ## [0.3.2] - 2026-07-01
 

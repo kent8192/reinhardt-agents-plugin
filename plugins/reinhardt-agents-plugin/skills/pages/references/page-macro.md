@@ -223,14 +223,14 @@ button { @click: |_| { do_something(); } }
 button { @click: handle_click }
 ```
 
-Closures must have 0 or 1 parameter (compile error if more). Prefer named
-`use_callback` handles for nontrivial work, and clone non-`Copy` callbacks or
-actions at the attribute use site when the render closure also needs them:
+Closures must have 0 or 1 parameter (compile error if more). For a 0.4.x event
+attribute that only dispatches an `Action`, prefer `dispatching` or
+`dispatching_with` over a hand-written `use_callback`. Use `use_callback` for
+nontrivial work beyond dispatch, and clone non-`Copy` callbacks or actions at
+the attribute use site when the render closure also needs them:
 
 ```rust
-let save_click = use_callback(move |_| {
-    save_action.dispatch(current_form_values());
-}, (save_action.clone(), form_state.clone()));
+let save_click = save_action.dispatching_with(move || current_form_values());
 
 page!(|| {
     button { @click: save_click.clone(), "Save" }
