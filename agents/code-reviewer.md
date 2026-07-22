@@ -100,6 +100,16 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] REST versioning configured via the `[rest_versioning]` settings fragment (rc.29+); flag any remaining `REINHARDT_VERSIONING_*` env-var reads or calls to `VersioningConfig::from_env`
 - [ ] Handler and server function signatures/bodies import request, DTO, and framework types instead of repeating long fully qualified paths
 
+### Durable Jobs (0.4.x)
+
+- [ ] Durable queue consumers enable facade feature `tasks-durable`; server-function injection also enables `di`
+- [ ] App-level durable-queue DI uses an app-owned wrapper/key; it does not register framework-owned `SharedDurableQueue` or `DurableQueueKey` through `#[injectable]`
+- [ ] Jobs are created from `JobSpec`, claimed atomically, and completed only through their returned `JobClaim`
+- [ ] Status endpoints expose `JobSnapshot` and ordered lifecycle events rather than mutable storage records
+- [ ] Retry, attempt, lease, and stale-claim conflict paths are handled intentionally; long-running workers renew their claims
+- [ ] Running-job cancellation treats `request_cancel` as cooperative: workers explicitly call `cancel` when honoring it, otherwise normal completion determines the terminal state
+- [ ] Durable queue tests cover lifecycle/events, retry exhaustion, cancellation, and lease recovery with a real SQLite durable store
+
 ### Pages Frontend
 
 - [ ] Button actions operate on the displayed/current entity: route params, form values, loaded DTOs, selected rows/versions, and server return values, not fixture IDs, sample constants, or canned text

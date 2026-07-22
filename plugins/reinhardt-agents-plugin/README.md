@@ -85,7 +85,7 @@ your project's `Cargo.toml` to determine which version family applies.
 | `macros` | "#[model]", "#[api]", "#[inject]", "#[admin]", "#[settings]" | Attribute, derive, and function-like procedural macros — semantics, options, and recommended patterns |
 | `testing` | "write tests", "add test coverage", "test this endpoint", "DI override" | rstest-based test generation with AAA pattern, reinhardt-test fixtures, TestContainers, and `with_di_overrides!` DI testing kit |
 | `dependency-injection` | "configure DI", "inject a service", "add a provider" | DI container configuration, provider scoping, `#[inject]` handler patterns, and database/auth integration |
-| `signals` | "signal", "signal handler", "lifecycle event", "background task" | Async side-effects via `pre_save` / `post_save` / etc., transaction signals, and task queue integration |
+| `signals` | "signal", "signal handler", "lifecycle event", "background task", "durable job" | Async side-effects via transaction signals, ordinary task queues, and durable job lifecycle guidance |
 | `configuration` | "settings", "configuration", "config", "TOML", "environment", "profile", "ProjectSettings", "fragment" | Composable settings system using fragments, TOML sources with interpolation, `MergeStrategy::Deep`, environment profiles, and the `#[settings]` macro |
 | `admin` | "admin", "admin panel", "ModelAdmin", "AdminSite", "admin interface" | Admin panel setup with `AdminSite` configuration, `#[admin]` macro, ModelAdmin registration, and route mounting |
 | `architecture` | "feature design", "cross-layer", "where does this go" | Cross-layer feature development workflow tying scaffolding, modeling, API, and pages together |
