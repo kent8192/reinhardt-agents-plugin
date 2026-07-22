@@ -136,19 +136,22 @@ let router = UnifiedRouter::new()
 Anonymous component DSL for WASM frontend views.
 
 ```rust
+let greeting = String::from("Hello, World!");
+
 page!({
     div {
-        h1 { "Hello, World!" }
+        h1 { { greeting } }
         p { "Welcome to Reinhardt Pages." }
     }
 })
 ```
 
 **(0.4.x)** `page!({ ... })` returns a `Page` immediately and implicitly
-captures surrounding values that implement `Clone`. Use it for normal page
-functions. Use `page!(|| { ... })` or `page!(|props: Props| { ... })` only for
-reusable factories invoked later; closure forms keep strict capture validation,
-so body values must be parameters or local bindings.
+captures surrounding values that implement `Clone`; the `greeting` value above
+is captured and cloned into generated reactive and event closures. Use it for
+normal page functions. Use `page!(|| { ... })` or `page!(|props: Props| { ... })`
+only for reusable factories invoked later; closure forms keep strict capture
+validation, so body values must be parameters or local bindings.
 
 ---
 
