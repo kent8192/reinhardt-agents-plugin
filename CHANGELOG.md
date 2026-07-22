@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Document the 0.4.x typed form-action contract from
+  [reinhardt-web PR #5556](https://github.com/kent8192/reinhardt-web/pull/5556)
+  across Pages examples, async-hook guidance, and the code-review checklist.
+
 ## [0.3.2] - 2026-07-01
 
 ### Added

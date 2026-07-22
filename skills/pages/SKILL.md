@@ -1,7 +1,7 @@
 ---
 name: pages
 description: Use when building WASM frontend pages with reinhardt-pages - covers page!/head!/form! macros, reactive hooks (Signal/Effect/useState), routing, SSR/hydration, server functions, and API client
-versions: ["0.1.x", "0.2.x", "0.3.x"]
+versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.x"]
 ---
 
 # Reinhardt Pages (WASM Frontend)
@@ -32,15 +32,19 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 
 1. **Define Form** — read `references/head-form-macros.md` (form! section)
 2. **Add Server Function** — read `references/head-form-macros.md` (`#[server_fn]` section)
-3. **Embed in Page** — read `references/page-macro.md`
-4. **Test** — read `references/testing-guide.md`
+3. **(0.4.x)** Compose typed async submission — read the `use_form_action`
+   section of `references/head-form-macros.md` and `references/reactive-hooks.md`
+4. **Embed in Page** — read `references/page-macro.md`
+5. **Test** — read `references/testing-guide.md`
 
 ## Important Rules
 
 - Prefer explicit imports over prelude (e.g., `use reinhardt::pages::component::Page;`) — see reinhardt-cloud dashboard for the canonical import style
 - Import app/framework types at the top of the module instead of repeating long fully qualified paths in components or server function signatures/bodies
 - In route-backed UI, wire buttons and actions to route params, form values, loaded DTOs, selected rows/versions, and server return values; never leave demo fixture IDs, sample constants, or canned text in production route actions
-- Build static form structure with `form!` and dynamic form state with `use_form`
+- Build static form structure with `form!` and dynamic form state with `use_form`;
+  **(0.4.x)** compose `use_form_action` when that generated runtime dispatches a
+  typed async mutation
 - For user-facing relation inputs, show representative values such as `title`, `name`, or `slug`; do not ask users to type raw foreign-key primary keys unless the surface is internal/admin-only or no useful representative field exists
 - Configure `cfg_aliases` in `build.rs` for `wasm`/`native` and `server`/`client` aliases
 - Event handlers in `page!` are auto-handled across platforms (no manual `#[cfg(wasm)]` needed)
@@ -59,7 +63,11 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - Keep Pages app `services/` modules focused on injectable keys, provider functions, and service structs/functions; put prompt builders, provider adapters, parsers, converters, repository/database internals, and narrow private helpers under app-local `server/` modules
 - Since 0.2.x, reactive expressions in `page!` are auto-wrapped — explicit `Page::reactive(...)` is no longer needed
 - Since 0.2.x, `use_effect`/`use_memo`/`use_callback` take explicit dependency arrays
-- Use `use_action` for async mutations, `use_resource` for async reads or derived text, and `use_callback` / `use_callback_with` for event handlers; keep `spawn_local` as an escape hatch for low-level browser integration only
+- Use `use_action` for async mutations outside a generated `use_form` runtime,
+  **(0.4.x)** `use_form_action` for validated generated-form submits,
+  `use_resource` for async reads or derived text, and `use_callback` /
+  `use_callback_with` for event handlers; keep `spawn_local` as an escape hatch
+  for low-level browser integration only
 - In 0.3.x, use `use_resource(fetcher, deps)` for both mount-only and dependency-driven resources; replace `create_resource*`
 - In 0.3.x, replace `use_effect_event*` with `use_callback*` or `.get_untracked()` inside the effect
 - Route internal button-triggered redirects through `reinhardt::pages::navigate(..., NavigationType::Push)` or the current router handle API; use `window.location.set_href` only for external URLs or hard-navigation fallbacks

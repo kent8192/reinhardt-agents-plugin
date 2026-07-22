@@ -149,7 +149,8 @@ use_effect(
 | Hook | Signature | Description |
 |------|-----------|-------------|
 | `use_transition` | `use_transition() -> TransitionState` | Non-blocking state updates |
-| `use_action` | `use_action(action_fn) -> Action<T, E>` | Async action with loading/error state |
+| `use_action` | `use_action(action_fn) -> Action<T, E>` | Async action with loading/error state and WASM completion callbacks |
+| `use_form_action` | `use_form_action(&form, action_fn) -> FormAction<...>` | **(0.4.x)** Validated typed async submit action for a `use_form` runtime |
 | `use_action_state` | *(deprecated)* | Use `use_action` instead |
 
 ```rust
@@ -161,29 +162,64 @@ let save_action = use_action(|data: FormData| async move {
 save_action.dispatch(form_data);
 
 // Check state
-match save_action.phase().get() {
+match save_action.phase() {
     ActionPhase::Idle => { /* ready */ },
     ActionPhase::Pending => { /* loading */ },
-    ActionPhase::Resolved(result) => { /* done */ },
+    ActionPhase::Success(result) => { /* done */ },
+    ActionPhase::Error(error) => { /* failed */ },
 }
 ```
 
+**(0.4.x)** `Action::on_success` and `Action::on_error` append callbacks for
+WASM action completion. They are useful for follow-up UI work that belongs after
+the action's result or error state is available:
+
+```rust
+let save_action = use_action(|input: SaveSettingsRequest| async move {
+    save_project_settings(input).await
+})
+.on_success(|_result| {
+    // Refresh related UI state.
+})
+.on_error(|error| {
+    // Record or surface the error.
+});
+```
+
+Native actions intentionally do not poll async futures, so these callbacks do
+not run on native targets. Keep completion assertions in WASM/browser tests;
+native tests can assert validation, dispatch, and synchronous state only.
+
+> **Generated forms (0.4.x):** When an action dispatches values from a
+> `form!` / `use_form` runtime, use `use_form_action` instead of manually
+> validating, collecting values, and calling `Action::dispatch`. It keeps the
+> form pending, success, and error lifecycle aligned with the action; see the
+> `use_form_action` section in `head-form-macros.md` for the full example.
+
 ### Async UI Handler Patterns
 
-Use `use_action` for button/form mutations whose pending, success, and error
-state should be visible in the component tree. Do not fire an async task and
-drop its result from a route component; the `Action` phase is the UI contract
-that disables controls, renders errors, and prevents duplicate submissions.
+Use `use_action` for button mutations and form flows that are not backed by a
+generated `use_form` runtime. Do not fire an async task and drop its result from
+a route component; the `Action` phase is the UI contract that disables controls,
+renders errors, and prevents duplicate submissions.
+
+For a `form!` / `use_form` runtime, use **(0.4.x)** `use_form_action` for the
+common validated typed submit flow. It dispatches generated current values only
+after validation and owns the corresponding form submit lifecycle.
 
 Use `use_resource` for async reads and derived text, including labels,
 diagnostics, previews, or server-translated copy that depends on the current
 route, selected version, locale, or loaded DTO. Prefer a stable fallback while
 the `Resource` is loading or failed.
 
-Use `use_callback` / `use_callback_with` for event handlers that dispatch the
-current form values, selected rows, selected versions, or route parameters into
-an `Action`. Avoid fixture IDs such as `Uuid::nil()`, `"sample-project"`, or
-hardcoded version IDs once the route has real server state available.
+Use `use_callback` / `use_callback_with` for event handlers that dispatch
+selected rows, selected versions, route parameters, or custom state into a
+standalone `Action`. A generated form handler calls `FormAction::submit()`
+instead of rebuilding a typed request from individual fields. Avoid fixture IDs
+such as `Uuid::nil()`, `"sample-project"`, or hardcoded version IDs once the
+route has real server state available.
+
+For a non-generated settings editor, an explicit request is still appropriate:
 
 ```rust
 let save_action = use_action(|input: SaveSettingsRequest| async move {
@@ -194,17 +230,17 @@ let save_click = use_callback(
     {
         let save_action = save_action.clone();
         let project_id = project_id.clone();
-        let form = form.clone();
+        let settings = settings.clone();
         move |_| {
             save_action.dispatch(SaveSettingsRequest {
                 project_id: project_id.get(),
-                title: form.title(),
-                idea: form.idea(),
-                model: form.model(),
+                title: settings.title(),
+                idea: settings.idea(),
+                model: settings.model(),
             });
         }
     },
-    (save_action.clone(), project_id.clone(), form.clone()),
+    (save_action.clone(), project_id.clone(), settings.clone()),
 );
 ```
 
@@ -351,6 +387,7 @@ The `page!` macro's `watch` block provides **reactive rendering** that automatic
 | Side effects (API calls, logging, subscriptions) | `use_effect` |
 | Expensive cached computations | `use_memo` |
 | Async actions with loading/error state | `use_action` |
+| Validated typed submit from `form!` / `use_form` (**0.4.x**) | `use_form_action` |
 | State management | `use_state`, `use_reducer` |
 | DOM refs and measurements | `use_ref`, `use_layout_effect` |
 
@@ -359,6 +396,9 @@ rules, action/server_fn, and submit button shape. Use `use_form` for dynamic
 states such as current values, dirty/touched markers, validation results, submit
 phase, and reset/submit actions. Use Signals, hooks, and `watch {}` for the
 surrounding display state, not as a second implementation of the form runtime.
+When generated form values invoke a typed async mutation, use **(0.4.x)**
+`use_form_action` so validation, dispatch, and submit lifecycle state remain in
+that boundary.
 
 ### Example: watch Replaces Manual Effect Rendering
 
