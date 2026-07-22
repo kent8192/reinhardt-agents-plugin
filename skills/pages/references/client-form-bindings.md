@@ -27,7 +27,14 @@ Then derive `ClientForm` explicitly.
 ```rust,ignore
 use reinhardt::pages::{ClientForm, ClientFormChoices, use_form};
 
-#[derive(Clone, Default, PartialEq, ClientFormChoices)]
+#[derive(
+    Clone,
+    Default,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize,
+    ClientFormChoices,
+)]
 #[serde(rename_all = "snake_case")]
 enum ProviderMode {
     #[default]

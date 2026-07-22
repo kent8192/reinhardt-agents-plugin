@@ -43,10 +43,11 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 
 ### Validation DTOs
 
-1. In 0.4.0-alpha.1+, use `#[dto]` on a named request DTO that must validate on both native and WASM; it emits or normalizes `Validate`, but does not replace explicit `Clone` or serde derives.
-2. Use `#[derive(ClientForm)]` only when that named DTO is the canonical supported client form contract; configure `name`, `validate`, and `server_fn` through `#[client_form(...)]`.
-3. Prefer generated `{Model}Info` types for model-shaped response DTOs.
-4. Only hand-write serializer structs when the API shape intentionally differs from the model.
+1. In 0.1.x–0.3.x, use `#[derive(Validate)]` with `#[validate(...)]` attributes for request DTOs.
+2. In 0.4.0-alpha.1+, use `#[dto]` on a named request DTO that must validate on both native and WASM; it emits or normalizes `Validate`, but does not replace explicit `Clone` or serde derives.
+3. Use `#[derive(ClientForm)]` only when that named DTO is the canonical supported client form contract; configure `name`, `validate`, and `server_fn` through `#[client_form(...)]`.
+4. Prefer generated `{Model}Info` types for model-shaped response DTOs.
+5. Only hand-write serializer structs when the API shape intentionally differs from the model.
 
 ### DI Integration
 
