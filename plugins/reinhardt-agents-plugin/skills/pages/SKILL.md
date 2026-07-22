@@ -1,7 +1,7 @@
 ---
 name: pages
 description: Use when building WASM frontend pages with reinhardt-pages - covers page!/head!/form! macros, reactive hooks (Signal/Effect/useState), routing, SSR/hydration, server functions, and API client
-versions: ["0.1.x", "0.2.x", "0.3.x"]
+versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.x"]
 ---
 
 # Reinhardt Pages (WASM Frontend)
@@ -62,6 +62,8 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - Use `use_action` for async mutations, `use_resource` for async reads or derived text, and `use_callback` / `use_callback_with` for event handlers; keep `spawn_local` as an escape hatch for low-level browser integration only
 - In 0.3.x, use `use_resource(fetcher, deps)` for both mount-only and dependency-driven resources; replace `create_resource*`
 - In 0.3.x, replace `use_effect_event*` with `use_callback*` or `.get_untracked()` inside the effect
+- In `0.4.0-alpha.1+`, when a `Resource` and compatible mutation `Action` results render the same domain value, use `Resource::latest_after(&action)` or `use_latest_resource_value(resource)` instead of a per-screen precedence handle; later added actions have higher priority, and only successful actions override the resource
+- Call `LatestResourceValue::refetch_on_success()` only when the server-backed resource must refresh after a tracked action transitions into success, and retain the returned handle for that behavior's lifetime; it does not refetch merely because an action was already successful when the handle was created
 - Route internal button-triggered redirects through `reinhardt::pages::navigate(..., NavigationType::Push)` or the current router handle API; use `window.location.set_href` only for external URLs or hard-navigation fallbacks
 - For app-local server-side translations needed by Pages clients, expose a small `#[server_fn]`, register its marker in the app/server router, and load it with `use_resource` plus a stable fallback instead of duplicating gettext logic behind client/server cfg gates
 - Put route-backed `#[component]` wrappers under `src/apps/<app>/client/components/`, not in app-local `pages.rs` or `client/pages`
