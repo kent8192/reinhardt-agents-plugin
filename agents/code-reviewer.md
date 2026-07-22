@@ -88,7 +88,11 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] Async mutations use `use_action`, async reads or derived text use `use_resource`, and event handlers use `use_callback` / `use_callback_with`; `spawn_local` is limited to low-level browser integration
 - [ ] Non-`Copy` callbacks/actions passed into `page!` render closures are cloned at the attribute use site when needed
 - [ ] Internal button-triggered redirects use `reinhardt::pages::navigate(..., NavigationType::Push)` or the current router handle API, not `window.location.set_href`
-- [ ] App-local i18n needed by Pages clients crosses the boundary through a registered `#[server_fn]` plus `use_resource` fallback, not duplicated client/server gettext code
+- [ ] **(0.4.x)** Catalog-backed Pages labels use feature-gated `I18nContext` with `t!` (or `tr` / `tn` / `tp` / `tnp`), not a per-label `#[server_fn]` and `use_resource` round trip
+- [ ] **(0.4.x)** Server-function translation remains limited to copy that depends on server-only policy, authorization, request data, or a remote source; it is registered and has a stable client fallback when used
+- [ ] **(0.4.x)** SSR localized Pages use `SsrOptions::new().i18n_context(context)` so translated output, `<html lang>`, and `pages.i18n` hydration state agree without a client catalog refetch
+- [ ] **(0.4.x)** Locale writes use `I18nContext::set_locale()` / `set_locale()` and reads use `locale()`; no code depends on the removed writable `locale_signal()` accessor
+- [ ] **(0.1.x through 0.3.x)** App-local i18n needed by Pages clients crosses the boundary through a registered `#[server_fn]` plus `use_resource` fallback, not duplicated client/server gettext code
 - [ ] Component examples import services, routes, serializers, server functions, and shared components at module scope instead of repeating full `crate::...` paths inside `page!` or event handlers
 - [ ] Label-requiring `input` types, `select`, and `textarea` in `page!` have a non-hidden accessible label, non-empty `aria-label`, or `aria-labelledby` that resolves to a non-hidden element with accessible content; generated `form!` fields retain meaningful labels
 - [ ] `button` and interactive `a` elements have an accessible name (text, ARIA label, or non-empty child image `alt`); `input type="submit"` / `"reset"` retain their built-in names, and image submit inputs have a non-empty `alt` or valid ARIA name

@@ -1,22 +1,5 @@
 # Testing Guide for Reinhardt Pages
 
-## Compile-Time `page!` Accessibility Contracts (0.4.0+)
-
-For a change to `page!` or `form!` validation, test the macro contract before
-runtime component behavior. Extend the existing `reinhardt-pages` UI fixture
-suite with both a passing fixture and a compile-fail fixture when a rule is
-added or changed.
-
-- Passing fixtures should cover valid control labels, interactive names,
-  concrete roles, `tabindex: 0` / `-1`, iframe titles, and a deliberately
-  scoped `a11y: off` exception as applicable.
-- Compile-fail fixtures should exercise the exact invalid static markup and
-  assert the diagnostic. Do not replace this with a browser or server-function
-  test: those run too late to prove a macro error.
-- UI fixtures are compiler inputs, not application `rstest` cases; retain the
-  existing macro UI-test harness convention while keeping runtime application
-  tests under the standards below.
-
 ## 3-Layer Test Architecture
 
 ### Layer 1: Server Function Unit Tests
@@ -77,34 +60,6 @@ Full integration tests with real server and WASM frontend.
 ```rust
 use reinhardt::pages::testing::e2e;
 ```
-
-## DTO-Derived Client Form Coverage (0.4.0)
-
-For a `ClientForm`-derived DTO, test the generated contract instead of only the
-page that happens to render it. Keep the native checks focused on the shared
-form runtime; the generated `form.submit(&runtime)` helper itself is a WASM
-client API.
-
-| Behavior | Required assertion |
-|----------|--------------------|
-| Request conversion | `new()` / `with_defaults()` and `to_request()` preserve typed scalar values; whitespace-only `Option<String>` becomes `None`. |
-| Choices | `ClientFormChoices` emits the exact serde wire values and default choice; invalid enum shapes or conflicting names fail at compile time. |
-| Hidden values | `#[client_form(skip)]` or serde-skipped defaults stay preserved through refresh and request reconstruction. |
-| Validation | `#[client_form(validate)]` maps DTO field errors into the corresponding field state, and validation failure does not call the submit closure. |
-| Async lifecycle | Success, operation error, already-pending, and cancellation leave pending/success/error state coherent; do not convert operation errors into validation errors. |
-| Cross-target DTOs | Shared `#[dto]` validation and `field_errors()` behavior work on both native and `wasm32-unknown-unknown`. |
-
-For framework changes, mirror the focused upstream gates where applicable:
-
-```bash
-cargo test -p reinhardt-pages --test client_form_integration --all-features
-cargo test -p reinhardt-pages --test use_form_integration --all-features
-cargo test -p reinhardt-pages --test ui --all-features
-cargo check -p reinhardt-pages --target wasm32-unknown-unknown --all-features
-```
-
-Application changes should use the equivalent focused tests for their own DTO,
-server function, and browser form surface.
 
 ## MockServiceWorker API
 
@@ -284,22 +239,23 @@ wasm-bindgen-test = "0.3"
 
 Ensure `build.rs` is set up for `wasm`/`native` aliases (see routing-ssr.md). Both test targets use the same aliases.
 
-## Latest Resource Value Composition (0.4.0-alpha.1+)
+## Reactive Pages I18n Tests (0.4.x)
 
-For `Resource::latest_after` or `use_latest_resource_value` behavior, run
-focused reactive tests inside
-`reinhardt::pages::reactive::ReactiveScope::run` and serialize the shared
-runtime with `#[serial(reactive_runtime)]` from `serial_test`. Keep the composed
-`LatestResourceValue` bound for the full test when exercising
-`refetch_on_success()`.
+For catalog-backed Pages translations, test the framework contract rather than
+mocking a server function for every label. Cover the following behaviors:
 
-Cover the contract with strict assertions:
+- `t!("msgid")` renders the active catalog value, and named interpolation
+  renders the supplied values.
+- Switching the context with `I18nContext::set_locale()` re-renders existing
+  translated page output.
+- SSR configured with `SsrOptions::new().i18n_context(context)` emits
+  translated HTML, the `pages.i18n` state payload, and the active `<html lang>`.
+- Hydration restores the serialized catalog before its first render, without an
+  extra catalog fetch or fallback-text flash.
 
-- Resource success is returned until an action succeeds, then the action result overrides it.
-- With multiple actions, the most recently added success wins; resetting it falls back to the prior action, then the resource.
-- An action error does not hide a resource error; assert the mutation error through its `Action` separately.
-- `state_with_empty` classifies empty and non-empty success values as `Empty` and `Success`.
-- `refetch_on_success()` refetches only on a transition into success, while the latest action success remains renderable during the resource's loading state.
+Tests that mutate shared i18n state or catalogs must use `#[serial(i18n)]`.
+Keep the Arrange/Act/Assert structure and use strict assertions for both the
+pre-switch and post-switch rendered text.
 
 ## Testing Standards
 

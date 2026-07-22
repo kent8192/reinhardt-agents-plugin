@@ -293,6 +293,27 @@ let mut renderer = SsrRenderer::with_options(SsrOptions::default());
 let page_html = renderer.render_page(&my_component);
 ```
 
+### Reactive I18n with SSR (0.4.x)
+
+When SSR renders catalog-backed Pages text, install the `I18nContext` through
+the renderer options rather than manually serializing a separate client
+translation payload:
+
+```rust
+use reinhardt::pages::prelude::*;
+
+let mut renderer = SsrRenderer::with_options(
+    SsrOptions::new().i18n_context(i18n_context),
+);
+```
+
+The renderer uses the context to resolve `t!` output, sets the generated
+`<html lang>` value from the active locale, and writes resolved catalogs into
+SSR state under `pages.i18n`. The normal hydration runtime restores that state
+before the component's first client render, so do not refetch or reconstruct the
+same catalog during startup. Test the SSR output and hydrated first render for
+the same translated text.
+
 ### Head Section in SSR
 
 ```rust

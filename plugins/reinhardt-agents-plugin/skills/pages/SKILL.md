@@ -1,6 +1,6 @@
 ---
 name: pages
-description: Use when building WASM frontend pages with reinhardt-pages - covers page!/head!/form! macros, reactive hooks (Signal/Effect/useState), routing, SSR/hydration, server functions, and API client
+description: Use when building WASM frontend pages with reinhardt-pages - covers page!/head!/form! macros, reactive hooks (Signal/Effect/useState), i18n, routing, SSR/hydration, server functions, and API client
 versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.x"]
 ---
 
@@ -14,7 +14,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - User works with `page!`, `head!`, `form!` macros or `#[server_fn]`
 - User sets up reactive state with Signal, Effect, Memo, or hooks
 - User configures client-side routing, SSR, or hydration
-- User mentions: "page", "head", "form", "server_fn", "Signal", "useState", "useEffect", "watch", "SSR", "hydration", "WASM", "frontend", "router", "ApiQuerySet", "Table", "prelude", "component"
+- User mentions: "page", "head", "form", "server_fn", "Signal", "useState", "useEffect", "watch", "i18n", "translation", "locale", "t!", "SSR", "hydration", "WASM", "frontend", "router", "ApiQuerySet", "Table", "prelude", "component"
 
 ## Workflow
 
@@ -23,10 +23,11 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 1. **Define Page Component** — read `references/page-macro.md`
 2. **Add Head Section** — read `references/head-form-macros.md` (if SSR)
 3. **Set Up Reactivity** — read `references/reactive-hooks.md`
-4. **Configure Routing** — read `references/routing-ssr.md` (if SPA)
-5. **Add Server Functions** — read `references/head-form-macros.md` (`#[server_fn]` section)
-6. **Connect API** — read `references/api-tables.md` (if data fetching)
-7. **Test** — read `references/testing-guide.md`
+4. **Add Pages I18n** — read `references/i18n.md` for localized UI, locale switching, or SSR/hydration translations
+5. **Configure Routing** — read `references/routing-ssr.md` (if SPA)
+6. **Add Server Functions** — read `references/head-form-macros.md` (`#[server_fn]` section)
+7. **Connect API** — read `references/api-tables.md` (if data fetching)
+8. **Test** — read `references/testing-guide.md`
 
 ### Creating a Form
 
@@ -39,21 +40,19 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 
 - Prefer explicit imports over prelude (e.g., `use reinhardt::pages::component::Page;`) — see reinhardt-cloud dashboard for the canonical import style
 - Import app/framework types at the top of the module instead of repeating long fully qualified paths in components or server function signatures/bodies
-- **(0.4.x)** Use `page!({ ... })` for ordinary application functions that return a `Page`: it returns immediately and implicitly captures surrounding `Clone` values. Reserve `page!(|| { ... })` and `page!(|props: Props| { ... })` for reusable factories called later; their bodies remain strict and capture-clean.
 - In route-backed UI, wire buttons and actions to route params, form values, loaded DTOs, selected rows/versions, and server return values; never leave demo fixture IDs, sample constants, or canned text in production route actions
 - Build static form structure with `form!` and dynamic form state with `use_form`
 - For user-facing relation inputs, show representative values such as `title`, `name`, or `slug`; do not ask users to type raw foreign-key primary keys unless the surface is internal/admin-only or no useful representative field exists
 - Configure `cfg_aliases` in `build.rs` for `wasm`/`native` and `server`/`client` aliases
 - Event handlers in `page!` are auto-handled across platforms (no manual `#[cfg(wasm)]` needed)
-- In 0.2.x and later, use reactive `if`, `for`, and expression nodes inside `page!` rather than static values extracted from Signals; `watch {}` remains compatible but is usually redundant
+- Use `watch {}` for reactive conditionals (not static `if` with extracted Signal values)
 - Use route reverse helpers for `href`, `action`, and `formaction` when named routes exist; avoid hardcoded paths
-- Use `reinhardt-i18n` for language-specific UI text, server-provided prompts, and generated copy, including Japanese output
+- For catalog-backed Pages UI in 0.4.x, enable both facade features `pages` and `i18n`, then use `I18nContext` with `t!` (or `tr` / `tn` / `tp` / `tnp`) instead of per-label asynchronous translation resources
+- In 0.4.x, keep locale updates validated through `I18nContext::set_locale()` / `locale()`; do not depend on the removed writable `locale_signal()` accessor
+- In 0.4.x, configure SSR Pages i18n through `SsrOptions::new().i18n_context(context)` so the renderer writes `pages.i18n` state and hydration restores the resolved catalogs before the first client render
 - Boolean attributes require expressions, not literals (`disabled: is_disabled`, NOT `disabled: true`)
 - `img` elements require both `src` and `alt` (compile-time enforcement)
-- In 0.4.x, `page!` statically validates accessibility: label-requiring `input` types, `select`, and `textarea` need a non-hidden accessible label or valid ARIA name; `button` and interactive links need an accessible name; and `iframe` needs a non-empty `title`
-- Static `role` values must be concrete WAI-ARIA 1.3 roles, and static `tabindex` values are limited to `0` and `-1`
-- Use `a11y: off` only on the individual element whose intentional runtime or external labeling cannot be expressed statically; never use it as a broad workaround
-- `form!` generated controls satisfy the structural label requirement by construction; keep field labels meaningful, and give generated image submit inputs meaningful non-empty `alt` text (used as their `aria-label`)
+- `button` elements require text content or `aria-label`/`aria-labelledby`
 - URL attributes (`href`, `src`, `action`, `formaction`) block dangerous schemes (`javascript:`, `data:`, `vbscript:`)
 - ALL code comments must be in English
 - Use `reinhardt-query` for any SQL construction, NEVER raw SQL
@@ -67,7 +66,8 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - In 0.3.x, use `use_resource(fetcher, deps)` for both mount-only and dependency-driven resources; replace `create_resource*`
 - In 0.3.x, replace `use_effect_event*` with `use_callback*` or `.get_untracked()` inside the effect
 - Route internal button-triggered redirects through `reinhardt::pages::navigate(..., NavigationType::Push)` or the current router handle API; use `window.location.set_href` only for external URLs or hard-navigation fallbacks
-- For app-local server-side translations needed by Pages clients, expose a small `#[server_fn]`, register its marker in the app/server router, and load it with `use_resource` plus a stable fallback instead of duplicating gettext logic behind client/server cfg gates
+- In 0.4.x, use a small `#[server_fn]` plus `use_resource` only for translation-dependent copy that is truly server-only or depends on server-side policy/data; do not add that round trip for normal catalog-backed Pages labels that `t!` can render synchronously
+- In 0.1.x through 0.3.x, expose app-local server-side translations through a small registered `#[server_fn]` and load them with `use_resource` plus a stable fallback instead of duplicating gettext logic behind client/server cfg gates
 - Put route-backed `#[component]` wrappers under `src/apps/<app>/client/components/`, not in app-local `pages.rs` or `client/pages`
 - For `#[server_fn]`, keep endpoint-specific request flows visible; do not move the same logic into `server/`, `service/`, or `services/` unless the extraction creates a narrower contract, shared dependency, or independently testable invariant
 - Keep simple `Model::objects()` CRUD visible inside the `#[server_fn]` or nearby endpoint helper; avoid semantic wrappers such as `get_project_model`, `list_document_chunks`, or `document_path` when they only hide a direct ORM call
@@ -95,3 +95,4 @@ For the latest API definitions:
 5. Read `reinhardt/crates/reinhardt-pages/src/api.rs` for API client
 6. Read `reinhardt/crates/reinhardt-pages/src/tables.rs` for table component
 7. Read `reinhardt/crates/reinhardt-pages/src/testing.rs` for test utilities
+8. Read `reinhardt/crates/reinhardt-pages/src/i18n.rs` for reactive Pages i18n and SSR/hydration contracts
