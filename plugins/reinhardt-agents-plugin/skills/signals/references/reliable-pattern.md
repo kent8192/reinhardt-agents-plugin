@@ -43,6 +43,7 @@ sequenceDiagram
 ```rust
 use reinhardt_tasks::{Task, TaskExecutor, TaskId, TaskPriority, TaskResult};
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SendOrderConfirmation {
@@ -86,12 +87,17 @@ impl TaskExecutor for SendOrderConfirmation {
 ### Step 2: Connect to on_commit Signal
 
 ```rust
-use reinhardt::signals::{connect_receiver, transaction};
+use std::sync::Arc;
+
+use reinhardt::core::{
+    connect_receiver,
+    signals::transaction::{self, TransactionContext},
+};
 
 pub fn register_order_signals() {
     connect_receiver!(
         transaction::on_commit(),
-        |ctx: Arc<TransactionContext>, _receiver_ctx| async move {
+        |_ctx: Arc<TransactionContext>| async move {
             // This runs ONLY after the transaction commits
             // The task queue handles async processing
             Ok(())
@@ -101,35 +107,88 @@ pub fn register_order_signals() {
 }
 ```
 
-### Step 3: Enqueue Task from Service
+### Step 3: Enqueue an Ordinary Task after Commit
 
-The recommended pattern is to enqueue directly from the service, using the transaction-aware signal as a safety net:
+Use the transaction-aware receiver to schedule ordinary work after the domain
+write commits. The current `TaskQueue` receives both the boxed task and its
+configured backend:
 
 ```rust
-impl OrderService {
-    pub async fn create_order(&self, input: CreateOrderInput) -> Result<OrderDto, AppError> {
-        let order = self.db.transaction(|tx| async move {
-            let order = Order::objects(tx).create(/* ... */).await?;
+use reinhardt::tasks::{TaskBackend, TaskExecutionError, TaskId, TaskQueue};
 
-            // Enqueue task — if transaction rolls back, task is discarded
-            let task = SendOrderConfirmation::new(order.id.unwrap());
-            TaskQueue::enqueue_in_transaction(tx, task).await?;
-
-            Ok(order)
-        }).await?;
-
-        Ok(OrderDto::from_model(&order))
-    }
+async fn enqueue_order_confirmation(
+    queue: &TaskQueue,
+    backend: &dyn TaskBackend,
+    order_id: Uuid,
+) -> Result<TaskId, TaskExecutionError> {
+    queue
+        .enqueue(Box::new(SendOrderConfirmation::new(order_id)), backend)
+        .await
 }
 ```
+
+### Durable Job Variant (0.4.x)
+
+Use a durable job when the side-effect must survive a process restart or a UI
+must be able to query its state. Enable `tasks-durable` on the `reinhardt`
+facade (and `di` when injecting the queue into server functions), then create
+the SQLite-backed store once during application setup. Give it a SQLite URL;
+do not pass an application's PostgreSQL, MySQL, or CockroachDB URL to
+`SqliteDurableJobStore`.
+
+```rust
+use std::sync::Arc;
+
+use reinhardt::tasks::{
+    DurableJobStore, DurableQueue, DurableQueueError, JobSnapshot, JobSpec,
+    SharedDurableQueue, SqliteDurableJobStore,
+};
+use serde::Serialize;
+use uuid::Uuid;
+
+#[derive(Serialize)]
+struct SendOrderConfirmationPayload {
+    order_id: Uuid,
+}
+
+async fn make_durable_queue(
+    sqlite_database_url: &str,
+) -> Result<SharedDurableQueue, DurableQueueError> {
+    let store: Arc<dyn DurableJobStore> =
+        Arc::new(SqliteDurableJobStore::new(sqlite_database_url).await?);
+    Ok(DurableQueue::new(store))
+}
+
+async fn enqueue_durable_order_confirmation(
+    queue: &SharedDurableQueue,
+    order_id: Uuid,
+) -> Result<JobSnapshot, DurableQueueError> {
+    let job = JobSpec::new("send_order_confirmation")
+        .target(order_id)
+        .payload(&SendOrderConfirmationPayload { order_id })?;
+
+    queue.enqueue(job).await
+}
+```
+
+Invoke the enqueue function from an `on_commit` receiver or an equivalent
+after-commit boundary. A durable enqueue persists its own job record; it does
+not roll back automatically with an unrelated domain transaction.
+
+Workers must complete the `JobClaim` from `claim_next` with `succeed`,
+`fail_retryable`, `fail_final`, or `cancel`. Expose `JobSnapshot` and ordered
+`events` for status endpoints. A running job's `request_cancel` is cooperative,
+not an immediate terminal state. Workers that honor it call `cancel`; otherwise
+the eventual success or failure completion determines the terminal state.
 
 ## Key Rules
 
 1. **NEVER perform side-effects inside `post_save`** — the transaction may still roll back
-2. **ALWAYS use `on_commit` or transaction-aware enqueue** — guarantees the DB write is committed
+2. **ALWAYS use `on_commit` or another explicit after-commit boundary** — guarantees the DB write is committed before work is enqueued
 3. **Task execution MUST be idempotent** — at-least-once delivery means it may run multiple times
 4. **Pass IDs, not objects** — tasks are serialized; model instances cannot be serialized
 5. **No cascading** — a task MUST NOT enqueue another signal-triggered task chain
+6. **Choose durable jobs deliberately** — use `DurableQueue` for restart-safe, observable work; do not add persistence to a simple fire-and-forget task without a product need
 
 ## Idempotency Patterns
 

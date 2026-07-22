@@ -1,7 +1,7 @@
 ---
 name: migration
-description: Use when upgrading reinhardt-web versions or replacing deprecated APIs, including 0.1.x to 0.2.x and 0.2.x to 0.3.0 stable migrations - analyzes migration guides, CHANGELOG entries, deprecated API usage, and application code before guiding code changes
-versions: ["0.1.x", "0.2.x", "0.3.x"]
+description: Use when upgrading reinhardt-web versions or replacing deprecated APIs, including 0.1.x to 0.2.x, 0.2.x to 0.3.0 stable, and 0.3.x to 0.4.x development migrations - analyzes migration guides, CHANGELOG entries, deprecated API usage, and application code before guiding code changes
+versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.x"]
 ---
 
 # Reinhardt Migration
@@ -12,7 +12,7 @@ Guide developers through reinhardt-web version upgrades and deprecated API repla
 
 - User wants to upgrade reinhardt version
 - User needs to fix deprecated API warnings
-- User mentions: "upgrade", "update reinhardt", "migrate", "deprecated", "version up", "CHANGELOG", "breaking change", "rc.XX", "0.2", "0.3", "major version"
+- User mentions: "upgrade", "update reinhardt", "migrate", "deprecated", "version up", "CHANGELOG", "breaking change", "rc.XX", "0.2", "0.3", "0.4", "major version"
 
 ## Workflow
 
@@ -63,6 +63,7 @@ For each migration task:
 - For direct 0.1.x → 0.3.x upgrades, treat the work as a combined migration: apply the 0.1.x → 0.2.x major-version guidance first, then apply the 0.2.x → 0.3.x checklist before editing code.
 - For 0.1.x → 0.2.x upgrades, this is a **major version migration** with extensive breaking changes. Use `references/upgrade-workflow.md` "Major Version Upgrade" section and `reinhardt/instructions/MIGRATION_0.2.md` for the full migration path.
 - For 0.2.x → 0.3.x upgrades, read `references/0.3-upgrade.md` first. If a local `reinhardt-web` checkout has `instructions/MIGRATION_0.3.md`, prefer that current guide and use the bundled reference as the fallback checklist.
+- For 0.3.x → 0.4.x development upgrades, extract every target CHANGELOG breaking change and its linked PR/Issue before editing. In 0.4.0-alpha.1+, migrate route-backed `#[component(PATH, "name")]` declarations to `#[component(PATH, name = "name")]`; replace identifier shorthand with a deliberate public route-name string.
 - After all migrations, run `cargo check` and `cargo test` to verify
 - If `cargo check` fails after migration, diagnose and fix before proceeding
 

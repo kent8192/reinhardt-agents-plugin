@@ -39,12 +39,13 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 
 - Prefer explicit imports over prelude (e.g., `use reinhardt::pages::component::Page;`) — see reinhardt-cloud dashboard for the canonical import style
 - Import app/framework types at the top of the module instead of repeating long fully qualified paths in components or server function signatures/bodies
+- **(0.4.x)** Use `page!({ ... })` for ordinary application functions that return a `Page`: it returns immediately and implicitly captures surrounding `Clone` values. Reserve `page!(|| { ... })` and `page!(|props: Props| { ... })` for reusable factories called later; their bodies remain strict and capture-clean.
 - In route-backed UI, wire buttons and actions to route params, form values, loaded DTOs, selected rows/versions, and server return values; never leave demo fixture IDs, sample constants, or canned text in production route actions
 - Build static form structure with `form!` and dynamic form state with `use_form`
 - For user-facing relation inputs, show representative values such as `title`, `name`, or `slug`; do not ask users to type raw foreign-key primary keys unless the surface is internal/admin-only or no useful representative field exists
 - Configure `cfg_aliases` in `build.rs` for `wasm`/`native` and `server`/`client` aliases
 - Event handlers in `page!` are auto-handled across platforms (no manual `#[cfg(wasm)]` needed)
-- Use `watch {}` for reactive conditionals (not static `if` with extracted Signal values)
+- In 0.2.x and later, use reactive `if`, `for`, and expression nodes inside `page!` rather than static values extracted from Signals; `watch {}` remains compatible but is usually redundant
 - Use route reverse helpers for `href`, `action`, and `formaction` when named routes exist; avoid hardcoded paths
 - Use `reinhardt-i18n` for language-specific UI text, server-provided prompts, and generated copy, including Japanese output
 - Boolean attributes require expressions, not literals (`disabled: is_disabled`, NOT `disabled: true`)

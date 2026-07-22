@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Align Pages, macro, and code-review guidance with direct `page!({ ... })`
+  bodies, implicit `Clone` captures, and strict closure factories from
+  reinhardt-web #5574.
+
 ## [0.3.2] - 2026-07-01
 
 ### Added

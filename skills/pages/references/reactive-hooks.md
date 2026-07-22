@@ -369,16 +369,14 @@ use_effect(move || {
     if show.get() { /* manually update DOM */ }
 });
 
-// PREFER: watch block in page! macro
-page!(|show: Signal<bool>| {
+// PREFER (0.4.x): direct body with an automatically reactive branch
+page!({
     div {
-        watch {
-            if show.get() {
-                div { class: "alert", "Visible!" }
-            }
+        if show.get() {
+            div { class: "alert", "Visible!" }
         }
     }
-})(show)
+})
 ```
 
 ### watch Best Practices

@@ -1,7 +1,7 @@
 ---
 name: testing
-description: Use when writing tests for reinhardt-web applications - provides rstest/AAA patterns, TestContainers setup, and API testing utilities
-versions: ["0.1.x", "0.2.x", "0.3.x"]
+description: Use when writing tests for reinhardt-web applications - provides rstest/AAA patterns, TestContainers setup, API testing utilities, and DTO-derived client-form coverage
+versions: ["0.4.0"]
 ---
 
 # Reinhardt Testing
@@ -12,7 +12,7 @@ Guide developers through writing high-quality tests using rstest, AAA pattern, r
 
 - User wants to write tests for reinhardt code
 - User asks about testing strategies or patterns
-- User mentions: "test", "fixture", "TestContainers", "assert", "rstest", "integration test", "unit test"
+- User mentions: "test", "fixture", "TestContainers", "assert", "rstest", "integration test", "unit test", "ClientForm", "DTO form test", "form validation test"
 
 ## Workflow
 
@@ -45,6 +45,17 @@ Guide developers through writing high-quality tests using rstest, AAA pattern, r
 2. Add focused regression tests for replaced APIs (`CurrentUser<T>`, keyed DI providers, endpoint registration, `use_resource`)
 3. For Pages apps, verify both native and `wasm32-unknown-unknown` surfaces when shared modules rely on 0.3 inert stubs
 4. For generated projects, scaffold a fresh 0.3 Pages app and compare app-local layout expectations before changing fixtures
+
+### DTO-Derived Client Form Tests (0.4.0)
+
+1. Read `../pages/references/client-form-bindings.md` and
+   `../pages/references/testing-guide.md` before testing a `ClientForm` DTO.
+2. Cover defaults-to-request conversion, whitespace-only optional strings,
+   serde choice values, hidden/default values, and DTO validation mapping.
+3. Assert validation failure does not dispatch the server function, then cover
+   success, operation error, already-pending, and cancellation state separately.
+4. Verify shared `#[dto]` validation on both native and WASM surfaces when the
+   request type crosses the client/server boundary.
 
 ## Important Rules
 
