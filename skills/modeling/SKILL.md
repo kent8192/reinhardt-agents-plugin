@@ -1,7 +1,7 @@
 ---
 name: modeling
 description: Use when defining database models, working with QuerySets, or managing migrations in reinhardt-web applications
-versions: ["0.1.x", "0.2.x", "0.3.x"]
+versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.x"]
 ---
 
 # Reinhardt Data Modeling
@@ -24,9 +24,11 @@ Guide developers through model definition, database operations, and migration ma
 2. Before writing any `#[model]`, inventory every ForeignKey, OneToOne, and ManyToMany relationship; choose its `#[rel(...)]` marker field, target, and deletion behavior
 3. Guide model struct definition with `#[model]` attribute
 4. Choose appropriate scalar field types and constraints
-5. Define the inventoried relationships with `#[rel(...)]`
-6. After editing, audit every `*_id` field in each `#[model]`: replace relationship-shaped scalar IDs with `#[rel(...)]` marker fields, or document why a retained scalar is intentionally denormalized or external and add a narrow inline `nosemgrep: reinhardt-no-scalar-fk-id -- <reason>` exception
-7. Implement `pub use` re-exports in the module entry file
+5. For 0.4.x generated columns, use the typed `SchemaExpr` contract in
+   `references/model-patterns.md` before choosing a raw SQL escape hatch
+6. Define the inventoried relationships with `#[rel(...)]`
+7. After editing, audit every `*_id` field in each `#[model]`: replace relationship-shaped scalar IDs with `#[rel(...)]` marker fields, or document why a retained scalar is intentionally denormalized or external and add a narrow inline `nosemgrep: reinhardt-no-scalar-fk-id -- <reason>` exception
+8. Implement `pub use` re-exports in the module entry file
 
 ### ORM Operations (Django-style)
 
@@ -45,15 +47,20 @@ Guide developers through model definition, database operations, and migration ma
 
 1. Read `references/queryset-api.md` (Low-Level Query Builder section)
 2. Use `reinhardt-query` for schema DDL, migrations, and raw query generation
-3. NEVER use raw SQL strings — always use `reinhardt_query::Query` builders
+3. Use `SchemaExpr` for portable generated-column DDL; reserve `generated_sql`
+   for trusted, backend-specific expression bodies
+4. NEVER use raw SQL strings — except the explicit `generated_sql` escape hatch
+   when a trusted backend-specific generated expression is necessary
 
 ### Migrations
 
 1. Read `references/migration-guide.md` for the full workflow
 2. Generate migration: `cargo run --bin manage makemigrations <app_label>`
 3. Review the generated migration file (declarative `Operation` variants)
-4. Apply: `cargo run --bin manage migrate`
-5. For custom operations (indexes, data migrations), write hand-written migration files
+4. For generated-column changes, review preserved expression/storage metadata,
+   replacement operations, and backend-specific execution before applying
+5. Apply: `cargo run --bin manage migrate`
+6. For custom operations (indexes, data migrations), write hand-written migration files
 
 ## Important Rules
 
@@ -70,6 +77,15 @@ Guide developers through model definition, database operations, and migration ma
 - Put `#[field(...)]` on every scalar model field, even when no options are required
 - Use `#[rel(...)]` for model relationships; do not represent foreign keys as unmanaged scalar IDs unless the scalar is intentionally denormalized or external, and document that non-relationship purpose next to the field with a narrow `nosemgrep: reinhardt-no-scalar-fk-id -- <reason>` exception
 - ALL model struct fields that can be NULL must use `Option<T>`
+- **(0.4.x)** Prefer `generated = SchemaExpr::...` for generated columns. Use
+  `generated_sql = "..."` only for trusted backend-specific expressions that
+  cannot use the portable DDL-safe subset.
+- **(0.4.x)** Generated columns require exactly one storage mode, cannot also
+  use a default or auto-increment, and must not combine `generated` with
+  `generated_sql`.
+- **(0.4.x)** Treat generated fields as read-only: they may be selected or
+  filtered, but must not appear in create/update inputs or partial-update
+  assignments.
 - Scope unique or stable keys by their owning record (project, tenant, document, etc.) when data can be duplicated across parents
 - For ordered sibling records, validate reorder inputs contain every sibling exactly once before updating positions
 - For versioned models, enforce one accepted/current version per target by clearing the previous accepted marker or using an equivalent invariant
@@ -94,3 +110,5 @@ For the latest model API and field types:
 6. Read `reinhardt/crates/reinhardt-db/src/migrations/operations.rs` for Operation variants
 7. Read `reinhardt/crates/reinhardt-commands/src/cli.rs` for CLI command definitions
 8. Grep for `#[model]` usage in `reinhardt/tests/` for real examples
+9. Read `reinhardt/crates/reinhardt-query/src/types/schema_expr.rs` for the
+   current portable generated-column expression surface

@@ -44,6 +44,10 @@ The `#[field]` attribute accepts these options to configure column behavior:
 | `max_length` | `usize` | Maximum character length for `String` fields. Required for `VARCHAR` columns. |
 | `unique` | `bool` | Adds a `UNIQUE` constraint to the column. |
 | `default` | literal | Default value for the column. Supports Rust literals (`true`, `false`, `0`, `""`, etc.). |
+| `generated` | `SchemaExpr` | **(0.4.x)** Portable, typed generated-column expression. Pair with exactly one storage attribute. |
+| `generated_sql` | `&str` | **(0.4.x)** Trusted backend-specific generated-column expression when the portable `SchemaExpr` subset cannot express it. |
+| `generated_stored` | `bool` | **(0.4.x)** Store the generated value. Required as one of the two storage choices. |
+| `generated_virtual` | `bool` | **(0.4.x, MySQL/SQLite)** Compute the generated value virtually. Required as one of the two storage choices when used. |
 | `auto_now_add` | `bool` | Automatically set to the current timestamp on row creation. |
 | `auto_now` | `bool` | Automatically set to the current timestamp on every save. |
 | `null` | `bool` | Whether the column allows `NULL`. Corresponding Rust type must be `Option<T>`. |
@@ -116,6 +120,65 @@ pub source_system_record_id: String, // nosemgrep: reinhardt-no-scalar-fk-id -- 
 
 Never use the suppression for a Reinhardt relationship; replace that scalar with
 the appropriate `#[rel(...)]` field instead.
+
+## Typed Generated Columns (0.4.x)
+
+**Source:** [original PR #5586](https://github.com/kent8192/reinhardt-web/pull/5586)
+defined the typed contract; [merged cherry-pick PR #5615](https://github.com/kent8192/reinhardt-web/pull/5615)
+contains its final migration and ORM behavior.
+
+Prefer the portable, DDL-safe `SchemaExpr` subset. It accepts
+`SchemaExpr::col`, `SchemaExpr::val`, `SchemaExpr::concat`, and
+`SchemaExpr::coalesce`, with chained `binary` and `cast` calls. For example:
+
+```rust
+use reinhardt::db::migrations::SchemaExpr;
+
+#[model(table_name = "users")]
+#[derive(Debug, Clone)]
+pub struct User {
+    #[field(primary_key = true)]
+    pub id: Option<i64>,
+
+    #[field(max_length = 100)]
+    pub first_name: String,
+
+    #[field(max_length = 100)]
+    pub last_name: String,
+
+    #[field(
+        max_length = 201,
+        generated = SchemaExpr::concat([
+            SchemaExpr::col("first_name"),
+            SchemaExpr::val(" "),
+            SchemaExpr::col("last_name"),
+        ]),
+        generated_stored = true,
+    )]
+    pub full_name: String,
+}
+```
+
+Do not use the former raw-string form `generated = "..."`. Use
+`generated_sql = "..."` only for a trusted backend-specific expression that
+cannot be represented by `SchemaExpr`; it is intentionally an explicit escape
+hatch, not the default.
+
+Use exactly one of `generated_stored = true` or `generated_virtual = true`.
+Virtual generated columns are available only with the MySQL or SQLite features;
+PostgreSQL and CockroachDB require stored generated columns. Generated columns
+cannot have a default or auto-increment. SQLite rejects generated primary keys,
+and MySQL rejects virtual generated primary keys.
+
+PostgreSQL and CockroachDB also reject a generated column that references
+another generated column. Model portable chains from their non-generated input
+columns and validate the generated migration on the actual target backend.
+
+Generated fields are read-only. The macro removes them from required model
+builder inputs, although an optional builder setter may still exist; ORM write
+paths omit any supplied generated value. Keep them out of create/update DTOs
+and `QuerySet::update_fields` assignments. Do not make an ordinary create
+workflow depend on a model that has no writable fields.
 
 ## Rust Type to Database Type Mapping
 
