@@ -226,7 +226,66 @@ If the result affects app state, prefer `Action` or `Resource` instead.
 
 | Hook | Description |
 |------|-------------|
-| `use_debug_value` | Custom label in dev tools (requires `debug-hooks` feature) |
+| `use_debug_value` | Custom debug label (always available; debug output requires `debug-hooks` and is a no-op in production) |
+
+### Custom Hooks (0.2.x+)
+
+Custom hooks are plain Rust functions that group reusable hook wiring behind a
+`use_<domain>` name. Extract a custom hook when the same combination of local
+state, `use_effect` / `use_resource`, callbacks, and derived handles appears in
+more than one component, or when a second component is a foreseeable consumer.
+Keep these functions in a shared client module such as
+`src/apps/<app>/client/hooks.rs`.
+
+Return reactive handles, not detached values. A hook that returns
+`Signal<bool>`, `Resource<T, E>`, `Action<T, E>`, or `Callback<Args, Ret>` lets
+the caller compose the state directly in `page!`. A hook that calls
+`.get()` and returns `bool` or `String` hides the reactive edge and usually
+forces duplicate effects in the caller.
+
+```rust
+use reinhardt::pages::prelude::*;
+
+pub fn use_online_status() -> Signal<bool> {
+    let (is_online, set_online) = use_state(browser_is_online());
+
+    use_debug_value(if is_online.get() { "Online" } else { "Offline" });
+
+    use_effect(
+        {
+            let set_online = set_online.clone();
+            move || {
+                let unsubscribe = subscribe_online_status({
+                    let set_online = set_online.clone();
+                    move |online| set_online(online)
+                });
+
+                Some(move || unsubscribe())
+            }
+        },
+        (),
+    );
+
+    is_online
+}
+```
+
+In this example, `browser_is_online` and `subscribe_online_status` are
+app-local browser adapters; the custom hook owns the state/effect/subscription
+contract while callers only read the returned `Signal<bool>`.
+
+The example uses the explicit dependency argument introduced in 0.2.x. On
+0.1.x, use the same effect closure without the trailing `()` dependency
+argument. Custom hooks SHOULD call `use_debug_value` with a compact status label
+or key state snapshot. The hook is always available; enabling `debug-hooks`
+activates its debug output, while production builds treat it as a no-op.
+
+Dependency review needs one extra pass inside custom hooks. The `page!` macro's
+deps-exhaustiveness check only sees hook calls written textually inside the
+`page!` invocation. Hook calls inside `use_*` functions still require a deps
+argument at the type level, but reviewers must verify that every Signal read in
+the hook closure is represented in that deps tuple, or is intentionally read
+with `get_untracked` / `with_untracked`.
 
 ## Resource (WASM Only)
 
@@ -383,17 +442,19 @@ let effect = Effect::new(move || {
 std::mem::forget(effect);  // Keep alive for page lifetime
 ```
 
-## watch Blocks vs Hooks
+## Direct Reactive Rendering vs Hooks
 
-The `page!` macro's `watch` block provides **reactive rendering** that automatically re-renders when Signal dependencies change. This is distinct from hooks.
+The `page!` macro automatically makes dynamic `{expr}`, `if`, `match`, and
+`for` blocks reactive: it re-renders them when their Signal dependencies
+change. This rendering mechanism is distinct from hooks.
 
-### When to Use watch (Not Hooks)
+### When to Use Direct Reactive Rendering (Not Hooks)
 
 | Scenario | Use | Not |
 |----------|-----|-----|
-| Conditionally show/hide elements based on Signal | `watch { if signal.get() { ... } }` | `use_effect` |
-| Render different views based on state | `watch { match state.get() { ... } }` | `use_effect` + manual DOM |
-| Reactive list rendering | `watch { for item in items.get() { ... } }` | `use_effect` |
+| Conditionally show/hide elements based on Signal | `if signal.get() { ... }` inside `page!` | `use_effect` |
+| Render different views based on state | `match state.get() { ... }` inside `page!` | `use_effect` + manual DOM |
+| Reactive list rendering | `for item in items.get() { ... }` inside `page!` | `use_effect` |
 
 ### When Hooks Are Still Needed
 
@@ -408,10 +469,11 @@ The `page!` macro's `watch` block provides **reactive rendering** that automatic
 For forms, use `form!` for static expressions such as fields, labels, validation
 rules, action/server_fn, and submit button shape. Use `use_form` for dynamic
 states such as current values, dirty/touched markers, validation results, submit
-phase, and reset/submit actions. Use Signals, hooks, and `watch {}` for the
-surrounding display state, not as a second implementation of the form runtime.
+phase, and reset/submit actions. Use Signals, hooks, and direct reactive
+`page!` expressions for surrounding display state, not as a second
+implementation of the form runtime.
 
-### Example: watch Replaces Manual Effect Rendering
+### Example: Direct Rendering Replaces Manual Effect Rendering
 
 ```rust
 // AVOID: using Effect for conditional rendering
@@ -420,24 +482,24 @@ use_effect(move || {
     if show.get() { /* manually update DOM */ }
 });
 
-// PREFER: watch block in page! macro
+// PREFER: a direct reactive conditional in page! macro
 page!(|show: Signal<bool>| {
     div {
-        watch {
-            if show.get() {
-                div { class: "alert", "Visible!" }
-            }
+        if show.get() {
+            div { class: "alert", "Visible!" }
         }
     }
 })(show)
 ```
 
-### watch Best Practices
+### Direct Reactive Rendering Best Practices
 
 - **Pass Signals directly** to `page!` — don't extract values before the macro
 - **Clone Signals freely** — `Signal::clone()` is cheap (Rc-based)
-- **One expression per watch** — each block must contain exactly one `if`, `match`, or `for`
-- **Don't nest watch blocks** — use multiple sibling watch blocks instead
+- **Use direct dynamic blocks** — write `if`, `match`, and `for` directly in
+  `page!`; `{expr}` is also reactive
+- **Avoid manual wrappers** — `watch {}` is removed and explicit
+  `Page::reactive(...)` is unnecessary for page-body rendering
 
 ## Architecture Notes
 
@@ -446,7 +508,8 @@ page!(|show: Signal<bool>| {
 - **Batching**: Multiple Signal changes batch into a single update cycle via micro-tasks
 - **Memory management**: All reactive nodes auto-cleanup when dropped
 - **`std::mem::forget`**: Use for Effects that should live for the entire page lifetime (e.g., routing)
-- **watch compiles to `Page::reactive()`**: The reactive closure is tracked by the runtime and re-evaluated on Signal changes
+- **Dynamic `page!` blocks compile to `Page::reactive()`**: The generated
+  closure is tracked by the runtime and re-evaluated on Signal changes
 
 ## Version Differences (0.2.x)
 
@@ -530,7 +593,9 @@ use_callback(
 
 ### Auto-wrapping in page! Macro
 
-In 0.2.x, `{expr}`, `if`, and `for` inside `page!` are unconditionally wrapped in `Page::reactive` — no explicit wrapping is needed. Code that previously used `watch { ... }` or manual `Page::reactive(...)` continues to work, but the wrapping is now redundant.
+Since 0.2.x, `{expr}`, `if`, `match`, and `for` inside `page!` are
+unconditionally wrapped in `Page::reactive` — no explicit wrapper is needed.
+`watch { ... }` was removed; move its body directly into `page!` instead.
 
 ### Reactive and ReactiveIf Clone
 
