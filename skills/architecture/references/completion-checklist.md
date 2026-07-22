@@ -20,6 +20,7 @@ Run through this checklist after implementing a feature to verify all layers are
 - [ ] Read serializer defined (API response)
 - [ ] Write serializer / input type defined (API request)
 - [ ] Field validation applied where needed
+- [ ] Shared native/WASM input uses named-field `#[dto]` with unconditional `#[validate(...)]` rules when targeting 0.4.0
 - [ ] Nested serializers for related models (if applicable)
 - [ ] Custom DTOs use centralized `From`/`Into` conversions instead of repeated literal field mapping
 - [ ] User-facing relation inputs use representative fields (`title`, `name`, `slug`) instead of raw FK primary-key prompts unless the surface is internal/admin-only or no useful representative exists
@@ -54,6 +55,7 @@ Run through this checklist after implementing a feature to verify all layers are
 - [ ] Permission guards applied (if required)
 - [ ] Error mapping verified (service errors → HTTP responses)
 - [ ] Request validation via serializer/input types
+- [ ] Server revalidates shared DTO input after deserialization; client validation is not the authorization or business-rule boundary
 
 ## Pages Form Layer (if applicable)
 
@@ -76,10 +78,11 @@ Run through this checklist after implementing a feature to verify all layers are
 - [ ] Unit tests for service business logic (mocked deps)
 - [ ] Integration tests with TestContainers (real DB)
 - [ ] API tests for HTTP endpoints
-- [ ] All tests use `#[rstest]`
+- [ ] Native tests use `#[rstest]`; browser-target tests use `#[wasm_bindgen_test]` (and `#[rstest]` when fixtures are needed)
 - [ ] AAA pattern with standard labels
 - [ ] Strict assertions (`assert_eq!`, not `assert!(x.contains(...))`)
 - [ ] Edge cases covered (not found, validation failure, duplicate)
+- [ ] Shared `#[dto]` validation has native and browser-target runtime coverage that checks expected `field_errors()` keys
 - [ ] Review-driven regressions cover stale scopes, duplicate generation, split/merge acceptance, reorder validation, streaming formatting, and external-service contracts when those behaviors exist
 
 ## Signal Layer (if applicable)

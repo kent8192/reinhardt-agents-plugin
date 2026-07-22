@@ -96,6 +96,36 @@ Checklist:
 
 ---
 
+## Shared Native/WASM Write DTOs (0.4.0; #5543)
+
+When an input payload is compiled by both a native API boundary and a WASM
+client, use `#[dto]` instead of making `Validate` native-only. The macro adds
+only Reinhardt's shared `Validate` derive; keep transport derives explicit.
+In a `default-features = false` client, enable the `core` feature on the
+`reinhardt` facade so the generated validation path is available.
+
+```rust
+use reinhardt::dto;
+use serde::{Deserialize, Serialize};
+
+#[dto]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateProfileInput {
+    #[validate(email)]
+    pub email: String,
+
+    #[validate(url)]
+    pub homepage_url: Option<String>,
+}
+```
+
+Use `email`, `url`, `length`, and `range` for client-visible field rules. Add
+`Schema` explicitly only when the DTO belongs in OpenAPI output. The server must
+still call validation after deserialization; client-side field errors provide
+feedback, not trust or authorization.
+
+---
+
 ## ModelSerializer
 
 `ModelSerializer<M>` automatically generates serialization logic from ORM models using a builder pattern. It is the recommended approach for standard CRUD endpoints.

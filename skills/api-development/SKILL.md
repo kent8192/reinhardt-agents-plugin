@@ -1,7 +1,7 @@
 ---
 name: api-development
 description: Use when building REST API endpoints with reinhardt-web - covers serializers, views, URL routing, authentication, and pagination
-versions: ["0.1.x", "0.2.x", "0.3.x"]
+versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.0"]
 ---
 
 # Reinhardt REST API Development
@@ -31,6 +31,7 @@ Guide developers through building REST API endpoints using reinhardt-rest, reinh
 - Use `ModelSerializer` for standard CRUD operations
 - Keep simple `Model::objects()` CRUD in the handler/server_fn; do not introduce semantic wrappers such as `get_project_model`, `list_document_chunks`, or `document_path` when they only hide a direct ORM call
 - For model-backed DTOs in 0.2.x, prefer the generated `{Model}Info` type plus `Validate`/`#[validate(...)]` over hand-maintained duplicate field shapes
+- **(0.4.0; #5543)** For a named write DTO shared by REST, `#[server_fn]`, or WebSocket client/server code, use `#[dto]` with unconditional `#[validate(...)]` rules; keep serde and optional OpenAPI `Schema` derives explicit, and revalidate after the payload reaches the server
 - For user-facing writes that reference related models, accept representative values such as `title`, `name`, or `slug` and resolve them server-side; raw FK primary-key input is reserved for internal/admin-only or machine APIs
 - Use `reinhardt-query` for custom queries, NEVER raw SQL
 - Scoped endpoints must apply the same target scope to every backend path, including fallback filename, filesystem, and hybrid-search branches
@@ -43,6 +44,8 @@ Guide developers through building REST API endpoints using reinhardt-rest, reinh
 - Do not move the same endpoint control flow into `server/`, `service/`, or `services/` only to shorten a handler; extract only for a narrower contract, shared dependency, or independently testable invariant
 - Inline and delete single-use delegated helpers when they only pass through one endpoint's request, dependencies, and persistence/provider sequence
 - Do not add top-level free helpers under app `server/` modules for exactly one production call site; inline the logic unless the helper has a reusable domain contract, isolates genuinely complex behavior with a clear operational name, or is expected to gain more call sites
+- Follow the Django-parity app boundary: every user-facing endpoint belongs to an app, including endpoints in minimal services and benchmarks with only one or two handlers
+- Define HTTP endpoint handlers in `src/apps/<app>/views.rs` and Pages `#[server_fn]` functions in `src/apps/<app>/server_fn.rs` (or app-local equivalents), then register them in an app-local router; `src/config/urls.rs` only composes app routers and framework-level routes, and MUST NOT define application endpoint handlers directly
 - Keep endpoint decorator paths app-local; compose app/API prefixes in route modules or `*_urls.rs`, not inside handler paths or function bodies
 - Import request, DTO, and framework types at module scope instead of using long fully qualified paths inside handler or server function signatures/bodies
 - Preserve streamed text exactly unless normalization is part of the product requirement; do not collapse prose with `split_whitespace()`

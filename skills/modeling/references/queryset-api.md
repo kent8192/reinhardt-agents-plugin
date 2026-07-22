@@ -51,6 +51,12 @@ let updated = User::objects().bulk_update(&[user1, user2]).await?;
 let (user, created) = User::objects().get_or_create(...).await?;
 ```
 
+> **Generated columns (0.4.x):** Generated fields are read-only. `Manager`
+> create/update and bulk write paths omit them, while
+> `QuerySet::update_fields` rejects an assignment to one. Keep generated fields
+> out of create/update inputs even though they remain available for reads and
+> filters.
+
 ### Call-Site CRUD vs Semantic Wrappers
 
 Keep simple ORM CRUD visible where the endpoint or `server_fn` handles the
@@ -467,6 +473,35 @@ let create_stmt = Query::create_table()
 
 db.execute(create_stmt).await?;
 ```
+
+#### GENERATED COLUMNS (0.4.x)
+
+Use `SchemaExpr` for portable generated-column DDL. For example,
+`SchemaExpr::concat` renders with `||` on PostgreSQL/SQLite and `CONCAT(...)`
+on MySQL.
+
+```rust
+use reinhardt_query::prelude::{ColumnDef, Query, SchemaExpr};
+
+let create_stmt = Query::create_table()
+    .table(Users::Table)
+    .col(
+        ColumnDef::new(Users::FullName)
+            .string_len(201)
+            .generated_stored(SchemaExpr::concat([
+                SchemaExpr::col("first_name"),
+                SchemaExpr::val(" "),
+                SchemaExpr::col("last_name"),
+            ])),
+    )
+    .to_owned();
+```
+
+Use `ColumnDef::generated_sql` only for trusted backend-specific expression
+bodies that the DDL-safe `SchemaExpr` subset cannot represent. Use virtual
+storage only with MySQL or SQLite; PostgreSQL and CockroachDB require stored
+generated columns. Direct low-level `INSERT` and `UPDATE` builders must omit
+generated columns just as ORM write paths do.
 
 #### ALTER TABLE
 

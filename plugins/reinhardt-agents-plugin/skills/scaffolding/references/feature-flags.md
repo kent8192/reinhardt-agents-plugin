@@ -42,6 +42,12 @@ Auth features can be combined (e.g., JWT for API clients + Session for admin pan
 | `auth-oauth` | OAuth 2.0 / OpenID Connect provider integration. |
 | `auth-token` | Persistent token-based authentication (database-backed API keys). |
 | `argon2-hasher` | Argon2id password hashing (recommended). Adds `argon2` dependency. |
+| `bcrypt-hasher` | **(0.4.x)** Bcrypt hashing for explicit `PasswordHashPolicy` choices, including compatibility migrations. Bcrypt input is limited to 72 bytes. |
+
+For a login-time migration from existing bcrypt hashes, enable both
+`argon2-hasher` and `bcrypt-hasher`, set Argon2id as the preferred policy
+hasher, and register bcrypt as a legacy hasher. Remove `bcrypt-hasher` only
+after no deployed accounts require bcrypt verification.
 
 ## Individual Component Features
 
@@ -94,9 +100,35 @@ Auth features can be combined (e.g., JWT for API clients + Session for admin pan
 | `storage` | File storage abstraction (local filesystem, S3, etc.). |
 | `shortcuts` | Convenience functions for common patterns. |
 | `tasks` | Background task execution framework. |
+| `tasks-durable` | **0.4.x:** SQLite-backed durable jobs. Includes `tasks`; use when work must survive restarts or expose status, retries, and cancellation. |
 | `dentdelion` | Plugin system for creating and consuming reinhardt plugins. |
 | `deeplink` | Mobile deep linking support. |
 | `dispatch` | Event dispatch system. |
+
+### Durable Job Queues (0.4.x)
+
+Enable `tasks-durable` when a background operation must survive process
+restarts or provide a UI/API with queryable progress, retries, and
+cancellation. It is additive to the ordinary `tasks` queue rather than a
+replacement for short-lived work.
+
+```toml
+[dependencies]
+reinhardt = { version = "...", features = ["tasks-durable"] }
+```
+
+For a server function or handler that receives the shared durable queue through
+DI, enable both features:
+
+```toml
+reinhardt = { version = "...", features = ["tasks-durable", "di"] }
+```
+
+The facade feature is named `tasks-durable`. Applications that depend directly
+on `reinhardt-tasks` instead use its `durable` feature, plus `di` when they need
+`DurableQueueKey`. `SqliteDurableJobStore` requires a SQLite connection URL;
+keep that durable-store setting separate from a generic application database URL
+when the application uses PostgreSQL, MySQL, or CockroachDB.
 
 ### Pages-Specific
 

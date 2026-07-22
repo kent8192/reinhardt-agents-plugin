@@ -267,6 +267,23 @@ wasm-bindgen-test = "0.3"
 
 Ensure `build.rs` is set up for `wasm`/`native` aliases (see routing-ssr.md). Both test targets use the same aliases.
 
+## Latest Resource Value Composition (0.4.0-alpha.1+)
+
+For `Resource::latest_after` or `use_latest_resource_value` behavior, run
+focused reactive tests inside
+`reinhardt::pages::reactive::ReactiveScope::run` and serialize the shared
+runtime with `#[serial(reactive_runtime)]` from `serial_test`. Keep the composed
+`LatestResourceValue` bound for the full test when exercising
+`refetch_on_success()`.
+
+Cover the contract with strict assertions:
+
+- Resource success is returned until an action succeeds, then the action result overrides it.
+- With multiple actions, the most recently added success wins; resetting it falls back to the prior action, then the resource.
+- An action error does not hide a resource error; assert the mutation error through its `Action` separately.
+- `state_with_empty` classifies empty and non-empty success values as `Empty` and `Success`.
+- `refetch_on_success()` refetches only on a transition into success, while the latest action success remains renderable during the resource's loading state.
+
 ## Testing Standards
 
 - ALL tests MUST use `rstest` (per project standards)
