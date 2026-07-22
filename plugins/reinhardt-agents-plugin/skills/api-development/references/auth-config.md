@@ -12,7 +12,7 @@ Reinhardt supports multiple authentication backends, each enabled via feature fl
 | Session | `SessionAuthentication<B>` | `auth-session` | Cookie (`sessionid`) | Yes | Traditional web apps, admin panel |
 | OAuth 2.0 | `OAuth2Authentication` | `auth-oauth` | `Authorization: Bearer <token>` | Depends | Third-party login (Google, GitHub, etc.) |
 | Token | `TokenAuthentication` | `auth-token` | `Authorization: Token <key>` | Yes (DB) | Persistent API keys, service accounts |
-| Basic | `BasicAuthentication` | (always available) | `Authorization: Basic <b64>` | No | Development, simple integrations |
+| Basic | `HttpBasicAuth` | `argon2-hasher` or `bcrypt-hasher` | `Authorization: Basic <b64>` | No | Development, simple integrations |
 | Remote User | `RemoteUserAuthentication` | (always available) | Proxy header | No | Reverse proxy auth (nginx, etc.) |
 
 ## JWT Authentication Setup (Verified Pattern)
@@ -210,23 +210,48 @@ pub async fn session_login(username: String, password: String) -> Result<AuthRes
 
 ## Password Hashing
 
-Reinhardt uses pluggable password hashers. The `argon2-hasher` feature is recommended for production.
+Reinhardt uses pluggable password hashers. Use `argon2-hasher` for new
+production passwords. `bcrypt-hasher` provides an opt-in `BcryptHasher` for an
+explicit preferred or legacy policy choice and enforces bcrypt's 72-byte
+password limit.
 
-| Hasher | Feature Flag | Security Level | Speed |
-|--------|-------------|----------------|-------|
-| Argon2id | `argon2-hasher` | Highest (recommended) | Slow (by design) |
-| PBKDF2-SHA256 | (default) | High | Moderate |
-| Bcrypt | (built-in) | High | Moderate |
+| Hasher | Feature Flag | Recommended Use |
+|--------|-------------|-----------------|
+| `Argon2Hasher` | `argon2-hasher` | Preferred hasher for new passwords |
+| `BcryptHasher` | `bcrypt-hasher` | Explicit preferred or legacy policy choice; commonly a migration path |
+
+### Login-Time Hash Upgrades **(0.4.x)**
+
+Keep one preferred hasher and register each legacy format with
+`PasswordHashPolicy::with_legacy` in verification order. The policy reports
+invalid credentials separately from a successful check that updated the hash:
 
 ```rust
-use reinhardt::auth::hashers::make_password;
+// Cargo.toml: features = ["argon2-hasher", "bcrypt-hasher"]
+use reinhardt::auth::{
+    Argon2Hasher, BaseUser, BcryptHasher, PasswordCheck, PasswordHashPolicy,
+};
 
-// Hash a password
-let hashed = make_password("user_password")?;
+let policy = PasswordHashPolicy::new(Argon2Hasher::default())
+    .with_legacy(BcryptHasher::default());
+let previous_hash = user.password_hash().map(str::to_owned);
 
-// Verify a password
-let is_valid = check_password("user_password", &hashed)?;
+match user.check_password_with_policy_update(&password, &policy)? {
+    PasswordCheck::Invalid => return Err(AppError::Authentication("Invalid credentials".into())),
+    PasswordCheck::Valid => {}
+    PasswordCheck::ValidUpdated => {
+        // The user changed only in memory. Persist the new hash with a
+        // conditional update on `previous_hash` or a row version. If that
+        // update loses a race to a reset/change, reload and recheck instead of
+        // overwriting the newer password.
+    }
+}
 ```
+
+`PasswordHashPolicy` verifies preferred hashes before legacy hashers. It keeps
+a valid credential valid if generating the opportunistic replacement hash
+fails, so login code must not convert that condition into an authentication
+failure.
 
 ## Permission Classes
 
@@ -268,7 +293,8 @@ fn article_handler() -> ModelViewSetHandler<Article> {
 ## Security Best Practices
 
 1. **Always use HTTPS in production** — Set `cookie_secure: true` for session cookies
-2. **Use `argon2-hasher`** — It is the most resistant to brute-force attacks
+2. **Use `argon2-hasher` for new passwords** — Use `PasswordHashPolicy` for
+   controlled legacy-hash migration instead of replacing a deployed hasher
 3. **Set short JWT access token lifetimes** — 15 minutes is recommended; use refresh tokens for longer sessions
 4. **Never store secrets in code** — Use environment variables for `JWT_SECRET_KEY`, database credentials, and OAuth client secrets
 5. **Enable CORS carefully** — Only whitelist known origins, never use `*` in production
