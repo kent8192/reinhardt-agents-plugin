@@ -109,7 +109,7 @@ parallel serializer struct with the same fields.
 
 ---
 
-## DTO-Derived Client Forms (0.4.0-alpha.1+)
+## DTO-Derived Client Forms (0.4.0)
 
 ### `#[derive(ClientForm)]`
 

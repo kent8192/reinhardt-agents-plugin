@@ -61,7 +61,7 @@ Full integration tests with real server and WASM frontend.
 use reinhardt::pages::testing::e2e;
 ```
 
-## DTO-Derived Client Form Coverage (0.4.0-alpha.1+)
+## DTO-Derived Client Form Coverage (0.4.0)
 
 For a `ClientForm`-derived DTO, test the generated contract instead of only the
 page that happens to render it. Keep the native checks focused on the shared

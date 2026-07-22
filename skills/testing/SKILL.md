@@ -1,7 +1,7 @@
 ---
 name: testing
 description: Use when writing tests for reinhardt-web applications - provides rstest/AAA patterns, TestContainers setup, API testing utilities, and DTO-derived client-form coverage
-versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.0-alpha.1"]
+versions: ["0.4.0"]
 ---
 
 # Reinhardt Testing
@@ -46,7 +46,7 @@ Guide developers through writing high-quality tests using rstest, AAA pattern, r
 3. For Pages apps, verify both native and `wasm32-unknown-unknown` surfaces when shared modules rely on 0.3 inert stubs
 4. For generated projects, scaffold a fresh 0.3 Pages app and compare app-local layout expectations before changing fixtures
 
-### DTO-Derived Client Form Tests (0.4.0-alpha.1+)
+### DTO-Derived Client Form Tests (0.4.0)
 
 1. Read `../pages/references/client-form-bindings.md` and
    `../pages/references/testing-guide.md` before testing a `ClientForm` DTO.

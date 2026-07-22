@@ -332,17 +332,19 @@ let effect = Effect::new(move || {
 std::mem::forget(effect);  // Keep alive for page lifetime
 ```
 
-## watch Blocks vs Hooks
+## Direct Reactive Rendering vs Hooks
 
-The `page!` macro's `watch` block provides **reactive rendering** that automatically re-renders when Signal dependencies change. This is distinct from hooks.
+The `page!` macro automatically makes dynamic `{expr}`, `if`, `match`, and
+`for` blocks reactive: it re-renders them when their Signal dependencies
+change. This rendering mechanism is distinct from hooks.
 
-### When to Use watch (Not Hooks)
+### When to Use Direct Reactive Rendering (Not Hooks)
 
 | Scenario | Use | Not |
 |----------|-----|-----|
-| Conditionally show/hide elements based on Signal | `watch { if signal.get() { ... } }` | `use_effect` |
-| Render different views based on state | `watch { match state.get() { ... } }` | `use_effect` + manual DOM |
-| Reactive list rendering | `watch { for item in items.get() { ... } }` | `use_effect` |
+| Conditionally show/hide elements based on Signal | `if signal.get() { ... }` inside `page!` | `use_effect` |
+| Render different views based on state | `match state.get() { ... }` inside `page!` | `use_effect` + manual DOM |
+| Reactive list rendering | `for item in items.get() { ... }` inside `page!` | `use_effect` |
 
 ### When Hooks Are Still Needed
 
@@ -355,16 +357,17 @@ The `page!` macro's `watch` block provides **reactive rendering** that automatic
 | DOM refs and measurements | `use_ref`, `use_layout_effect` |
 
 For forms, use `form!` for a hand-defined static schema, or (in
-0.4.0-alpha.1+) use a `ClientForm`-derived companion when a supported DTO is the
+0.4.0) use a `ClientForm`-derived companion when a supported DTO is the
 canonical request contract. Both use `use_form` for current values,
 dirty/touched markers, validation results, submit phase, and reset/submit
 actions. For a generated client-form submit, let the form runtime own its
 validation and async lifecycle; bind pending, success, and error UI to form
 state instead of recreating it with a separate action. Use Signals, hooks, and
-`watch {}` for surrounding display state, not as a second implementation of the
-form runtime. See [DTO-Derived Client Form Bindings](client-form-bindings.md).
+direct reactive `page!` expressions for surrounding display state, not as a
+second implementation of the form runtime. See [DTO-Derived Client Form
+Bindings](client-form-bindings.md).
 
-### Example: watch Replaces Manual Effect Rendering
+### Example: Direct Rendering Replaces Manual Effect Rendering
 
 ```rust
 // AVOID: using Effect for conditional rendering
@@ -373,24 +376,24 @@ use_effect(move || {
     if show.get() { /* manually update DOM */ }
 });
 
-// PREFER: watch block in page! macro
+// PREFER: a direct reactive conditional in page! macro
 page!(|show: Signal<bool>| {
     div {
-        watch {
-            if show.get() {
-                div { class: "alert", "Visible!" }
-            }
+        if show.get() {
+            div { class: "alert", "Visible!" }
         }
     }
 })(show)
 ```
 
-### watch Best Practices
+### Direct Reactive Rendering Best Practices
 
 - **Pass Signals directly** to `page!` — don't extract values before the macro
 - **Clone Signals freely** — `Signal::clone()` is cheap (Rc-based)
-- **One expression per watch** — each block must contain exactly one `if`, `match`, or `for`
-- **Don't nest watch blocks** — use multiple sibling watch blocks instead
+- **Use direct dynamic blocks** — write `if`, `match`, and `for` directly in
+  `page!`; `{expr}` is also reactive
+- **Avoid manual wrappers** — `watch {}` is removed and explicit
+  `Page::reactive(...)` is unnecessary for page-body rendering
 
 ## Architecture Notes
 
@@ -399,7 +402,8 @@ page!(|show: Signal<bool>| {
 - **Batching**: Multiple Signal changes batch into a single update cycle via micro-tasks
 - **Memory management**: All reactive nodes auto-cleanup when dropped
 - **`std::mem::forget`**: Use for Effects that should live for the entire page lifetime (e.g., routing)
-- **watch compiles to `Page::reactive()`**: The reactive closure is tracked by the runtime and re-evaluated on Signal changes
+- **Dynamic `page!` blocks compile to `Page::reactive()`**: The generated
+  closure is tracked by the runtime and re-evaluated on Signal changes
 
 ## Version Differences (0.2.x)
 
@@ -483,7 +487,9 @@ use_callback(
 
 ### Auto-wrapping in page! Macro
 
-In 0.2.x, `{expr}`, `if`, and `for` inside `page!` are unconditionally wrapped in `Page::reactive` — no explicit wrapping is needed. Code that previously used `watch { ... }` or manual `Page::reactive(...)` continues to work, but the wrapping is now redundant.
+Since 0.2.x, `{expr}`, `if`, `match`, and `for` inside `page!` are
+unconditionally wrapped in `Page::reactive` — no explicit wrapper is needed.
+`watch { ... }` was removed; move its body directly into `page!` instead.
 
 ### Reactive and ReactiveIf Clone
 

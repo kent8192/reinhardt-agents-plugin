@@ -55,18 +55,16 @@ claude install kent8192/reinhardt-agents-plugin
 
 ## Supported Versions
 
-This plugin is aligned with the reinhardt-web 0.3.2 stable release line and
-also documents selected opt-in 0.4.0-alpha.1 preview APIs. Older-version
-guidance remains available for projects that are still migrating:
+This plugin targets reinhardt-web 0.4.0. Historical migration guidance remains
+only where it is explicitly labeled as such.
 
 | Version | Status | Source |
 |---------|--------|--------|
-| **0.3.2** | Target stable line | `reinhardt-web@v0.3.2` |
-| **0.4.0-alpha.1** | Preview line | `develop/0.4.0`; DTO-derived client forms are preview-only |
-| **0.2.x** | Legacy migration source | `reinhardt-web-v0.2.x` releases |
-| **0.1.x** | Legacy migration source | `reinhardt-web-v0.1.3` and earlier tags |
+| **0.4.0** | Current target | `develop/0.4.0` |
 
-Skills use inline version markers — `**(0.1.x)**` / `**(0.2.x)**` / `**(0.3.x)**` / `**(0.4.0-alpha.1+)**` — where APIs diverge between versions. Check your project's `Cargo.toml` to determine which version family applies.
+Skills use the `**(0.4.0)**` marker for current APIs. Historical migration
+notes name their source version explicitly. Check your project's `Cargo.toml`
+before applying a migration note.
 
 ## Features
 
@@ -79,7 +77,7 @@ Skills use inline version markers — `**(0.1.x)**` / `**(0.2.x)**` / `**(0.3.x)
 | `api-development` | "create an API", "add a view", "configure routes" | Serializers, views, URL routing, authentication, and pagination following reinhardt REST conventions; `ModelViewSet`, `VersionedRouter` |
 | `authentication` | "JWT", "session auth", "OAuth", "OIDC", "GenericOidcProvider", "social login" | Auth backends, JWT/session setup, social providers (Google/GitHub/Apple/Microsoft) and `GenericOidcProvider` for arbitrary OIDC IdPs |
 | `authorization` | "permissions", "guards", "extractors", "access control" | Permission system, guard middleware, and extractor patterns |
-| `pages` | "page", "head", "form", "ClientForm", "ClientFormChoices", "server_fn", "Signal", "useState", "SSR", "hydration", "WASM", "frontend", "ClientLauncher" | WASM frontend with `page!` / `head!` / `form!` macros, 0.4.0-alpha.1+ DTO-derived client forms, reactive hooks, `ClientLauncher` lifecycle, SPA routing, and SSR |
+| `pages` | "page", "head", "form", "ClientForm", "ClientFormChoices", "server_fn", "Signal", "useState", "SSR", "hydration", "WASM", "frontend", "ClientLauncher" | WASM frontend with `page!` / `head!` / `form!` macros, 0.4.0 DTO-derived client forms, reactive hooks, `ClientLauncher` lifecycle, SPA routing, and SSR |
 | `macros` | "#[model]", "#[api]", "#[inject]", "#[admin]", "#[settings]" | Attribute, derive, and function-like procedural macros — semantics, options, and recommended patterns |
 | `testing` | "write tests", "add test coverage", "test this endpoint", "DI override" | rstest-based test generation with AAA pattern, reinhardt-test fixtures, TestContainers, and `with_di_overrides!` DI testing kit |
 | `dependency-injection` | "configure DI", "inject a service", "add a provider" | DI container configuration, provider scoping, `#[inject]` handler patterns, and database/auth integration |
@@ -139,7 +137,7 @@ The PostToolUse hook automatically scans code changes for these reinhardt-specif
 ## Requirements
 
 - **Rust** >= 1.96.0 (2024 Edition)
-- **reinhardt-web** `0.3.2`; `0.4.0-alpha.1+` is supported for documented preview APIs such as DTO-derived client forms, while legacy `0.2.x` / `0.1.x` guidance is kept for migrations
+- **reinhardt-web** `0.4.0`
 - **reinhardt-admin-cli** -- `cargo install reinhardt-admin-cli`
 - **Docker Desktop** -- required for TestContainers-based database tests
 - **semgrep** (optional) -- enables automatic anti-pattern detection via PostToolUse hook

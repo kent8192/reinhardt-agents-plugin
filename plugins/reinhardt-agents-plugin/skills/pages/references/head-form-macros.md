@@ -79,11 +79,12 @@ and reset/submit actions.
 Keep dynamic concerns in the form boundary:
 
 - Field values, validation, disabled state, and submit phase belong to form state.
-- Derived display around the form can use `watch {}` or memoized values.
+- Derived display around the form can use direct reactive `page!` expressions
+  or memoized values.
 - Server submission should target the configured `server_fn` or `action`; do not
   manually duplicate the request payload in an unrelated event handler.
 
-### DTO-Derived Client Forms (0.4.0-alpha.1+)
+### DTO-Derived Client Forms (0.4.0)
 
 `ClientForm` is an opt-in alternative source for a form whose canonical request
 schema is already a supported, named DTO. It generates a typed companion that

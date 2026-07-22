@@ -1,7 +1,7 @@
 ---
 name: pages
 description: Use when building WASM frontend pages with reinhardt-pages - covers page!/head!/form! macros, DTO-derived ClientForm bindings, reactive hooks (Signal/Effect/useState), routing, SSR/hydration, server functions, and API client
-versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.0-alpha.1"]
+versions: ["0.4.0"]
 ---
 
 # Reinhardt Pages (WASM Frontend)
@@ -30,7 +30,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 
 ### Creating a Form
 
-1. **Choose the source of truth** — use `form!` for a hand-defined UI schema, or (in 0.4.0-alpha.1+) derive `ClientForm` when a supported named request DTO is the canonical form contract; read `references/head-form-macros.md`.
+1. **Choose the source of truth** — use `form!` for a hand-defined UI schema, or (in 0.4.0) derive `ClientForm` when a supported named request DTO is the canonical form contract; read `references/head-form-macros.md`.
 2. **Build DTO-derived forms** — read `references/client-form-bindings.md` for `ClientForm`, `ClientFormChoices`, validation, hidden fields, and generated submit helpers.
 3. **Add Server Function** — read `references/head-form-macros.md` (`#[server_fn]` section).
 4. **Embed in Page** — read `references/page-macro.md`.
@@ -42,12 +42,12 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - Import app/framework types at the top of the module instead of repeating long fully qualified paths in components or server function signatures/bodies
 - In route-backed UI, wire buttons and actions to route params, form values, loaded DTOs, selected rows/versions, and server return values; never leave demo fixture IDs, sample constants, or canned text in production route actions
 - Build static form structure with `form!` and dynamic form state with `use_form`
-- **(0.4.0-alpha.1+)** When a non-generic named request DTO is the canonical browser payload and its fields fit the generated contract, prefer opt-in `#[derive(ClientForm)]` over duplicating field tokens and request assembly by hand. `ClientForm` shares the `use_form` runtime and does not alter existing `form!` behavior.
-- **(0.4.0-alpha.1+)** Use `ClientFormChoices` only for externally tagged, fieldless enums whose serialized and deserialized choice names agree. Keep serde-skipped request fields out of generated `server_fn` submit helpers so browser and native payloads stay compatible.
+- **(0.4.0)** When a non-generic named request DTO is the canonical browser payload and its fields fit the generated contract, prefer opt-in `#[derive(ClientForm)]` over duplicating field tokens and request assembly by hand. `ClientForm` shares the `use_form` runtime and does not alter existing `form!` behavior.
+- **(0.4.0)** Use `ClientFormChoices` only for externally tagged, fieldless enums whose serialized and deserialized choice names agree. Keep serde-skipped request fields out of generated `server_fn` submit helpers so browser and native payloads stay compatible.
 - For user-facing relation inputs, show representative values such as `title`, `name`, or `slug`; do not ask users to type raw foreign-key primary keys unless the surface is internal/admin-only or no useful representative field exists
 - Configure `cfg_aliases` in `build.rs` for `wasm`/`native` and `server`/`client` aliases
 - Event handlers in `page!` are auto-handled across platforms (no manual `#[cfg(wasm)]` needed)
-- Use `watch {}` for reactive conditionals (not static `if` with extracted Signal values)
+- Write reactive `{expr}`, `if`, `match`, and `for` blocks directly inside `page!`; the macro auto-wraps them, so do not use removed `watch {}` blocks or manual `Page::reactive(...)` wrappers
 - Use route reverse helpers for `href`, `action`, and `formaction` when named routes exist; avoid hardcoded paths
 - Use `reinhardt-i18n` for language-specific UI text, server-provided prompts, and generated copy, including Japanese output
 - Boolean attributes require expressions, not literals (`disabled: is_disabled`, NOT `disabled: true`)

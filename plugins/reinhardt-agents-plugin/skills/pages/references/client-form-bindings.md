@@ -3,7 +3,7 @@
 ## Availability
 
 `ClientForm` and `ClientFormChoices` are available in
-**0.4.0-alpha.1+**. They are opt-in additions: `form!` continues to own
+**0.4.0**. They are opt-in additions: `form!` continues to own
 hand-defined static forms, while `use_form` remains the shared runtime for both
 styles.
 

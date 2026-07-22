@@ -1,7 +1,7 @@
 ---
 name: macros
 description: Use when working with reinhardt procedural macros - covers attribute macros (#[model], #[dto], #[user], #[inject], HTTP decorators), derive macros including ClientForm, and function-like macros (guard!, installed_apps!, path!)
-versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.0-alpha.1"]
+versions: ["0.4.0"]
 ---
 
 # Reinhardt Macros
@@ -43,11 +43,10 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 
 ### Validation DTOs
 
-1. In 0.1.x–0.3.x, use `#[derive(Validate)]` with `#[validate(...)]` attributes for request DTOs.
-2. In 0.4.0-alpha.1+, use `#[dto]` on a named request DTO that must validate on both native and WASM; it emits or normalizes `Validate`, but does not replace explicit `Clone` or serde derives.
-3. Use `#[derive(ClientForm)]` only when that named DTO is the canonical supported client form contract; configure `name`, `validate`, and `server_fn` through `#[client_form(...)]`.
-4. Prefer generated `{Model}Info` types for model-shaped response DTOs.
-5. Only hand-write serializer structs when the API shape intentionally differs from the model.
+1. In 0.4.0, use `#[dto]` on a named request DTO that must validate on both native and WASM; it emits or normalizes `Validate`, but does not replace explicit `Clone` or serde derives.
+2. Use `#[derive(ClientForm)]` only when that named DTO is the canonical supported client form contract; configure `name`, `validate`, and `server_fn` through `#[client_form(...)]`.
+3. Prefer generated `{Model}Info` types for model-shaped response DTOs.
+4. Only hand-write serializer structs when the API shape intentionally differs from the model.
 
 ### DI Integration
 
@@ -68,8 +67,8 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 - ALL macros are re-exported through the `reinhardt` facade crate
 - `#[model]` auto-derives `Model`, `Serialize`, `Deserialize`, `Clone`, `Debug`
 - Every scalar field inside `#[model]` should have `#[field]` or `#[field(...)]`; relationship fields should have `#[rel(...)]`
-- Use `#[derive(Validate)]` / `#[validate(...)]` for request validation instead of duplicating validation logic in services
-- **(0.4.0-alpha.1+)** `#[dto]` is limited to named structs and keeps validation cross-target; `ClientForm` additionally requires a non-generic named struct with supported scalar or choice fields. See `references/attribute-macros.md` and `references/derive-macros.md`.
+- Use `#[dto]` / `#[validate(...)]` for request validation instead of duplicating validation logic in services
+- **(0.4.0)** `#[dto]` is limited to named structs and keeps validation cross-target; `ClientForm` additionally requires a non-generic named struct with supported scalar or choice fields. See `references/attribute-macros.md` and `references/derive-macros.md`.
 - `#[user]` auto-implements `BaseUser` and `AuthIdentity` traits on native targets and is inert on WASM in 0.3.x
 - HTTP decorators (`#[get]`, etc.) accept `name` and `use_inject` options
 - Register 0.3 endpoint-macro handlers with `ServerRouter::endpoint(...)`; do not use removed raw `ServerRouter::function` / `.route` registration

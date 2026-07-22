@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Document `0.4.0-alpha.1+` DTO-derived client form bindings across Pages,
+- Document `0.4.0` DTO-derived client form bindings across Pages,
   macro, testing, and review guidance, including `ClientForm`,
   `ClientFormChoices`, shared DTO validation, and generated submit lifecycle
   checks. (#57)

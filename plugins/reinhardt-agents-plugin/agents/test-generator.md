@@ -36,7 +36,7 @@ Specialized agent for generating high-quality tests that comply with reinhardt t
 | Integration tests (cross-crate) | `tests/` directory |
 | E2E tests | `tests/` directory |
 
-## DTO-Derived Client Form Coverage (0.4.0-alpha.1+)
+## DTO-Derived Client Form Coverage (0.4.0)
 
 When generating tests for `ClientForm`, cover the generated DTO contract as
 well as page rendering:

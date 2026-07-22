@@ -52,7 +52,7 @@ pub struct Post {
 
 **Generated:** `Model` trait implementation with `fn objects() -> Manager<Self>`, field accessors, table name derivation.
 
-### `#[dto]` (0.4.0-alpha.1+)
+### `#[dto]` (0.4.0)
 
 **Crate:** `reinhardt-core/macros`
 
@@ -74,7 +74,7 @@ pub struct CreateProjectRequest {
 `#[dto]` only accepts structs with named fields. Tuple structs, unit structs,
 enums, and unions must use another explicit validation boundary. When this DTO
 is also the canonical client form payload, add `#[derive(ClientForm)]` and see
-[the ClientForm derive reference](derive-macros.md#dto-derived-client-forms-040-alpha1).
+[the ClientForm derive reference](derive-macros.md#dto-derived-client-forms-040).
 
 ### Field Attributes (`#[field(...)]`)
 
