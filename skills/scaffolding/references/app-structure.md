@@ -227,9 +227,15 @@ project configuration.
 ```text
 src/
 ├── apps.rs
+├── config.rs
 ├── apps/
 │   ├── status.rs               # App entry point and `#[app_config]`
 │   └── status/
+│       ├── admin.rs             # Admin configuration
+│       ├── models.rs            # Model definitions
+│       ├── serializers.rs       # Serializer definitions
+│       ├── services.rs          # App services
+│       ├── tests.rs             # App tests
 │       ├── views.rs             # Application endpoint handlers
 │       └── urls.rs              # Application router
 └── config/
@@ -243,10 +249,15 @@ handler, and router in the `status` app:
 ```rust
 // src/apps.rs
 pub mod status;
+pub use status::StatusConfig;
 
 // src/apps/status.rs
 use reinhardt::app_config;
 
+pub mod admin;
+pub mod models;
+pub mod serializers;
+pub mod services;
 pub mod urls;
 pub mod views;
 
@@ -318,21 +329,26 @@ Follow this procedure to add a new app to an existing project:
    The legacy `-t restful|mtv` / `--template-type` flag was removed in rc.18.
 
 2. **Verify the generated structure** matches the layout above. The generated app includes:
-   - `lib.rs` — App entry point with `#[app_config]` macro
+   - `<name>.rs` — App entry point with `#[app_config]` macro
    - `admin.rs` — Admin configuration
    - `models.rs` — Model definitions
    - `serializers.rs` — Serializer definitions
+   - `services.rs` — App services
    - `views.rs` — View functions
    - `urls.rs` — URL routing (`ServerRouter`)
    - `tests.rs` — App tests
 
-3. **Register the app module** in `src/apps.rs`:
+3. **Verify the app module registration** in `src/apps.rs`. Current `startapp`
+   templates add it automatically:
 
    ```rust
    pub mod <name>;
+   pub use <name>::<Name>Config;
    ```
 
-4. **Register the app** in `installed_apps!` macro (in `src/config/apps.rs` or equivalent):
+4. **Verify the app registration** in the `installed_apps!` macro (in
+   `src/config/apps.rs` or equivalent). Current `startapp` templates append it
+   automatically:
 
    ```rust
    installed_apps! {
@@ -347,7 +363,7 @@ Follow this procedure to add a new app to an existing project:
    #[routes]
    pub fn routes() -> UnifiedRouter {
        UnifiedRouter::new()
-           .mount("/api/", crate::apps::<name>::urls::url_patterns())
+           .mount("/api/", crate::apps::<name>::urls::server_url_patterns())
    }
    ```
 

@@ -65,7 +65,7 @@ Guide developers through creating new reinhardt-web projects and adding apps wit
    ```
 
 4. **Verify structure** — read `references/app-structure.md` for expected layout
-5. **Register app** — add module to `src/apps.rs` and entry to `installed_apps!` macro in `src/config/apps.rs`
+5. **Verify registration** — current `startapp` templates add the module/export in `src/apps.rs` and the entry in `src/config/apps.rs`'s `installed_apps!` macro; register them manually only for legacy project layouts that the command cannot update
 
 ## Important Rules
 
@@ -79,7 +79,7 @@ Guide developers through creating new reinhardt-web projects and adding apps wit
 - In 0.3.x Pages apps, expect app-local split modules (`client/`, `server/`, `services/client.rs`, `services/server.rs`, `urls/client_router.rs`, `urls/server_router.rs`) and preserve generated empty directories with `.gitkeep`
 - Do not keep obsolete app-local `pages.rs`, `client/pages`, `urls/server_urls.rs`, or broad project-level `shared/forms.rs` / `shared/types.rs` unless the project still has hand-written cross-app DTOs there
 - Follow the Django-parity app boundary: every web application MUST create or select an app for user-facing endpoints, including minimal services and benchmarks with only one or two handlers
-- Define endpoint handlers in `src/apps/<app>/views.rs` or an app-local equivalent, and register their routes in `src/apps/<app>/urls.rs` or an app-local `urls/` module
+- Define HTTP endpoint handlers in `src/apps/<app>/views.rs` and Pages `#[server_fn]` functions in `src/apps/<app>/server_fn.rs` (or app-local equivalents), then register their routes in `src/apps/<app>/urls.rs` or an app-local `urls/` module
 - Keep `src/config/urls.rs` composition-only: it may mount app routers and framework-level routes, but MUST NOT define application endpoint handlers directly; register every implementation app in `src/config/apps.rs`
 
 ## Cross-Domain References
