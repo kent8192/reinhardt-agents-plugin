@@ -2,42 +2,70 @@
 
 ## Basic Syntax
 
-The `page!` macro creates anonymous components with closure-style DSL. It returns a closure — invoke it with `()` to get a `Page`:
+The `page!` macro has a direct body form for ordinary `Page`-returning
+functions and explicit closure forms for reusable factories.
+
+### 0.4.x: Direct Page Bodies
+
+Use `page!({ ... })` for application screens and ordinary functions that
+return a `Page`. It returns the `Page` immediately, so there is no trailing
+`()`. Free value identifiers from the surrounding Rust scope are implicitly
+captured and cloned into generated reactive and event closures. Every captured
+value must implement `Clone`.
+
+The direct form is `page!({ ... })`: do not add a `move` keyword to the macro
+syntax. It supports captures used in expressions, attributes, event handlers,
+component props and children, macro arguments, `#head`, and keyed `for` loops.
 
 ```rust
 use reinhardt::pages::component::Page;
 use reinhardt::pages::page;
 
-// No parameters — note the double call: page!(|| { ... })()
-pub fn hello_page() -> Page {
-    page!(|| {
-        div { "Hello, World!" }
-    })()
-}
-
-// With parameters — pass arguments in the second call
 pub fn greeting_page(name: String) -> Page {
-    page!(|name: String| {
+    page!({
         div { class: "greeting", { name } }
-    })(name)
+    })
 }
 ```
 
-### Component Composition (Layout Pattern)
+`Signal`, `Action`, `Resource`, `Callback`, `Page`, and typical application
+handles are normally cheap to clone. A non-`Clone` capture is a compile error;
+keep it outside the page body or pass a cloneable handle instead.
+
+### Reusable Page Factories (Strict)
+
+Use `page!(|| { ... })` or `page!(|props: Props| { ... })` only when a caller
+needs a factory that it will invoke later. These forms return a closure and
+retain strict capture validation: every value used in the body must be a
+declared closure parameter or a local binding inside the body.
+
+```rust
+let greeting_factory = page!(|name: String| {
+    div { class: "greeting", { name } }
+});
+
+let greeting = greeting_factory("Ada".to_string());
+```
+
+Migrate an existing body-only page that used surrounding values to
+`page!({ ... })`. If that page was intentionally a no-argument factory, make
+the factory explicit with `page!(|| { ... })` instead.
+
+### Component Composition (Layout Pattern, 0.4.x)
 
 Wrap content in a layout by accepting `Page` as a parameter:
 
 ```rust
 pub fn auth_layout(title: &str, form_content: Page) -> Page {
     let title = title.to_string();
-    page!(|title: String, form_content: Page| {
+    page!({
         div { class: "min-h-screen flex items-center justify-center bg-gray-50",
             div { class: "w-full max-w-md",
                 h2 { class: "text-xl font-semibold mb-6", { title } }
                 { form_content }
             }
         }
-    })(title, form_content)
+    })
 }
 
 // Usage:
@@ -49,7 +77,8 @@ pub fn login_page() -> Page {
 
 ## Head Directive (SSR)
 
-Inject head content using `#head` for server-side rendering:
+**(0.4.x)** Inject head content using `#head` for server-side rendering with a
+direct page body:
 
 ```rust
 let page_head = head!(|| {
@@ -58,14 +87,14 @@ let page_head = head!(|| {
     link { rel: "stylesheet", href: resolve_static("css/main.css") }
 });
 
-page! {
+page!(
     #head: page_head,
-    || {
+    {
         div { class: "container",
             h1 { "Welcome Home" }
         }
     }
-}()
+)
 ```
 
 ## HTML Elements
@@ -223,18 +252,19 @@ button { @click: |_| { do_something(); } }
 button { @click: handle_click }
 ```
 
-Closures must have 0 or 1 parameter (compile error if more). For a 0.4.x event
-attribute that only dispatches an `Action`, prefer `dispatching` or
-`dispatching_with` over a hand-written `use_callback`. Use `use_callback` for
-nontrivial work beyond dispatch, and clone non-`Copy` callbacks or actions at
-the attribute use site when the render closure also needs them:
+Closures must have 0 or 1 parameter (compile error if more). Prefer named
+`use_callback` handles for nontrivial work, and clone non-`Copy` callbacks or
+actions at the attribute use site when the render closure also needs them:
 
 ```rust
-let save_click = save_action.dispatching_with(move || current_form_values());
+// 0.4.x direct body
+let save_click = use_callback(move |_| {
+    save_action.dispatch(current_form_values());
+}, (save_action.clone(), form_state.clone()));
 
-page!(|| {
+page!({
     button { @click: save_click.clone(), "Save" }
-})()
+})
 ```
 
 ## Child Nodes
@@ -304,50 +334,67 @@ ul {
 }
 ```
 
-## Direct Reactive Rendering
+## Reactive watch Blocks
 
-Write Signal-dependent `{expr}`, `if`, `match`, and `for` blocks directly
-inside `page!`. The macro automatically wraps them in `Page::reactive`, so
-they re-evaluate when Signal dependencies change.
+Use `watch` for Signal-dependent reactive rendering. Unlike static `if` conditions evaluated once at render time, `watch` blocks re-evaluate when Signal dependencies change.
 
 ```rust
-// Direct reactive conditional
-page!(|error: Signal<Option<String>>| {
+// 0.4.x direct body with watch
+page!({
     div {
-        if error.get().is_some() {
-            div { class: "alert", { error.get().unwrap_or_default() } }
+        watch {
+            if error.get().is_some() {
+                div { class: "alert", { error.get().unwrap_or_default() } }
+            }
         }
     }
-})(error.clone())
+})
 
-// Direct reactive branches
-page!(|state: Signal<State>| {
+// watch with match
+watch {
     match state.get() {
         State::Loading => div { "Loading..." },
         State::Ready(data) => div { { data } },
         State::Error(msg) => div { class: "error", { msg } },
     }
-})(state.clone())
+}
 ```
 
-### When to Use Direct Reactive Rendering
+### When to Use watch
 
 | Scenario | Solution |
 |----------|----------|
 | Static condition on Copy type | Plain `if` |
-| Dynamic Signal-dependent condition | `if signal.get() { ... }` inside `page!` |
-| Multiple reactive branches | `match state.get() { ... }` inside `page!` |
-| Reactive list rendering | `for item in items.get() { ... }` inside `page!` |
+| Dynamic Signal-dependent condition | `watch { if signal.get() { ... } }` |
+| Multiple reactive branches | `watch { match state.get() { ... } }` |
 
-**Best practices**: Pass Signals directly (don't extract values before
-`page!`) and clone them freely. Do not wrap the body in `watch {}` or call
-`Page::reactive(...)` manually.
+**Best practices**: Pass Signals directly (don't extract values before `page!`). Clone freely. Single expression per `watch` block.
 
-### 0.2.x+: Automatic Reactive Wrapping
+### 0.2.x: Automatic Reactive Wrapping
 
-Since 0.2.x, reactive expressions (`{expr}`, `if`, `match`, and `for`) inside
-`page!` are **automatically wrapped** in `Page::reactive`. `watch { ... }` was
-removed; move the former block body directly into `page!`.
+In 0.2.x, reactive expressions (`{expr}`, `if`, `for`) inside `page!` are **automatically wrapped** in `Page::reactive` — no explicit `watch { ... }` or manual `Page::reactive(...)` call is needed. Existing `watch` blocks still compile, but the wrapping is now redundant.
+
+```rust
+// 0.1.x — explicit watch needed for reactive re-rendering
+page!(|count: Signal<i32>| {
+    div {
+        watch {
+            if count.get() > 0 {
+                span { "Positive" }
+            }
+        }
+    }
+})(count)
+
+// 0.2.x — if/for/{expr} are auto-wrapped, watch is optional
+page!(|count: Signal<i32>| {
+    div {
+        if count.get() > 0 {
+            span { "Positive" }
+        }
+    }
+})(count)
+```
 
 ### 0.2.x: Bind Listener Typed Value Conversion
 
@@ -397,13 +444,13 @@ URL attributes (`href`, `src`, `action`, `formaction`) block dangerous schemes: 
 | `ul`, `ol` | Can only contain `li` |
 | `dl` | Can only contain `dt`, `dd`, and `div` |
 
-## Complete Example
+## Complete Example (0.4.x)
 
 ```rust
 use reinhardt::pages::prelude::*;
 
 fn todo_app(todos: Signal<Vec<String>>, filter: Signal<String>) -> Page {
-    page!(|todos: Signal<Vec<String>>, filter: Signal<String>| {
+    page!({
         div {
             class: "todo-app",
 
@@ -427,8 +474,10 @@ fn todo_app(todos: Signal<Vec<String>>, filter: Signal<String>) -> Page {
 
             ul {
                 class: "todo-list",
-                if todos.get().is_empty() {
-                    li { class: "empty", "No todos yet" }
+                watch {
+                    if todos.get().is_empty() {
+                        li { class: "empty", "No todos yet" }
+                    }
                 }
             }
 
@@ -438,6 +487,6 @@ fn todo_app(todos: Signal<Vec<String>>, filter: Signal<String>) -> Page {
                 { format!("{} items", todos.get().len()) }
             }
         }
-    })(todos, filter)
+    })
 }
 ```

@@ -63,14 +63,14 @@ where
 Use standard HTML `<a>` tags with `href` in `page!` macro. SPA link interception is set up separately to avoid full page reloads:
 
 ```rust
-// In page! macro — use standard <a> tags
-page!(|| {
+// 0.4.x direct page body — use standard <a> tags
+page!({
     nav {
         a { href: "/", class: "nav-link", "Overview" }
         a { href: "/users/", class: "nav-link", "Users" }
         a { href: "/login", class: "nav-link", "Login" }
     }
-})()
+})
 ```
 
 #### SPA Link Interception (Required for Client-Side Navigation)
@@ -301,10 +301,11 @@ let page_head = head!(|| {
     meta { name: "description", content: "..." }
 });
 
-let page = page! {
+// 0.4.x direct page body
+let page = page!(
     #head: page_head,
-    || { div { "Content" } }
-}();
+    { div { "Content" } }
+);
 
 // SsrRenderer includes the head in the HTML output
 let html = SsrRenderer::render(&page);
