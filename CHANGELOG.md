@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Align model, macro, migration, and code-review guidance with the typed
+  generated-column contract delivered by reinhardt-web #5586 and #5615.
+
 ## [0.3.2] - 2026-07-01
 
 ### Added

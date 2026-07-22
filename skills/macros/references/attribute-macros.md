@@ -61,6 +61,10 @@ pub struct Post {
 | `unique` | flag | Unique constraint |
 | `index` | flag | Create database index |
 | `default` | value | Default value |
+| `generated = SchemaExpr::...` | expression | **(0.4.x)** Portable, typed generated-column expression. Pair with exactly one storage flag. |
+| `generated_sql = "..."` | `&str` | **(0.4.x)** Trusted backend-specific generated-column expression when `SchemaExpr` cannot represent it. |
+| `generated_stored = true` | `bool` | **(0.4.x)** Store the generated value. |
+| `generated_virtual = true` | `bool` | **(0.4.x, MySQL/SQLite)** Compute the generated value virtually. |
 | `rename = "..."` | `&str` | Custom database column name |
 | `min` | number | Minimum value (numeric) |
 | `max` | number | Maximum value (numeric) |
@@ -69,6 +73,33 @@ pub struct Post {
 Use `#[field]` even when a scalar field has no options. This keeps field
 metadata complete for migrations, validation, serializers, admin, and generated
 `{Model}Info` structs.
+
+### Typed Generated Columns (0.4.x)
+
+Use the portable `SchemaExpr` subset for `generated`: `col`, `val`, `concat`,
+`coalesce`, and chained `binary` / `cast` calls. For a backend-specific trusted
+fragment, use the explicit `generated_sql` escape hatch instead of a raw string
+in `generated`.
+
+```rust
+use reinhardt::db::migrations::SchemaExpr;
+
+#[field(
+    max_length = 201,
+    generated = SchemaExpr::concat([
+        SchemaExpr::col("first_name"),
+        SchemaExpr::val(" "),
+        SchemaExpr::col("last_name"),
+    ]),
+    generated_stored = true,
+)]
+pub full_name: String,
+```
+
+`generated` and `generated_sql` are mutually exclusive. Specify exactly one
+storage mode: `generated_stored = true`, or `generated_virtual = true` for
+MySQL/SQLite. Generated columns cannot have a default or auto-increment; they
+are read-only and must not be included in create/update DTOs or partial updates.
 
 ### Relationship Attributes (`#[rel(...)]`)
 

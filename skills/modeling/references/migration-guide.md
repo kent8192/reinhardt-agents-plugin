@@ -56,6 +56,29 @@ migrations/
 
 > **Note:** There is no `sqlmigrate` command. To preview SQL, use `--plan` flag on the `migrate` command or review the generated migration file directly.
 
+### Generated Columns (0.4.x)
+
+The typed generated-column contract originated in
+[PR #5586](https://github.com/kent8192/reinhardt-web/pull/5586) and its final
+execution behavior was delivered in the merged cherry-pick
+[PR #5615](https://github.com/kent8192/reinhardt-web/pull/5615).
+
+- Generate a fresh migration after adding or changing a generated expression or
+  its storage mode. Typed `SchemaExpr` tokens and explicit `generated_sql`
+  values are preserved in migration state; do not replace that metadata with
+  hand-written raw SQL.
+- Review generated-column changes as replacements rather than assuming an
+  in-place `ALTER`. The autodetector drops and recreates changed generated
+  columns, keeps dependency order for generated-column chains, and repairs
+  affected indexes and constraints.
+- Test the generated migration on every target backend. SQLite cannot add a
+  stored generated column with direct `ALTER TABLE ADD COLUMN`; the migration
+  executor routes that case through table recreation, preserving columns,
+  constraints, and indexes.
+- A direct `ColumnDefinition { ... }` literal now needs `generated: None` for
+  an ordinary column. Prefer constructors where possible so new metadata is
+  initialized safely.
+
 ### Step 4: Apply the Migration
 
 ```bash
@@ -145,6 +168,7 @@ pub fn migration() -> Migration {
                     primary_key: true,
                     auto_increment: false,
                     default: None,
+                    generated: None,
                 },
                 ColumnDefinition {
                     name: "username".to_string(),
@@ -154,6 +178,7 @@ pub fn migration() -> Migration {
                     primary_key: false,
                     auto_increment: false,
                     default: None,
+                    generated: None,
                 },
                 // ... more columns
             ],
