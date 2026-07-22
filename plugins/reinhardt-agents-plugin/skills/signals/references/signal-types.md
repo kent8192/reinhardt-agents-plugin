@@ -125,8 +125,10 @@ connect_receiver!(
 
 ### Receiver Function Signature
 
+`connect_receiver!` passes the signal payload to its receiver.
+
 ```rust
-async fn my_receiver(instance: Arc<Product>, ctx: ReceiverContext) -> Result<(), SignalError> {
+async fn my_receiver(instance: Arc<Product>) -> Result<(), SignalError> {
     // Handle the signal
     Ok(())
 }

@@ -387,27 +387,35 @@ Add async side-effects for post-commit operations.
 
 **Steps:**
 
-1. Connect signal receiver for model events
-2. Implement receiver as idempotent async function
-3. Optionally enqueue background tasks
+1. Connect a receiver for the required model or transaction event
+2. Implement the receiver as an idempotent async function
+3. After a successful transaction commit, enqueue ordinary work or a durable job
 
 **Example:**
 
 ```rust
-use reinhardt::signals::{post_save, connect_receiver};
+use std::sync::Arc;
+
+use reinhardt::core::{
+    connect_receiver,
+    signals::transaction::{self, TransactionContext},
+};
 
 // In app setup
 connect_receiver!(
-    post_save::<Product>(),
-    |product: Arc<Product>, _ctx| async move {
-        // Enqueue notification task
-        let task = NotifyProductCreated::new(product.id.unwrap());
-        TaskQueue::enqueue(task).await?;
+    transaction::on_commit(),
+    |_ctx: Arc<TransactionContext>| async move {
+        // Call the app-owned queue service after the write commits.
         Ok(())
     },
-    dispatch_uid = "product_post_save_notify"
+    dispatch_uid = "product_on_commit_notify"
 );
 ```
+
+Use ordinary `TaskQueue` work for short-lived fire-and-forget behavior. For
+restart-safe operations or UI-visible status/retry/cancellation, enable
+`tasks-durable` and enqueue a `JobSpec` through a long-lived `DurableQueue`.
+The durable enqueue must also occur after the domain write commits.
 
 **Checklist:**
 
@@ -417,6 +425,7 @@ connect_receiver!(
 - [ ] Arguments are serializable (IDs, not model instances)
 - [ ] No cascading signal triggers
 - [ ] Tests verify receiver behavior in isolation
+- [ ] Durable jobs use `tasks-durable`, persist through a shared queue, and expose status through snapshots/events when clients need progress
 
 ---
 
