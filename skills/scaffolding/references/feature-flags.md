@@ -108,14 +108,14 @@ replacement for short-lived work.
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.4.0-alpha.1", features = ["tasks-durable"] }
+reinhardt = { version = "...", features = ["tasks-durable"] }
 ```
 
 For a server function or handler that receives the shared durable queue through
 DI, enable both features:
 
 ```toml
-reinhardt = { version = "0.4.0-alpha.1", features = ["tasks-durable", "di"] }
+reinhardt = { version = "...", features = ["tasks-durable", "di"] }
 ```
 
 The facade feature is named `tasks-durable`. Applications that depend directly

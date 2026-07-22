@@ -80,13 +80,19 @@ pub async fn generate_novel(
 - `#[injectable_factory]` is retained only as a deprecated 0.2 compatibility
   alias; do not use it for new 0.3.x code
 
-### Durable Queue Provider (0.4.x)
+### Durable Queue Integration (0.4.x)
 
 For a queue used by more than one server function, enable `tasks-durable` and
-`di`, create the SQLite-backed queue once, and register the framework-provided
-key rather than declaring a lookalike application key. The provider contract is
-`FactoryOutput<DurableQueueKey, SharedDurableQueue>` and consumers receive
-`Depends<DurableQueueKey, SharedDurableQueue>`.
+`di`, then create the SQLite-backed queue once. `SharedDurableQueue` and
+`DurableQueueKey` are framework-managed. Current 0.4 does not provide an
+`#[injectable]` durable-queue registration, so application code must not try to
+register either type: validation rejects framework-type overrides. If an
+application needs its own DI boundary, wrap the queue in an application-owned
+type and use an application-owned key.
+
+For an explicit application key, use `KeyedFactoryOutput<K, T>` and consume it
+as `KeyedDepends<K, T>`. `FactoryOutput<K, T>` is a deprecated compatibility
+alias, and `Depends<K, T>` is not the explicit-key wrapper in 0.4.
 
 Use singleton scope: a request-scoped provider would rebuild the store/queue
 and undermine durable coordination. Initialize `SqliteDurableJobStore` from a

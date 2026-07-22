@@ -85,7 +85,7 @@ Specialized agent for reviewing reinhardt-web application code against project c
 ### Durable Jobs (0.4.x)
 
 - [ ] Durable queue consumers enable facade feature `tasks-durable`; server-function injection also enables `di`
-- [ ] Shared durable queues use the framework `DurableQueueKey` and singleton `FactoryOutput<DurableQueueKey, SharedDurableQueue>`, not a per-request store or a duplicate custom key
+- [ ] App-level durable-queue DI uses an app-owned wrapper/key; it does not register framework-owned `SharedDurableQueue` or `DurableQueueKey` through `#[injectable]`
 - [ ] Jobs are created from `JobSpec`, claimed atomically, and completed only through their returned `JobClaim`
 - [ ] Status endpoints expose `JobSnapshot` and ordered lifecycle events rather than mutable storage records
 - [ ] Retry, attempt, lease, and stale-claim conflict paths are handled intentionally; long-running workers renew their claims
