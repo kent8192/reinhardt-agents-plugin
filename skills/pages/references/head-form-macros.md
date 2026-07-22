@@ -349,12 +349,22 @@ When a `#[server_fn]` receives a visible representative relation value such as
 Return application-level validation errors for not-found and ambiguous matches
 instead of falling back to raw `project_id` entry in the user-facing form.
 
-### Server-fn-backed i18n Helpers
+### Server-fn-backed i18n Exceptions
 
-When a Pages client needs app-local text that must be translated server-side,
-put the gettext boundary behind a small `#[server_fn]`. Do not duplicate
-client/server gettext implementations behind cfg gates when the intended
-boundary is "client asks server for translated copy".
+**(0.4.x)** Use the first-class Pages `I18nContext` and `t!` surface for normal
+catalog-backed UI text. Use this server-function pattern only when translated
+copy depends on server-only policy, authorization, request data, or a remote
+source that cannot be included in the Pages catalog. Do not add a round trip for
+a static page label that `t!` can render synchronously from the current context.
+
+For the exceptional server-owned case, put the gettext boundary behind a small
+`#[server_fn]`. Do not duplicate client/server gettext implementations behind
+cfg gates when the intended boundary is "client asks server for translated
+copy".
+
+**(0.1.x through 0.3.x)** This is the normal Pages translation boundary: use a
+small registered `#[server_fn]` plus `use_resource` and keep a stable fallback
+while loading or on error.
 
 ```rust
 use reinhardt::pages::server_fn::{ServerFnError, server_fn};

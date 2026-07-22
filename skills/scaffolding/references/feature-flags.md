@@ -87,7 +87,7 @@ Auth features can be combined (e.g., JWT for API clients + Session for admin pan
 
 | Feature | Description |
 |---------|-------------|
-| `i18n` | Internationalization: message catalogs, locale detection, translation macros. |
+| `i18n` | Internationalization: message catalogs, locale detection, and translation macros. In 0.4.x with `pages`, also enables reactive Pages `t!` translations. |
 | `mail` | Email sending framework with template support. |
 | `admin` | Auto-generated admin interface for registered models. |
 | `static-files` | Static file serving and collection (CSS, JS, images). |

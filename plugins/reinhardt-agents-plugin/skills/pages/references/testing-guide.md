@@ -239,6 +239,24 @@ wasm-bindgen-test = "0.3"
 
 Ensure `build.rs` is set up for `wasm`/`native` aliases (see routing-ssr.md). Both test targets use the same aliases.
 
+## Reactive Pages I18n Tests (0.4.x)
+
+For catalog-backed Pages translations, test the framework contract rather than
+mocking a server function for every label. Cover the following behaviors:
+
+- `t!("msgid")` renders the active catalog value, and named interpolation
+  renders the supplied values.
+- Switching the context with `I18nContext::set_locale()` re-renders existing
+  translated page output.
+- SSR configured with `SsrOptions::new().i18n_context(context)` emits
+  translated HTML, the `pages.i18n` state payload, and the active `<html lang>`.
+- Hydration restores the serialized catalog before its first render, without an
+  extra catalog fetch or fallback-text flash.
+
+Tests that mutate shared i18n state or catalogs must use `#[serial(i18n)]`.
+Keep the Arrange/Act/Assert structure and use strict assertions for both the
+pre-switch and post-switch rendered text.
+
 ## Testing Standards
 
 - ALL tests MUST use `rstest` (per project standards)

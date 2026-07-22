@@ -255,6 +255,31 @@ div {
 }
 ```
 
+## Localized Child Nodes (0.4.x)
+
+For catalog-backed UI text, enable the facade `pages` and `i18n` features and
+render lazy translations directly inside `page!`. `t!` accepts a string literal
+and optional named interpolation values; the resulting `TranslatedText` tracks
+the current Pages locale when it renders.
+
+```rust
+use reinhardt::pages::t;
+
+let display_name = "Ada".to_string();
+
+page!(|display_name: String| {
+    section {
+        h1 { { t!("Workspace") } }
+        p { { t!("Welcome, {name}", name = display_name) } }
+    }
+})(display_name)
+```
+
+Use `tn`, `tp`, or `tnp` for plural or contextual messages; `t!` intentionally
+covers only simple messages and named interpolation. Set up the catalog and
+`I18nContext` as described in `i18n.md`; do not wrap an already available
+catalog translation in `use_resource` just to make it reactive.
+
 ## Conditional Rendering
 
 ```rust

@@ -175,10 +175,16 @@ state should be visible in the component tree. Do not fire an async task and
 drop its result from a route component; the `Action` phase is the UI contract
 that disables controls, renders errors, and prevents duplicate submissions.
 
-Use `use_resource` for async reads and derived text, including labels,
-diagnostics, previews, or server-translated copy that depends on the current
-route, selected version, locale, or loaded DTO. Prefer a stable fallback while
-the `Resource` is loading or failed.
+Use `use_resource` for asynchronous reads and derived text, including labels,
+diagnostics, previews, or server-derived copy that depends on the current route,
+selected version, locale, or loaded DTO. Prefer a stable fallback while the
+`Resource` is loading or failed.
+
+Do not wrap an already-loaded Pages i18n catalog entry in `use_resource`. In
+0.4.x, `t!` and the `TranslatedText` helpers read `I18nContext` lazily and
+re-render when `set_locale()` changes the active locale. Reserve a `Resource`
+for remote or server-policy-dependent copy that is not part of the Pages catalog
+or SSR hydration state.
 
 Use `use_callback` / `use_callback_with` for event handlers that dispatch the
 current form values, selected rows, selected versions, or route parameters into
