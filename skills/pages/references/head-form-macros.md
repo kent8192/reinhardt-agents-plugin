@@ -79,9 +79,59 @@ and reset/submit actions.
 Keep dynamic concerns in the form boundary:
 
 - Field values, validation, disabled state, and submit phase belong to form state.
-- Derived display around the form can use `watch {}` or memoized values.
+- Derived display around the form can use direct reactive `page!` expressions
+  or memoized values.
+- **(0.4.x)** When a generated runtime submits a typed async mutation, use
+  `use_form_action` to sequence validation and current-value dispatch. Do not
+  reproduce `handle_submit`, `get_values`, and `use_action.dispatch` in a
+  separate event handler.
 - Server submission should target the configured `server_fn` or `action`; do not
   manually duplicate the request payload in an unrelated event handler.
+
+### Typed Form Actions (0.4.x; #5556)
+
+Use `use_form_action` when a `use_form` runtime should validate and then invoke
+a typed async mutation. It composes the existing `form!` static definition and
+`use_form` runtime with `use_action`; it does not replace either boundary.
+
+```rust
+use reinhardt::pages::{use_form, use_form_action};
+
+let runtime = use_form(&login_form).build();
+let save = use_form_action(&runtime, |values: LoginFormValues| async move {
+    login(values).await
+})
+.on_success(|runtime, _result| {
+    runtime.reset_default_values();
+});
+
+let on_submit = move |event| {
+    event.prevent_default();
+    if !save.is_pending() {
+        save.submit();
+    }
+};
+```
+
+Bind `on_submit` to the form's `@submit` event (or call it from a submit-button
+`@click` handler). Do not call `FormAction::submit` while rendering: rendering
+can run more than once and must not dispatch a mutation by itself.
+
+`FormAction::submit` runs generated validation before dispatching the current
+`LoginFormValues`. Invalid input returns a validation failure without dispatching
+the mutation. Use `is_pending()` to prevent repeat submits, `is_success()` and
+`result()` for completed success state, and `error()` or `error_message()` for
+action and validation feedback.
+
+On WASM, action success and failure complete the form submit lifecycle before
+`.on_success` and `.on_error` callbacks run. On native targets, `use_action`
+intentionally does not poll async futures: `submit()` still validates and
+dispatches the current values, then clears pending state without manufacturing a
+result, success, error, or callback. Cover completion behavior with a WASM or
+browser test; native tests should cover validation and payload dispatch.
+
+Use standalone `use_action` when the mutation is not driven by a generated
+`use_form` runtime.
 
 ### Form-Level Attributes
 
@@ -288,6 +338,34 @@ client_validators: {
     ],
 }
 ```
+
+### Shared DTO Validation (0.4.0; #5543)
+
+For a named input type used by both a WASM form and a native `#[server_fn]` or
+HTTP handler, use `#[dto]` with unconditional field rules. This is separate
+from `client_validators`: the form DSL does not automatically invoke the Rust
+DTO's `Validate` implementation.
+
+```rust
+use reinhardt::dto;
+use serde::{Deserialize, Serialize};
+
+#[dto]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SignupInput {
+    #[validate(email)]
+    pub email: String,
+
+    #[validate(length(min = 8))]
+    pub password: String,
+}
+```
+
+`#[dto]` emits only Reinhardt's shared `Validate` derive. Keep transport
+derives explicit, use the client-compatible `email`, `url`, `length`, and
+`range` rules, and enable the `core` feature on the `reinhardt` facade in a
+`default-features = false` client. Call validation again on the server after deserialization.
+Use server-side validation for cross-field, authorization, and business rules.
 
 ## #[server_fn] Attribute Macro
 

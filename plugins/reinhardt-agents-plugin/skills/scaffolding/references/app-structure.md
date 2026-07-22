@@ -217,6 +217,101 @@ pub fn get_installed_apps() -> Vec<String> {
 - The macro generates an `InstalledApp` enum with `all_apps()` and `path()` methods
 - App names in `installed_apps!` must match the `name` in `#[app_config]`
 
+## Django-Parity App Boundary
+
+Every web application needs an app boundary for its user-facing endpoints. This
+applies equally to a minimal service or benchmark with one handler: create or
+select the smallest appropriate app instead of placing application code in the
+project configuration.
+
+```text
+src/
+├── apps.rs
+├── config.rs
+├── apps/
+│   ├── status.rs               # App entry point and `#[app_config]`
+│   └── status/
+│       ├── admin.rs             # Admin configuration
+│       ├── models.rs            # Model definitions
+│       ├── serializers.rs       # Serializer definitions
+│       ├── services.rs          # App services
+│       ├── tests.rs             # App tests
+│       ├── views.rs             # Application endpoint handlers
+│       └── urls.rs              # Application router
+└── config/
+    ├── apps.rs                  # `installed_apps!` registration
+    └── urls.rs                  # Root composition only
+```
+
+For example, a one-endpoint RESTful health service keeps the app declaration,
+handler, and router in the `status` app:
+
+```rust
+// src/apps.rs
+pub mod status;
+pub use status::StatusConfig;
+
+// src/apps/status.rs
+use reinhardt::app_config;
+
+pub mod admin;
+pub mod models;
+pub mod serializers;
+pub mod services;
+pub mod urls;
+pub mod views;
+
+#[app_config(name = "status", label = "status")]
+pub struct StatusConfig;
+```
+
+```rust
+// src/apps/status/views.rs
+use reinhardt::http::ViewResult;
+use reinhardt::{get, Response, StatusCode};
+
+#[get("/health/", name = "status_health")]
+pub async fn health_check() -> ViewResult<Response> {
+    Ok(Response::new(StatusCode::OK).with_body("ok"))
+}
+```
+
+```rust
+// src/apps/status/urls.rs
+use reinhardt::ServerRouter;
+
+use super::views;
+
+pub fn server_url_patterns() -> ServerRouter {
+    ServerRouter::new().endpoint(views::health_check)
+}
+```
+
+Register the app, then let the project-level router mount it:
+
+```rust
+// src/config/apps.rs
+use reinhardt::installed_apps;
+
+installed_apps! {
+    status: "status",
+}
+
+// src/config/urls.rs
+use reinhardt::prelude::*;
+use reinhardt::routes;
+
+#[routes]
+pub fn routes() -> UnifiedRouter {
+    UnifiedRouter::new()
+        .mount("/", crate::apps::status::urls::server_url_patterns())
+}
+```
+
+`src/config/urls.rs` is composition-only. It may mount app routers, register
+framework-level routes, and configure global router concerns, but it MUST NOT
+define application endpoint handlers such as `#[get]` or `#[post]` functions.
+
 ## Adding a New App
 
 Follow this procedure to add a new app to an existing project:
@@ -234,21 +329,26 @@ Follow this procedure to add a new app to an existing project:
    The legacy `-t restful|mtv` / `--template-type` flag was removed in rc.18.
 
 2. **Verify the generated structure** matches the layout above. The generated app includes:
-   - `lib.rs` — App entry point with `#[app_config]` macro
+   - `<name>.rs` — App entry point with `#[app_config]` macro
    - `admin.rs` — Admin configuration
    - `models.rs` — Model definitions
    - `serializers.rs` — Serializer definitions
+   - `services.rs` — App services
    - `views.rs` — View functions
    - `urls.rs` — URL routing (`ServerRouter`)
    - `tests.rs` — App tests
 
-3. **Register the app module** in `src/apps.rs`:
+3. **Verify the app module registration** in `src/apps.rs`. Current `startapp`
+   templates add it automatically:
 
    ```rust
    pub mod <name>;
+   pub use <name>::<Name>Config;
    ```
 
-4. **Register the app** in `installed_apps!` macro (in `src/config/apps.rs` or equivalent):
+4. **Verify the app registration** in the `installed_apps!` macro (in
+   `src/config/apps.rs` or equivalent). Current `startapp` templates append it
+   automatically:
 
    ```rust
    installed_apps! {
@@ -263,7 +363,7 @@ Follow this procedure to add a new app to an existing project:
    #[routes]
    pub fn routes() -> UnifiedRouter {
        UnifiedRouter::new()
-           .mount("/api/", crate::apps::<name>::urls::url_patterns())
+           .mount("/api/", crate::apps::<name>::urls::server_url_patterns())
    }
    ```
 
@@ -310,6 +410,12 @@ pub mod client_router;
 - `#[cfg(wasm)]` — WASM-only modules (client components)
 - `#[cfg(server)]` — Server-mode-only routing (mode-gated, not platform-gated)
 - No annotation — Available on both platforms (DI service keys, service APIs, and shared DTOs that do not depend on native-only types)
+
+For a shared request or form DTO on the 0.4.0 line **(#5543)**, keep the type
+in an unconditional shared module and use `#[dto]` above explicit serde derives.
+It supplies `Validate` for both targets; keep field-level `#[validate(...)]`
+attributes unconditional and reserve server-only modules for validation rules
+that cannot run in the browser.
 
 ### Pages Service and Server Boundaries
 

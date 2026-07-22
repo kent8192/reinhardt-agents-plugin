@@ -154,6 +154,7 @@ use_effect(
 
 `use_action` and its `Idle`, `Pending`, `Success`, and `Error` phases are
 available across 0.1.x–0.4.x. `use_action_state` is available only in 0.4.x.
+| `use_form_action` | `use_form_action(&form, action_fn) -> FormAction<...>` | **(0.4.x)** Validated typed async submit action for a `use_form` runtime |
 
 ```rust
 let save_action = use_action(|data: FormData| async move {
@@ -168,7 +169,7 @@ match save_action.phase() {
     ActionPhase::Idle => { /* ready */ },
     ActionPhase::Pending => { /* loading */ },
     ActionPhase::Success(result) => { /* done */ },
-    ActionPhase::Error(error) => { /* failed */ },
+    ActionPhase::Error(error) => { /* show error */ },
 }
 ```
 
@@ -208,6 +209,32 @@ enable `reset_on_success()` when the normal UI must render `last_result` or
 Reserve it for callback-owned completion behavior such as navigation, a toast,
 or resetting a form.
 
+**(0.4.x)** `Action::on_success` and `Action::on_error` append callbacks for
+WASM action completion. They are useful for follow-up UI work that belongs after
+the action's result or error state is available:
+
+```rust
+let save_action = use_action(|input: SaveSettingsRequest| async move {
+    save_project_settings(input).await
+})
+.on_success(|_result| {
+    // Refresh related UI state.
+})
+.on_error(|error| {
+    // Record or surface the error.
+});
+```
+
+Native actions intentionally do not poll async futures, so these callbacks do
+not run on native targets. Keep completion assertions in WASM/browser tests;
+native tests can assert validation, dispatch, and synchronous state only.
+
+> **Generated forms (0.4.x):** When an action dispatches values from a
+> `form!` / `use_form` runtime, use `use_form_action` instead of manually
+> validating, collecting values, and calling `Action::dispatch`. It keeps the
+> form pending, success, and error lifecycle aligned with the action; see the
+> `use_form_action` section in `head-form-macros.md` for the full example.
+
 ### Async UI Handler Patterns
 
 Use `use_action` or `use_action_state` for button/form mutations whose pending,
@@ -215,6 +242,9 @@ success, and error state should be visible in the component tree. Do not fire
 an async task and drop its result from a route component; the `Action` phase
 is the UI contract that disables controls, renders errors, and prevents
 duplicate submissions.
+For a `form!` / `use_form` runtime, use **(0.4.x)** `use_form_action` for the
+common validated typed submit flow. It dispatches generated current values only
+after validation and owns the corresponding form submit lifecycle.
 
 Use `use_resource` for async reads and derived text, including labels,
 diagnostics, previews, or server-translated copy that depends on the current
@@ -227,6 +257,10 @@ selected rows, versions, or route parameters at event time. Use
 `use_callback` / `use_callback_with` only when the handler has additional
 behavior. Avoid fixture IDs such as `Uuid::nil()`, `"sample-project"`, or
 hardcoded version IDs once the route has real server state available.
+
+For a generated form, call `FormAction::submit()` instead of rebuilding a typed
+request from individual fields. For a non-generated settings editor, an explicit
+request is still appropriate:
 
 ```rust
 let save_action = use_action(|input: SaveSettingsRequest| async move {
@@ -262,7 +296,66 @@ If the result affects app state, prefer `Action` or `Resource` instead.
 
 | Hook | Description |
 |------|-------------|
-| `use_debug_value` | Custom label in dev tools (requires `debug-hooks` feature) |
+| `use_debug_value` | Custom debug label (always available; debug output requires `debug-hooks` and is a no-op in production) |
+
+### Custom Hooks (0.2.x+)
+
+Custom hooks are plain Rust functions that group reusable hook wiring behind a
+`use_<domain>` name. Extract a custom hook when the same combination of local
+state, `use_effect` / `use_resource`, callbacks, and derived handles appears in
+more than one component, or when a second component is a foreseeable consumer.
+Keep these functions in a shared client module such as
+`src/apps/<app>/client/hooks.rs`.
+
+Return reactive handles, not detached values. A hook that returns
+`Signal<bool>`, `Resource<T, E>`, `Action<T, E>`, or `Callback<Args, Ret>` lets
+the caller compose the state directly in `page!`. A hook that calls
+`.get()` and returns `bool` or `String` hides the reactive edge and usually
+forces duplicate effects in the caller.
+
+```rust
+use reinhardt::pages::prelude::*;
+
+pub fn use_online_status() -> Signal<bool> {
+    let (is_online, set_online) = use_state(browser_is_online());
+
+    use_debug_value(if is_online.get() { "Online" } else { "Offline" });
+
+    use_effect(
+        {
+            let set_online = set_online.clone();
+            move || {
+                let unsubscribe = subscribe_online_status({
+                    let set_online = set_online.clone();
+                    move |online| set_online(online)
+                });
+
+                Some(move || unsubscribe())
+            }
+        },
+        (),
+    );
+
+    is_online
+}
+```
+
+In this example, `browser_is_online` and `subscribe_online_status` are
+app-local browser adapters; the custom hook owns the state/effect/subscription
+contract while callers only read the returned `Signal<bool>`.
+
+The example uses the explicit dependency argument introduced in 0.2.x. On
+0.1.x, use the same effect closure without the trailing `()` dependency
+argument. Custom hooks SHOULD call `use_debug_value` with a compact status label
+or key state snapshot. The hook is always available; enabling `debug-hooks`
+activates its debug output, while production builds treat it as a no-op.
+
+Dependency review needs one extra pass inside custom hooks. The `page!` macro's
+deps-exhaustiveness check only sees hook calls written textually inside the
+`page!` invocation. Hook calls inside `use_*` functions still require a deps
+argument at the type level, but reviewers must verify that every Signal read in
+the hook closure is represented in that deps tuple, or is intentionally read
+with `get_untracked` / `with_untracked`.
 
 ## Resource (WASM Only)
 
@@ -287,13 +380,63 @@ Async data loading with reactive dependencies.
     let current_user = use_resource(fetch_current_user, ());
 
     // Check state
-    match user.state().get() {
+    match user.get() {
         ResourceState::Loading => { /* show spinner */ },
-        ResourceState::Ready(data) => { /* render data */ },
+        ResourceState::Success(data) => { /* render data */ },
         ResourceState::Error(err) => { /* show error */ },
     }
 }
 ```
+
+### Resource and Action Composition (0.4.0-alpha.1+)
+
+When a screen initially loads a value with `use_resource` and its mutations
+return the same value type, compose them with `Resource::latest_after` instead
+of maintaining a screen-local struct that decides which result to render. A
+successful action value overrides the resource; pending and failed actions leave
+the underlying resource state in control. Each later `latest_after` call has
+higher priority than the earlier ones.
+
+```rust
+// Each operation returns Result<Vec<Project>, AppError>.
+let projects = use_resource(move || list_projects(team_id), ());
+let refresh = use_action(refresh_projects);
+let create = use_action(create_project_and_list);
+
+let current_projects = projects
+    .latest_after(&refresh)
+    .latest_after(&create)
+    .refetch_on_success();
+
+match current_projects.state_with_empty(Vec::is_empty) {
+    LatestResourceState::Loading => { /* show spinner */ },
+    LatestResourceState::Empty => { /* show empty state */ },
+    LatestResourceState::Success(projects) => { /* render projects */ },
+    LatestResourceState::Error(error) => { /* show resource error */ },
+}
+```
+
+The fluent form above is equivalent to the builder when actions are collected
+or configured separately:
+
+```rust
+let current_projects = use_latest_resource_value(projects.clone())
+    .with_action(&refresh)
+    .with_action(&create)
+    .refetch_on_success()
+    .build();
+```
+
+Both forms accept an owned `Action` or `&Action`. Use
+`refetch_on_success()` only when the resource must be reloaded after a tracked
+action enters success: it reacts to that transition, not an action that was
+already successful when the composed handle was created. Use `get()` or
+`state()` for the composed `ResourceState`, `state_with_empty(...)` for an
+explicit empty-state policy, and `resource_state()` when the unmodified resource
+state is required. Keep the returned `LatestResourceValue` alive for as long as
+`refetch_on_success()` behavior is needed. Its `error()` reports the remaining
+resource error; render a mutation failure from the corresponding `Action::error()`
+separately.
 
 ## Platform Event Type
 
@@ -369,17 +512,19 @@ let effect = Effect::new(move || {
 std::mem::forget(effect);  // Keep alive for page lifetime
 ```
 
-## watch Blocks vs Hooks
+## Direct Reactive Rendering vs Hooks
 
-The `page!` macro's `watch` block provides **reactive rendering** that automatically re-renders when Signal dependencies change. This is distinct from hooks.
+The `page!` macro automatically makes dynamic `{expr}`, `if`, `match`, and
+`for` blocks reactive: it re-renders them when their Signal dependencies
+change. This rendering mechanism is distinct from hooks.
 
-### When to Use watch (Not Hooks)
+### When to Use Direct Reactive Rendering (Not Hooks)
 
 | Scenario | Use | Not |
 |----------|-----|-----|
-| Conditionally show/hide elements based on Signal | `watch { if signal.get() { ... } }` | `use_effect` |
-| Render different views based on state | `watch { match state.get() { ... } }` | `use_effect` + manual DOM |
-| Reactive list rendering | `watch { for item in items.get() { ... } }` | `use_effect` |
+| Conditionally show/hide elements based on Signal | `if signal.get() { ... }` inside `page!` | `use_effect` |
+| Render different views based on state | `match state.get() { ... }` inside `page!` | `use_effect` + manual DOM |
+| Reactive list rendering | `for item in items.get() { ... }` inside `page!` | `use_effect` |
 
 ### When Hooks Are Still Needed
 
@@ -388,16 +533,20 @@ The `page!` macro's `watch` block provides **reactive rendering** that automatic
 | Side effects (API calls, logging, subscriptions) | `use_effect` |
 | Expensive cached computations | `use_memo` |
 | Async actions with loading/error state | `use_action` |
+| Validated typed submit from `form!` / `use_form` (**0.4.x**) | `use_form_action` |
 | State management | `use_state`, `use_reducer` |
 | DOM refs and measurements | `use_ref`, `use_layout_effect` |
 
 For forms, use `form!` for static expressions such as fields, labels, validation
 rules, action/server_fn, and submit button shape. Use `use_form` for dynamic
 states such as current values, dirty/touched markers, validation results, submit
-phase, and reset/submit actions. Use Signals, hooks, and `watch {}` for the
-surrounding display state, not as a second implementation of the form runtime.
+phase, and reset/submit actions. Use Signals, hooks, and direct reactive
+`page!` expressions for surrounding display state, not as a second
+implementation of the form runtime. When generated form values invoke a typed async mutation, use **(0.4.x)**
+`use_form_action` so validation, dispatch, and submit lifecycle state remain in
+that boundary.
 
-### Example: watch Replaces Manual Effect Rendering
+### Example: Direct Rendering Replaces Manual Effect Rendering
 
 ```rust
 // AVOID: using Effect for conditional rendering
@@ -406,24 +555,24 @@ use_effect(move || {
     if show.get() { /* manually update DOM */ }
 });
 
-// PREFER: watch block in page! macro
+// PREFER: a direct reactive conditional in page! macro
 page!(|show: Signal<bool>| {
     div {
-        watch {
-            if show.get() {
-                div { class: "alert", "Visible!" }
-            }
+        if show.get() {
+            div { class: "alert", "Visible!" }
         }
     }
 })(show)
 ```
 
-### watch Best Practices
+### Direct Reactive Rendering Best Practices
 
 - **Pass Signals directly** to `page!` — don't extract values before the macro
 - **Clone Signals freely** — `Signal::clone()` is cheap (Rc-based)
-- **One expression per watch** — each block must contain exactly one `if`, `match`, or `for`
-- **Don't nest watch blocks** — use multiple sibling watch blocks instead
+- **Use direct dynamic blocks** — write `if`, `match`, and `for` directly in
+  `page!`; `{expr}` is also reactive
+- **Avoid manual wrappers** — `watch {}` is removed and explicit
+  `Page::reactive(...)` is unnecessary for page-body rendering
 
 ## Architecture Notes
 
@@ -432,7 +581,8 @@ page!(|show: Signal<bool>| {
 - **Batching**: Multiple Signal changes batch into a single update cycle via micro-tasks
 - **Memory management**: All reactive nodes auto-cleanup when dropped
 - **`std::mem::forget`**: Use for Effects that should live for the entire page lifetime (e.g., routing)
-- **watch compiles to `Page::reactive()`**: The reactive closure is tracked by the runtime and re-evaluated on Signal changes
+- **Dynamic `page!` blocks compile to `Page::reactive()`**: The generated
+  closure is tracked by the runtime and re-evaluated on Signal changes
 
 ## Version Differences (0.2.x)
 
@@ -516,7 +666,9 @@ use_callback(
 
 ### Auto-wrapping in page! Macro
 
-In 0.2.x, `{expr}`, `if`, and `for` inside `page!` are unconditionally wrapped in `Page::reactive` — no explicit wrapping is needed. Code that previously used `watch { ... }` or manual `Page::reactive(...)` continues to work, but the wrapping is now redundant.
+Since 0.2.x, `{expr}`, `if`, `match`, and `for` inside `page!` are
+unconditionally wrapped in `Page::reactive` — no explicit wrapper is needed.
+`watch { ... }` was removed; move its body directly into `page!` instead.
 
 ### Reactive and ReactiveIf Clone
 
