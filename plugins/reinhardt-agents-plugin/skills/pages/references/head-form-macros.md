@@ -1,4 +1,4 @@
-# head!, form!, and #[server_fn] Reference
+# head!, form!, DTO-derived ClientForm, and #[server_fn] Reference
 
 ## head! Macro
 
@@ -68,6 +68,20 @@ let login_form = form! {
 let form_view: Page = login_form.into_page();
 ```
 
+### 0.4.0+ Compile-Time Accessibility
+
+`form!` generates controls that satisfy the structural control-label
+requirement by construction. Keep every user-facing field `label` meaningful
+instead of relying on a placeholder or raw identifier. Generated image submit
+inputs copy their non-empty `alt` text into `aria-label`, so write `alt` as the
+action's accessible name.
+
+These guarantees apply to generated form output only. Any raw `input`,
+`select`, `textarea`, `button`, `a`, or `iframe` written beside a form in
+`page!` must meet the `page!` compile-time accessibility rules; see
+`page-macro.md` for the complete contract and the narrowly scoped `a11y: off`
+escape hatch.
+
 ### Dynamic Form State
 
 When a component has user-editable inputs, represent the static form expression
@@ -79,9 +93,25 @@ and reset/submit actions.
 Keep dynamic concerns in the form boundary:
 
 - Field values, validation, disabled state, and submit phase belong to form state.
-- Derived display around the form can use `watch {}` or memoized values.
+- Derived display around the form can use direct reactive `page!` expressions
+  or memoized values.
 - Server submission should target the configured `server_fn` or `action`; do not
   manually duplicate the request payload in an unrelated event handler.
+
+### DTO-Derived Client Forms (0.4.0)
+
+`ClientForm` is an opt-in alternative source for a form whose canonical request
+schema is already a supported, named DTO. It generates a typed companion that
+uses the same `use_form` runtime; it does not change the `form!` DSL or its
+existing behavior.
+
+- Use `form!` when the UI needs an independent static schema, collections,
+  file inputs, or custom field behavior outside the generated DTO contract.
+- Use `#[derive(ClientForm)]` when duplicating field tokens and request assembly
+  would make a named request DTO drift from its client form.
+- Read [DTO-Derived Client Form Bindings](client-form-bindings.md) before using
+  `#[client_form(validate)]`, `server_fn = ...`, generated choices, or hidden
+  DTO fields.
 
 ### Form-Level Attributes
 

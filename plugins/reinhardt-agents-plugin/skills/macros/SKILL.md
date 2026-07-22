@@ -1,7 +1,7 @@
 ---
 name: macros
 description: Use when working with reinhardt procedural macros - covers attribute macros (#[model], #[user], #[inject], HTTP decorators), derive macros, and function-like macros (guard!, installed_apps!, path!)
-versions: ["0.1.x", "0.2.x", "0.3.x"]
+versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.x"]
 ---
 
 # Reinhardt Macros

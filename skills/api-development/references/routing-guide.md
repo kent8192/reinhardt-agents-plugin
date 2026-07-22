@@ -66,6 +66,14 @@ The project's root `urls.rs` uses `UnifiedRouter` to combine all app routers. It
 
 The root router function MUST be annotated with `#[routes]`:
 
+Project-level `src/config/urls.rs` is composition-only. It may mount app routers,
+register framework-level routes or server functions, and configure global router
+concerns. It MUST NOT define application endpoint handlers directly, even for a
+minimal service or benchmark. Put HTTP endpoint handlers in
+`src/apps/<app>/views.rs` and Pages `#[server_fn]` functions in
+`src/apps/<app>/server_fn.rs` (or app-local equivalents), then expose them
+through that app's router.
+
 ```rust
 // src/config/urls.rs
 use reinhardt::routes;
@@ -81,6 +89,7 @@ pub fn routes() -> UnifiedRouter {
         .expect("JWT secret must be configured");
 
     UnifiedRouter::new()
+        // Compose app routers; do not define application handlers in this module.
         .mount("/api/", crate::apps::user::urls::url_patterns())
         .mount("/api/", crate::apps::auth::urls::url_patterns())
         .server(|s| {

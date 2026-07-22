@@ -2,42 +2,70 @@
 
 ## Basic Syntax
 
-The `page!` macro creates anonymous components with closure-style DSL. It returns a closure — invoke it with `()` to get a `Page`:
+The `page!` macro has a direct body form for ordinary `Page`-returning
+functions and explicit closure forms for reusable factories.
+
+### 0.4.x: Direct Page Bodies
+
+Use `page!({ ... })` for application screens and ordinary functions that
+return a `Page`. It returns the `Page` immediately, so there is no trailing
+`()`. Free value identifiers from the surrounding Rust scope are implicitly
+captured and cloned into generated reactive and event closures. Every captured
+value must implement `Clone`.
+
+The direct form is `page!({ ... })`: do not add a `move` keyword to the macro
+syntax. It supports captures used in expressions, attributes, event handlers,
+component props and children, macro arguments, `#head`, and keyed `for` loops.
 
 ```rust
 use reinhardt::pages::component::Page;
 use reinhardt::pages::page;
 
-// No parameters — note the double call: page!(|| { ... })()
-pub fn hello_page() -> Page {
-    page!(|| {
-        div { "Hello, World!" }
-    })()
-}
-
-// With parameters — pass arguments in the second call
 pub fn greeting_page(name: String) -> Page {
-    page!(|name: String| {
+    page!({
         div { class: "greeting", { name } }
-    })(name)
+    })
 }
 ```
 
-### Component Composition (Layout Pattern)
+`Signal`, `Action`, `Resource`, `Callback`, `Page`, and typical application
+handles are normally cheap to clone. A non-`Clone` capture is a compile error;
+keep it outside the page body or pass a cloneable handle instead.
+
+### Reusable Page Factories (Strict)
+
+Use `page!(|| { ... })` or `page!(|props: Props| { ... })` only when a caller
+needs a factory that it will invoke later. These forms return a closure and
+retain strict capture validation: every value used in the body must be a
+declared closure parameter or a local binding inside the body.
+
+```rust
+let greeting_factory = page!(|name: String| {
+    div { class: "greeting", { name } }
+});
+
+let greeting = greeting_factory("Ada".to_string());
+```
+
+Migrate an existing body-only page that used surrounding values to
+`page!({ ... })`. If that page was intentionally a no-argument factory, make
+the factory explicit with `page!(|| { ... })` instead.
+
+### Component Composition (Layout Pattern, 0.4.x)
 
 Wrap content in a layout by accepting `Page` as a parameter:
 
 ```rust
 pub fn auth_layout(title: &str, form_content: Page) -> Page {
     let title = title.to_string();
-    page!(|title: String, form_content: Page| {
+    page!({
         div { class: "min-h-screen flex items-center justify-center bg-gray-50",
             div { class: "w-full max-w-md",
                 h2 { class: "text-xl font-semibold mb-6", { title } }
                 { form_content }
             }
         }
-    })(title, form_content)
+    })
 }
 
 // Usage:
@@ -49,7 +77,8 @@ pub fn login_page() -> Page {
 
 ## Head Directive (SSR)
 
-Inject head content using `#head` for server-side rendering:
+**(0.4.x)** Inject head content using `#head` for server-side rendering with a
+direct page body:
 
 ```rust
 let page_head = head!(|| {
@@ -58,14 +87,14 @@ let page_head = head!(|| {
     link { rel: "stylesheet", href: resolve_static("css/main.css") }
 });
 
-page! {
+page!(
     #head: page_head,
-    || {
+    {
         div { class: "container",
             h1 { "Welcome Home" }
         }
     }
-}()
+)
 ```
 
 ## HTML Elements
@@ -146,7 +175,7 @@ Attributes use `key: value` syntax. Underscores convert to hyphens (`data_testid
 |------|--------|---------|
 | String literal | `attr: "value"` | `class: "container"` |
 | Expression | `attr: expr` | `class: css_class` |
-| Integer literal | `attr: number` | `tabindex: 1` |
+| Integer literal | `attr: number` | `tabindex: 0` |
 | Boolean expression | `attr: expr` | `disabled: is_disabled` |
 
 ### Boolean Attributes (Expression Only — No Literals)
@@ -155,10 +184,10 @@ Attributes use `key: value` syntax. Underscores convert to hyphens (`data_testid
 
 ```rust
 // CORRECT:
-button { disabled: is_disabled }
+button { disabled: is_disabled, "Submit" }
 
 // INCORRECT (compile error):
-button { disabled: true }
+button { disabled: true, "Submit" }
 ```
 
 ### Enumerated Attributes
@@ -214,13 +243,13 @@ use crate::apps::writing::server_fn::manuscript::{
 };
 
 // Inline closure with event parameter
-button { @click: |e| { handle_click(e); } }
+button { @click: |e| { handle_click(e); }, "Handle click" }
 
 // Closure ignoring event
-button { @click: |_| { do_something(); } }
+button { @click: |_| { do_something(); }, "Run action" }
 
 // Function reference
-button { @click: handle_click }
+button { @click: handle_click, "Handle click" }
 ```
 
 Closures must have 0 or 1 parameter (compile error if more). Prefer named
@@ -228,13 +257,14 @@ Closures must have 0 or 1 parameter (compile error if more). Prefer named
 actions at the attribute use site when the render closure also needs them:
 
 ```rust
+// 0.4.x direct body
 let save_click = use_callback(move |_| {
     save_action.dispatch(current_form_values());
 }, (save_action.clone(), form_state.clone()));
 
-page!(|| {
+page!({
     button { @click: save_click.clone(), "Save" }
-})()
+})
 ```
 
 ## Child Nodes
@@ -334,8 +364,8 @@ ul {
 Use `watch` for Signal-dependent reactive rendering. Unlike static `if` conditions evaluated once at render time, `watch` blocks re-evaluate when Signal dependencies change.
 
 ```rust
-// watch with if
-page!(|error: Signal<Option<String>>| {
+// 0.4.x direct body with watch
+page!({
     div {
         watch {
             if error.get().is_some() {
@@ -343,7 +373,7 @@ page!(|error: Signal<Option<String>>| {
             }
         }
     }
-})(error.clone())
+})
 
 // watch with match
 watch {
@@ -397,7 +427,9 @@ In 0.2.x, `bind listener_value` is added for typed value conversion in event lis
 
 ```rust
 // 0.2.x — bind listener_value for typed extraction
+label { for: "count", "Count" }
 input {
+    id: "count",
     type: "number",
     bind listener_value: count_signal,
 }
@@ -418,12 +450,54 @@ MyWrapper(class: "container") {
 
 ## Validation Rules (Compile-Time)
 
-### Accessibility
+### Accessibility (0.4.0+)
 
-| Element | Requirement |
-|---------|-------------|
-| `img` | Must have `src` (string literal) and `alt` attributes |
-| `button` | Must have text content or `aria-label`/`aria-labelledby` |
+`page!` rejects statically decidable accessibility violations at compile time.
+Fix the markup rather than deferring a known violation to a runtime audit.
+
+| Element or attribute | Requirement |
+|----------------------|-------------|
+| `img` | Must have `src` (string literal) and an `alt` attribute |
+| Non-hidden `input` other than `submit`, `reset`, `button`, or `image`; `select`; `textarea` | Must have a non-empty `aria-label`, a static `aria-labelledby` that resolves to a non-hidden element with accessible content, a wrapping non-hidden `label` with accessible content, or a matching `label for` / `id` pair whose label has accessible content |
+| `input type: "submit"`, `input type: "reset"` | Built-in accessible names are valid without `value` or ARIA attributes |
+| `input type: "button"` | Must have a non-empty `value` or `aria-label`, or resolved `aria-labelledby` |
+| `input type: "image"` | Must have a non-empty `alt` or valid ARIA name; generated image submit inputs copy `alt` into `aria-label` |
+| `button`, interactive `a` | Must have text content, non-empty `aria-label`, a resolved `aria-labelledby`, or an `img` child with non-empty `alt`; a bare anchor without `href` or events is not interactive |
+| `iframe` | Must have a non-empty `title` |
+| Static `role` | Must be a concrete [WAI-ARIA 1.3 role](https://www.w3.org/TR/wai-aria-1.3/#role_definitions) |
+| Static `tabindex` | Only `0` and `-1` are allowed; do not create a positive tab order |
+
+Dynamic values are accepted when the macro cannot decide the requirement at
+compile time. Keep their runtime accessibility behavior intentional and test it
+at the component level.
+
+```rust
+page!(|| {
+    label { for: "search", "Search" }
+    input { id: "search", type: "search", name: "search" }
+
+    button {
+        aria_label: "Open settings",
+        img { src: "/icons/settings.svg", alt: "Settings" }
+    }
+
+    iframe { src: "/preview", title: "Preview" }
+})()
+```
+
+#### Intentional Opt-Outs
+
+Use `a11y: off` only for one element whose intentional behavior relies on
+runtime or external labeling. It is not inherited by children and accepts only
+the `off` marker, which keeps the exception visible in source.
+
+```rust
+input {
+    type: "range",
+    name: "decorative-volume",
+    a11y: off,
+}
+```
 
 ### Security
 
@@ -439,19 +513,21 @@ URL attributes (`href`, `src`, `action`, `formaction`) block dangerous schemes: 
 | `ul`, `ol` | Can only contain `li` |
 | `dl` | Can only contain `dt`, `dd`, and `div` |
 
-## Complete Example
+## Complete Example (0.4.x)
 
 ```rust
 use reinhardt::pages::prelude::*;
 
 fn todo_app(todos: Signal<Vec<String>>, filter: Signal<String>) -> Page {
-    page!(|todos: Signal<Vec<String>>, filter: Signal<String>| {
+    page!({
         div {
             class: "todo-app",
 
             header {
                 h1 { "My Todo App" }
+                label { for: "new-todo", "Add a todo" }
                 input {
+                    id: "new-todo",
                     type: "text",
                     placeholder: "Add a todo...",
                     @input: |e| { /* handle input */ },
@@ -482,6 +558,6 @@ fn todo_app(todos: Signal<Vec<String>>, filter: Signal<String>) -> Page {
                 { format!("{} items", todos.get().len()) }
             }
         }
-    })(todos, filter)
+    })
 }
 ```
