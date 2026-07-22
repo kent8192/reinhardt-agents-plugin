@@ -117,6 +117,9 @@ Specialized agent for reviewing reinhardt-web application code against project c
 
 - [ ] Button actions operate on the displayed/current entity: route params, form values, loaded DTOs, selected rows/versions, and server return values, not fixture IDs, sample constants, or canned text
 - [ ] Async mutations use `use_action`, async reads or derived text use `use_resource`, and event handlers use `use_callback` / `use_callback_with`; `spawn_local` is limited to low-level browser integration
+- [ ] **(0.4.x; #5556)** A generated `form!` / `use_form` runtime using the common typed async submit flow uses `use_form_action`; flag duplicated `handle_submit` / `get_values` / `use_action.dispatch` sequencing that recreates its validation or lifecycle state
+- [ ] **(0.4.x; #5556)** Form-action UI prevents duplicate submits with `is_pending()` and renders validation or action feedback from form-action state; native tests do not expect an async result, success state, or lifecycle callback
+- [ ] **(0.4.x; #5556)** `Action::on_success` / `on_error` and form-action callbacks are WASM completion hooks; do not rely on them for native action completion
 - [ ] Repeated inline hook wiring (state plus effect/resource plus callbacks) is extracted into a shared `use_*` custom hook that returns Signals or handles instead of raw values
 - [ ] Non-`Copy` callbacks/actions passed into `page!` render closures are cloned at the attribute use site when needed
 - [ ] Internal button-triggered redirects use `reinhardt::pages::navigate(..., NavigationType::Push)` or the current router handle API, not `window.location.set_href`

@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Document the 0.4.x typed form-action contract from
+  [reinhardt-web PR #5556](https://github.com/kent8192/reinhardt-web/pull/5556)
+  across Pages examples, async-hook guidance, and the code-review checklist.
 - Document the 0.4.0 shared `#[dto]` validation contract from
   [reinhardt-web PR #5543](https://github.com/kent8192/reinhardt-web/pull/5543)
   across macro, API, Pages, scaffolding, testing, and review guidance
