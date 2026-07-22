@@ -1,7 +1,7 @@
 ---
 name: scaffolding
 description: Use when creating a new reinhardt project or adding an app - guides feature flag selection, template type, database backend, and authentication setup
-versions: ["0.1.x", "0.2.x", "0.3.x"]
+versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.x"]
 ---
 
 # Reinhardt Project Scaffolding
@@ -74,6 +74,7 @@ Guide developers through creating new reinhardt-web projects and adding apps wit
 - If generated templates contain `mod.rs` files, convert them to the new module system
 - Generated app templates must not ship stale placeholder views, full absolute paths, or app-specific demo names that users are expected to rename later
 - Generated Pages templates should use named imports, route reverse helpers, `form!`, and `use_form` in any interactive example
+- In 0.4.0-alpha.1+, generated route-backed component templates must emit `#[reinhardt::pages::component("/<app>/", name = "placeholder")]`; do not emit positional route names or bare identifier shorthand
 - ALL code comments must be in English
 - Use `pub use` for explicit re-exports, NEVER `pub use module::*`
 - In 0.3.x Pages apps, expect app-local split modules (`client/`, `server/`, `services/client.rs`, `services/server.rs`, `urls/client_router.rs`, `urls/server_router.rs`) and preserve generated empty directories with `.gitkeep`
