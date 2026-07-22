@@ -104,10 +104,17 @@ let save = use_form_action(&runtime, |values: LoginFormValues| async move {
     runtime.reset_default_values();
 });
 
-if !save.is_pending() {
-    save.submit();
-}
+let on_submit = move |event| {
+    event.prevent_default();
+    if !save.is_pending() {
+        save.submit();
+    }
+};
 ```
+
+Bind `on_submit` to the form's `@submit` event (or call it from a submit-button
+`@click` handler). Do not call `FormAction::submit` while rendering: rendering
+can run more than once and must not dispatch a mutation by itself.
 
 `FormAction::submit` runs generated validation before dispatching the current
 `LoginFormValues`. Invalid input returns a validation failure without dispatching
