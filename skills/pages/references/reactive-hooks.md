@@ -150,7 +150,9 @@ use_effect(
 |------|-----------|-------------|
 | `use_transition` | `use_transition() -> TransitionState` | Non-blocking state updates |
 | `use_action` | `use_action(action_fn) -> Action<T, E>` | Async action with loading/error state |
-| `use_action_state` | `use_action_state(action_fn) -> ActionStateBuilder<...>` | **(0.4.x)** Configure action lifecycle callbacks and optional success reset before building an `Action` |
+| `use_action_state` | `use_action_state(action_fn) -> ActionStateBuilder<...>` **(0.4.x)** | Configure action lifecycle callbacks and optional success reset before building an `Action`; deprecated in 0.1.x–0.3.x |
+
+#### Action phases (0.4.x)
 
 ```rust
 let save_action = use_action(|data: FormData| async move {
@@ -166,6 +168,26 @@ match save_action.phase() {
     ActionPhase::Pending => { /* loading */ },
     ActionPhase::Success(result) => { /* done */ },
     ActionPhase::Error(error) => { /* failed */ },
+}
+```
+
+#### Action phases (0.1.x–0.3.x)
+
+Before 0.4.x, `use_action_state` is deprecated; use `use_action` directly.
+The action phase is a signal, so read it with `.get()` and handle a completed
+operation with `ActionPhase::Resolved`:
+
+```rust
+let save_action = use_action(|data: FormData| async move {
+    save_to_server(data).await
+});
+
+save_action.dispatch(form_data);
+
+match save_action.phase().get() {
+    ActionPhase::Idle => { /* ready */ },
+    ActionPhase::Pending => { /* loading */ },
+    ActionPhase::Resolved(result) => { /* done */ },
 }
 ```
 

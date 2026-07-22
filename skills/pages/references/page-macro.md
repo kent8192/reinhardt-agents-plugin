@@ -233,7 +233,7 @@ the attribute use site when the render closure also needs them:
 let save_click = save_action.dispatching_with(move || current_form_values());
 
 page!(|| {
-    button { @click: save_click, "Save" }
+    button { @click: save_click.clone(), "Save" }
 })()
 ```
 
