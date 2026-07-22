@@ -105,6 +105,7 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] Non-`Copy` callbacks/actions passed into `page!` render closures are cloned at the attribute use site when needed
 - [ ] Internal button-triggered redirects use `reinhardt::pages::navigate(..., NavigationType::Push)` or the current router handle API, not `window.location.set_href`
 - [ ] App-local i18n needed by Pages clients crosses the boundary through a registered `#[server_fn]` plus `use_resource` fallback, not duplicated client/server gettext code
+- [ ] **(0.4.0-alpha.1+)** A screen that renders a `Resource` after compatible mutations uses `Resource::latest_after(...)` or `use_latest_resource_value(...)` with deliberate action ordering, rather than a custom per-screen result-precedence handle; only action successes override the resource, mutation errors remain separate, and the composed handle is retained while `refetch_on_success()` is needed
 - [ ] Component examples import services, routes, serializers, server functions, and shared components at module scope instead of repeating full `crate::...` paths inside `page!` or event handlers
 
 ### Testing
