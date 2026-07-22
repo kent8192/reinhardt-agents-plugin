@@ -146,7 +146,7 @@ Attributes use `key: value` syntax. Underscores convert to hyphens (`data_testid
 |------|--------|---------|
 | String literal | `attr: "value"` | `class: "container"` |
 | Expression | `attr: expr` | `class: css_class` |
-| Integer literal | `attr: number` | `tabindex: 1` |
+| Integer literal | `attr: number` | `tabindex: 0` |
 | Boolean expression | `attr: expr` | `disabled: is_disabled` |
 
 ### Boolean Attributes (Expression Only — No Literals)
@@ -155,10 +155,10 @@ Attributes use `key: value` syntax. Underscores convert to hyphens (`data_testid
 
 ```rust
 // CORRECT:
-button { disabled: is_disabled }
+button { disabled: is_disabled, "Submit" }
 
 // INCORRECT (compile error):
-button { disabled: true }
+button { disabled: true, "Submit" }
 ```
 
 ### Enumerated Attributes
@@ -214,13 +214,13 @@ use crate::apps::writing::server_fn::manuscript::{
 };
 
 // Inline closure with event parameter
-button { @click: |e| { handle_click(e); } }
+button { @click: |e| { handle_click(e); }, "Handle click" }
 
 // Closure ignoring event
-button { @click: |_| { do_something(); } }
+button { @click: |_| { do_something(); }, "Run action" }
 
 // Function reference
-button { @click: handle_click }
+button { @click: handle_click, "Handle click" }
 ```
 
 Closures must have 0 or 1 parameter (compile error if more). Prefer named
@@ -372,7 +372,9 @@ In 0.2.x, `bind listener_value` is added for typed value conversion in event lis
 
 ```rust
 // 0.2.x — bind listener_value for typed extraction
+label { r#for: "count", "Count" }
 input {
+    id: "count",
     type: "number",
     bind listener_value: count_signal,
 }
@@ -393,12 +395,54 @@ MyWrapper(class: "container") {
 
 ## Validation Rules (Compile-Time)
 
-### Accessibility
+### Accessibility (0.4.0+)
 
-| Element | Requirement |
-|---------|-------------|
-| `img` | Must have `src` (string literal) and `alt` attributes |
-| `button` | Must have text content or `aria-label`/`aria-labelledby` |
+`page!` rejects statically decidable accessibility violations at compile time.
+Fix the markup rather than deferring a known violation to a runtime audit.
+
+| Element or attribute | Requirement |
+|----------------------|-------------|
+| `img` | Must have `src` (string literal) and an `alt` attribute |
+| Non-hidden `input` other than `submit`, `reset`, `button`, or `image`; `select`; `textarea` | Must have a non-empty `aria-label`, a static `aria-labelledby` that resolves to a non-hidden element with accessible content, a wrapping non-hidden `label` with accessible content, or a matching `label for` / `id` pair whose label has accessible content |
+| `input type: "submit"`, `input type: "reset"` | Built-in accessible names are valid without `value` or ARIA attributes |
+| `input type: "button"` | Must have a non-empty `value` or `aria-label`, or resolved `aria-labelledby` |
+| `input type: "image"` | Must have a non-empty `alt` or valid ARIA name; generated image submit inputs copy `alt` into `aria-label` |
+| `button`, interactive `a` | Must have text content, non-empty `aria-label`, a resolved `aria-labelledby`, or an `img` child with non-empty `alt`; a bare anchor without `href` or events is not interactive |
+| `iframe` | Must have a non-empty `title` |
+| Static `role` | Must be a concrete [WAI-ARIA 1.3 role](https://www.w3.org/TR/wai-aria-1.3/#role_definitions) |
+| Static `tabindex` | Only `0` and `-1` are allowed; do not create a positive tab order |
+
+Dynamic values are accepted when the macro cannot decide the requirement at
+compile time. Keep their runtime accessibility behavior intentional and test it
+at the component level.
+
+```rust
+page!(|| {
+    label { r#for: "search", "Search" }
+    input { id: "search", r#type: "search", name: "search" }
+
+    button {
+        aria_label: "Open settings",
+        img { src: "/icons/settings.svg", alt: "Settings" }
+    }
+
+    iframe { src: "/preview", title: "Preview" }
+})()
+```
+
+#### Intentional Opt-Outs
+
+Use `a11y: off` only for one element whose intentional behavior relies on
+runtime or external labeling. It is not inherited by children and accepts only
+the `off` marker, which keeps the exception visible in source.
+
+```rust
+input {
+    r#type: "range",
+    name: "decorative-volume",
+    a11y: off,
+}
+```
 
 ### Security
 
@@ -426,7 +470,9 @@ fn todo_app(todos: Signal<Vec<String>>, filter: Signal<String>) -> Page {
 
             header {
                 h1 { "My Todo App" }
+                label { r#for: "new-todo", "Add a todo" }
                 input {
+                    id: "new-todo",
                     type: "text",
                     placeholder: "Add a todo...",
                     @input: |e| { /* handle input */ },

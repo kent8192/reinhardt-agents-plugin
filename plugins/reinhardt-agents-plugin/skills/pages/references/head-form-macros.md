@@ -68,6 +68,20 @@ let login_form = form! {
 let form_view: Page = login_form.into_page();
 ```
 
+### 0.4.0+ Compile-Time Accessibility
+
+`form!` generates controls that satisfy the structural control-label
+requirement by construction. Keep every user-facing field `label` meaningful
+instead of relying on a placeholder or raw identifier. Generated image submit
+inputs copy their non-empty `alt` text into `aria-label`, so write `alt` as the
+action's accessible name.
+
+These guarantees apply to generated form output only. Any raw `input`,
+`select`, `textarea`, `button`, `a`, or `iframe` written beside a form in
+`page!` must meet the `page!` compile-time accessibility rules; see
+`page-macro.md` for the complete contract and the narrowly scoped `a11y: off`
+escape hatch.
+
 ### Dynamic Form State
 
 When a component has user-editable inputs, represent the static form expression
