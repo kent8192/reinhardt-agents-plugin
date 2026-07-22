@@ -304,67 +304,50 @@ ul {
 }
 ```
 
-## Reactive watch Blocks
+## Direct Reactive Rendering
 
-Use `watch` for Signal-dependent reactive rendering. Unlike static `if` conditions evaluated once at render time, `watch` blocks re-evaluate when Signal dependencies change.
+Write Signal-dependent `{expr}`, `if`, `match`, and `for` blocks directly
+inside `page!`. The macro automatically wraps them in `Page::reactive`, so
+they re-evaluate when Signal dependencies change.
 
 ```rust
-// watch with if
+// Direct reactive conditional
 page!(|error: Signal<Option<String>>| {
     div {
-        watch {
-            if error.get().is_some() {
-                div { class: "alert", { error.get().unwrap_or_default() } }
-            }
+        if error.get().is_some() {
+            div { class: "alert", { error.get().unwrap_or_default() } }
         }
     }
 })(error.clone())
 
-// watch with match
-watch {
+// Direct reactive branches
+page!(|state: Signal<State>| {
     match state.get() {
         State::Loading => div { "Loading..." },
         State::Ready(data) => div { { data } },
         State::Error(msg) => div { class: "error", { msg } },
     }
-}
+})(state.clone())
 ```
 
-### When to Use watch
+### When to Use Direct Reactive Rendering
 
 | Scenario | Solution |
 |----------|----------|
 | Static condition on Copy type | Plain `if` |
-| Dynamic Signal-dependent condition | `watch { if signal.get() { ... } }` |
-| Multiple reactive branches | `watch { match state.get() { ... } }` |
+| Dynamic Signal-dependent condition | `if signal.get() { ... }` inside `page!` |
+| Multiple reactive branches | `match state.get() { ... }` inside `page!` |
+| Reactive list rendering | `for item in items.get() { ... }` inside `page!` |
 
-**Best practices**: Pass Signals directly (don't extract values before `page!`). Clone freely. Single expression per `watch` block.
+**Best practices**: Pass Signals directly (don't extract values before
+`page!`) and clone them freely. Do not wrap the body in `watch {}` or call
+`Page::reactive(...)` manually.
 
-### 0.2.x: Automatic Reactive Wrapping
+### 0.2.x+: Automatic Reactive Wrapping
 
-In 0.2.x, reactive expressions (`{expr}`, `if`, `for`) inside `page!` are **automatically wrapped** in `Page::reactive` — no explicit `watch { ... }` or manual `Page::reactive(...)` call is needed. Existing `watch` blocks still compile, but the wrapping is now redundant.
-
-```rust
-// 0.1.x — explicit watch needed for reactive re-rendering
-page!(|count: Signal<i32>| {
-    div {
-        watch {
-            if count.get() > 0 {
-                span { "Positive" }
-            }
-        }
-    }
-})(count)
-
-// 0.2.x — if/for/{expr} are auto-wrapped, watch is optional
-page!(|count: Signal<i32>| {
-    div {
-        if count.get() > 0 {
-            span { "Positive" }
-        }
-    }
-})(count)
-```
+Since 0.2.x, reactive expressions (`{expr}`, `if`, `match`, and `for`) inside
+`page!` are **automatically wrapped** in `Page::reactive`. `watch { ... }` was
+removed; move the former block body directly into `page!`.
 
 ### 0.2.x: Bind Listener Typed Value Conversion
 
@@ -444,10 +427,8 @@ fn todo_app(todos: Signal<Vec<String>>, filter: Signal<String>) -> Page {
 
             ul {
                 class: "todo-list",
-                watch {
-                    if todos.get().is_empty() {
-                        li { class: "empty", "No todos yet" }
-                    }
+                if todos.get().is_empty() {
+                    li { class: "empty", "No todos yet" }
                 }
             }
 

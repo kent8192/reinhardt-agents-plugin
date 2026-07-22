@@ -61,6 +61,13 @@ pub trait BaseUser: Send + Sync + Serialize + for<'de> Deserialize<'de> {
     fn normalize_username(username: &str) -> String;
     fn set_password(&mut self, password: &str) -> Result<(), Error>;
     fn check_password(&self, password: &str) -> Result<bool, Error>;
+    fn check_password_with_update(&mut self, password: &str)
+        -> Result<PasswordCheck, Error>;
+    fn check_password_with_policy_update(
+        &mut self,
+        password: &str,
+        policy: &PasswordHashPolicy,
+    ) -> Result<PasswordCheck, Error>;
     fn set_unusable_password(&mut self);
     fn has_usable_password(&self) -> bool;
     fn get_session_auth_hash(&self, secret: &str) -> String;
@@ -72,7 +79,7 @@ pub trait BaseUser: Send + Sync + Serialize + for<'de> Deserialize<'de> {
 | Type | Description |
 |------|-------------|
 | `PrimaryKey` | Primary key type (e.g., `Uuid`, `i64`, `String`) |
-| `Hasher` | Password hasher implementation (e.g., `Argon2Hasher`) |
+| `Hasher` | Default password hasher for single-hasher helpers (e.g., `Argon2Hasher`) |
 
 ---
 
@@ -176,30 +183,37 @@ The `#[user]` macro auto-generates:
 ### PasswordHasher Trait
 
 ```rust
-pub trait PasswordHasher: Default + Send + Sync {
+pub trait PasswordHasher: Send + Sync {
     fn hash(&self, password: &str) -> Result<String, Error>;
-    fn verify(&self, hash: &str, password: &str) -> Result<bool, Error>;
+    fn verify(&self, password: &str, hash: &str) -> Result<bool, Error>;
+    fn algorithm(&self) -> Option<&'static str> { None }
+    fn identify(&self, hash: &str) -> bool { false }
+    fn must_update(&self, hash: &str) -> Result<bool, Error> { Ok(false) }
 }
 ```
+
+Custom hashers need `Send + Sync`; hashers registered with
+`PasswordHashPolicy::new` or `with_legacy` must also be `'static`.
+`BaseUser::Hasher` additionally requires `Default` because the ordinary
+`set_password` and `check_password` helpers construct the configured default
+hasher.
 
 ### Built-in Hashers
 
 | Hasher | Feature Flag | Algorithm | Security Level | Speed |
 |--------|-------------|-----------|----------------|-------|
 | `Argon2Hasher` | `argon2-hasher` | Argon2id | Highest (recommended) | Slow (by design) |
-| PBKDF2-SHA256 | (default) | PBKDF2 | High | Moderate |
-| Bcrypt | (built-in) | Bcrypt | High | Moderate |
+| `BcryptHasher` | `bcrypt-hasher` | Bcrypt | High | Explicit policy choice; 72-byte input limit |
 
 ### Usage
 
 ```rust
-use reinhardt::auth::hashers::{make_password, check_password};
+use reinhardt::auth::{Argon2Hasher, PasswordHasher};
 
-// Hash a password
-let hashed = make_password("user_password")?;
+let hasher = Argon2Hasher::default();
+let hashed = hasher.hash("user_password")?;
 
-// Verify a password
-let is_valid = check_password("user_password", &hashed)?;
+let is_valid = hasher.verify("user_password", &hashed)?;
 ```
 
 Or via the user model:
@@ -210,6 +224,46 @@ user.set_password("secure_password_123")?;
 assert!(user.check_password("secure_password_123")?);
 assert!(!user.check_password("wrong_password")?);
 ```
+
+### Password Hash Policy Upgrades **(0.4.x)**
+
+`PasswordHashPolicy` has one preferred hasher for new hashes and any number of
+legacy hashers. Verification checks the preferred hasher first and then legacy
+hashers in registration order. A valid legacy hash, or a preferred hash whose
+parameters are stale, can return `PasswordVerification::ValidNeedsRehash`.
+
+For example, migrate stored bcrypt hashes to Argon2id at successful login:
+
+```rust
+// Cargo.toml: features = ["argon2-hasher", "bcrypt-hasher"]
+use reinhardt::auth::{
+    Argon2Hasher, BaseUser, BcryptHasher, PasswordCheck, PasswordHashPolicy,
+};
+
+let policy = PasswordHashPolicy::new(Argon2Hasher::default())
+    .with_legacy(BcryptHasher::default());
+
+let previous_hash = user.password_hash().map(str::to_owned);
+match user.check_password_with_policy_update(password, &policy)? {
+    PasswordCheck::Invalid => {
+        // Reject the credentials.
+    }
+    PasswordCheck::Valid => {
+        // Authenticate without a storage change.
+    }
+    PasswordCheck::ValidUpdated => {
+        // `user.password_hash()` changed only in memory. Persist it with an
+        // atomic/optimistic update constrained by `previous_hash` or a record
+        // version; reload and recheck instead of overwriting a concurrent
+        // password change.
+    }
+}
+```
+
+Do not reject a valid login just because the replacement hash cannot be
+generated: policy verification deliberately reports it as valid without an
+update. Enable `bcrypt-hasher` whenever the selected policy needs bcrypt as a
+preferred or legacy hasher; its hasher rejects passwords longer than 72 bytes.
 
 ---
 
@@ -278,6 +332,7 @@ pub trait PermissionsMixin {
 |---------|---------|---------|
 | `params` | enabled | `CurrentUser<U>`, `AuthInfo`, `Guard<P>` extractors |
 | `argon2-hasher` | disabled | Argon2id password hashing, `DefaultUser` |
+| `bcrypt-hasher` | disabled | Bcrypt compatibility hashing for policy-based migrations |
 | `database` | disabled | Database-backed user/group storage |
 
 ## Dynamic References

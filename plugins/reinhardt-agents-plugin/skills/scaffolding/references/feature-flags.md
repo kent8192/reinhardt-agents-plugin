@@ -42,6 +42,12 @@ Auth features can be combined (e.g., JWT for API clients + Session for admin pan
 | `auth-oauth` | OAuth 2.0 / OpenID Connect provider integration. |
 | `auth-token` | Persistent token-based authentication (database-backed API keys). |
 | `argon2-hasher` | Argon2id password hashing (recommended). Adds `argon2` dependency. |
+| `bcrypt-hasher` | **(0.4.x)** Bcrypt hashing for explicit `PasswordHashPolicy` choices, including compatibility migrations. Bcrypt input is limited to 72 bytes. |
+
+For a login-time migration from existing bcrypt hashes, enable both
+`argon2-hasher` and `bcrypt-hasher`, set Argon2id as the preferred policy
+hasher, and register bcrypt as a legacy hasher. Remove `bcrypt-hasher` only
+after no deployed accounts require bcrypt verification.
 
 ## Individual Component Features
 

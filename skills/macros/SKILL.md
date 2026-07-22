@@ -1,7 +1,7 @@
 ---
 name: macros
 description: Use when working with reinhardt procedural macros - covers attribute macros (#[model], #[user], #[inject], HTTP decorators), derive macros, and function-like macros (guard!, installed_apps!, path!)
-versions: ["0.1.x", "0.2.x", "0.3.x"]
+versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.x"]
 ---
 
 # Reinhardt Macros
@@ -27,7 +27,9 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 1. Use `#[model(app_label = "...")]` to define a database model
 2. Use `#[field(...)]` attributes on every scalar field, including unconstrained fields
 3. Use `#[rel(...)]` attributes for relationships
-4. Optionally use `#[user(...)]` for user model with auth traits
+4. For 0.4.x generated columns, use typed `generated = SchemaExpr::...` and
+   review `references/attribute-macros.md` before selecting storage
+5. Optionally use `#[user(...)]` for user model with auth traits
 
 > **0.3.x note:** `#[model]` still auto-generates `{Model}Info`; relation fields now use `RelationInfo<T>` / `ManyToManyInfo<Source, Target>` payloads.
 
@@ -37,7 +39,7 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 2. Use `#[api_view]` for function-based API views
 3. Use `#[action]` for custom ViewSet actions
 4. Use `#[routes]` for URL pattern registration
-5. Use `#[component]` for 0.3 route-backed Pages components
+5. Use `#[component]` for route-backed Pages components; in 0.4.0-alpha.1+, write `#[component("/path/", name = "public-route-name")]`
 
 > **0.2.x note:** `#[url_patterns]` is removed in 0.2.x — use `#[routes]` for all URL registration.
 
@@ -66,10 +68,14 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 - ALL macros are re-exported through the `reinhardt` facade crate
 - `#[model]` auto-derives `Model`, `Serialize`, `Deserialize`, `Clone`, `Debug`
 - Every scalar field inside `#[model]` should have `#[field]` or `#[field(...)]`; relationship fields should have `#[rel(...)]`
+- **(0.4.x)** Generated columns use `generated = SchemaExpr::...` by default;
+  reserve `generated_sql` for trusted backend-specific expressions and keep
+  generated fields out of write inputs
 - Use `#[derive(Validate)]` / `#[validate(...)]` for request validation instead of duplicating validation logic in services
 - `#[user]` auto-implements `BaseUser` and `AuthIdentity` traits on native targets and is inert on WASM in 0.3.x
 - HTTP decorators (`#[get]`, etc.) accept `name` and `use_inject` options
 - Register 0.3 endpoint-macro handlers with `ServerRouter::endpoint(...)`; do not use removed raw `ServerRouter::function` / `.route` registration
+- **(0.4.0-alpha.1+)** Route-backed `#[component]` declarations require a string-literal `name = "..."`; positional names and bare identifiers are rejected
 - `guard!` precedence: `!` > `&` > `|` — use parentheses for clarity
 - `installed_apps!` validates app names at compile time
 - `path!` validates URL patterns at compile time (must start with `/`, snake_case params)

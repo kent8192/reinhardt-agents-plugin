@@ -43,6 +43,8 @@ Guide developers through building REST API endpoints using reinhardt-rest, reinh
 - Do not move the same endpoint control flow into `server/`, `service/`, or `services/` only to shorten a handler; extract only for a narrower contract, shared dependency, or independently testable invariant
 - Inline and delete single-use delegated helpers when they only pass through one endpoint's request, dependencies, and persistence/provider sequence
 - Do not add top-level free helpers under app `server/` modules for exactly one production call site; inline the logic unless the helper has a reusable domain contract, isolates genuinely complex behavior with a clear operational name, or is expected to gain more call sites
+- Follow the Django-parity app boundary: every user-facing endpoint belongs to an app, including endpoints in minimal services and benchmarks with only one or two handlers
+- Define HTTP endpoint handlers in `src/apps/<app>/views.rs` and Pages `#[server_fn]` functions in `src/apps/<app>/server_fn.rs` (or app-local equivalents), then register them in an app-local router; `src/config/urls.rs` only composes app routers and framework-level routes, and MUST NOT define application endpoint handlers directly
 - Keep endpoint decorator paths app-local; compose app/API prefixes in route modules or `*_urls.rs`, not inside handler paths or function bodies
 - Import request, DTO, and framework types at module scope instead of using long fully qualified paths inside handler or server function signatures/bodies
 - Preserve streamed text exactly unless normalization is part of the product requirement; do not collapse prose with `split_whitespace()`
