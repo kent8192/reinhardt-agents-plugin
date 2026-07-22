@@ -225,9 +225,9 @@ If the result affects app state, prefer `Action` or `Resource` instead.
 
 | Hook | Description |
 |------|-------------|
-| `use_debug_value` | Custom label in dev tools (requires `debug-hooks` feature) |
+| `use_debug_value` | Custom debug label (always available; debug output requires `debug-hooks` and is a no-op in production) |
 
-### Custom Hooks
+### Custom Hooks (0.2.x+)
 
 Custom hooks are plain Rust functions that group reusable hook wiring behind a
 `use_<domain>` name. Extract a custom hook when the same combination of local
@@ -273,9 +273,11 @@ In this example, `browser_is_online` and `subscribe_online_status` are
 app-local browser adapters; the custom hook owns the state/effect/subscription
 contract while callers only read the returned `Signal<bool>`.
 
-Custom hooks SHOULD call `use_debug_value` with a compact status label or key
-state snapshot. This keeps extracted state visible in debug builds and makes
-the hook boundary easier to inspect.
+The example uses the explicit dependency argument introduced in 0.2.x. On
+0.1.x, use the same effect closure without the trailing `()` dependency
+argument. Custom hooks SHOULD call `use_debug_value` with a compact status label
+or key state snapshot. The hook is always available; enabling `debug-hooks`
+activates its debug output, while production builds treat it as a no-op.
 
 Dependency review needs one extra pass inside custom hooks. The `page!` macro's
 deps-exhaustiveness check only sees hook calls written textually inside the
