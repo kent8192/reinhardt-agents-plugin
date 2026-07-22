@@ -86,15 +86,14 @@ Specialized agent for reviewing reinhardt-web application code against project c
 
 - [ ] Button actions operate on the displayed/current entity: route params, form values, loaded DTOs, selected rows/versions, and server return values, not fixture IDs, sample constants, or canned text
 - [ ] Async mutations use `use_action`, async reads or derived text use `use_resource`, and event handlers use `use_callback` / `use_callback_with`; `spawn_local` is limited to low-level browser integration
-- [ ] **(0.4.x)** `page!` form matches its intent: `page!({ ... })` returns a `Page` directly and may implicitly capture only `Clone` values, while `page!(|| { ... })` / `page!(|...| { ... })` are callable factories with no free surrounding captures
 - [ ] Non-`Copy` callbacks/actions passed into `page!` render closures are cloned at the attribute use site when needed
 - [ ] Internal button-triggered redirects use `reinhardt::pages::navigate(..., NavigationType::Push)` or the current router handle API, not `window.location.set_href`
 - [ ] App-local i18n needed by Pages clients crosses the boundary through a registered `#[server_fn]` plus `use_resource` fallback, not duplicated client/server gettext code
 - [ ] Component examples import services, routes, serializers, server functions, and shared components at module scope instead of repeating full `crate::...` paths inside `page!` or event handlers
-- [ ] **(0.4.0)** `ClientForm` is derived only from a non-generic named DTO that is the canonical supported request contract; no hand-written duplicate field tokens or request assembly drift alongside it
-- [ ] **(0.4.0)** `ClientFormChoices` uses a fieldless externally tagged enum whose serde serialize/deserialize names agree; data variants, tagged/untagged encodings, directional renames with different wire names, and colliding aliases are rejected
-- [ ] **(0.4.0)** Exported DTOs have public editable fields; hidden/default fields have a valid skip/default contract, and generated `server_fn` submit DTOs have no serde-skipped request fields
-- [ ] **(0.4.0)** Generated client-form submit UI reflects the runtime's pending, success, and error state; validation failure does not invoke the server function and operation errors are not presented as validation errors
+- [ ] Label-requiring `input` types, `select`, and `textarea` in `page!` have a non-hidden accessible label, non-empty `aria-label`, or `aria-labelledby` that resolves to a non-hidden element with accessible content; generated `form!` fields retain meaningful labels
+- [ ] `button` and interactive `a` elements have an accessible name (text, ARIA label, or non-empty child image `alt`); `input type="submit"` / `"reset"` retain their built-in names, and image submit inputs have a non-empty `alt` or valid ARIA name
+- [ ] Static `role` values are concrete WAI-ARIA 1.3 roles, static `tabindex` is only `0` or `-1`, and every `iframe` has a non-empty `title`
+- [ ] Each `a11y: off` is a documented, element-local exception rather than a way to suppress a fixable violation
 
 ### Testing
 
@@ -104,7 +103,6 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] Fixtures used for shared setup
 - [ ] `#[serial]` used for global state tests
 - [ ] DI override tests (`with_di_overrides!`, `register_override`) depend on the `testing` feature; keep `#[serial(di_registry)]` only for 0.1.x registry overrides or other global state because 0.2.x / 0.3.x use per-context registry isolation
-- [ ] **(0.4.0)** Client-form tests cover DTO reconstruction, optional-string normalization, choices, hidden defaults, validation short-circuiting, and async submission lifecycle on the appropriate native/WASM surface
 
 ### Documentation & Style
 

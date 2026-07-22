@@ -1,5 +1,22 @@
 # Testing Guide for Reinhardt Pages
 
+## Compile-Time `page!` Accessibility Contracts (0.4.0+)
+
+For a change to `page!` or `form!` validation, test the macro contract before
+runtime component behavior. Extend the existing `reinhardt-pages` UI fixture
+suite with both a passing fixture and a compile-fail fixture when a rule is
+added or changed.
+
+- Passing fixtures should cover valid control labels, interactive names,
+  concrete roles, `tabindex: 0` / `-1`, iframe titles, and a deliberately
+  scoped `a11y: off` exception as applicable.
+- Compile-fail fixtures should exercise the exact invalid static markup and
+  assert the diagnostic. Do not replace this with a browser or server-function
+  test: those run too late to prove a macro error.
+- UI fixtures are compiler inputs, not application `rstest` cases; retain the
+  existing macro UI-test harness convention while keeping runtime application
+  tests under the standards below.
+
 ## 3-Layer Test Architecture
 
 ### Layer 1: Server Function Unit Tests

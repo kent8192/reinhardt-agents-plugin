@@ -136,22 +136,23 @@ let router = UnifiedRouter::new()
 Anonymous component DSL for WASM frontend views.
 
 ```rust
-let greeting = String::from("Hello, World!");
-
-page!({
+page!(|name: String| {
     div {
-        h1 { { greeting } }
+        h1 { "Hello, {name}!" }
         p { "Welcome to Reinhardt Pages." }
     }
 })
 ```
 
-**(0.4.x)** `page!({ ... })` returns a `Page` immediately and implicitly
-captures surrounding values that implement `Clone`; the `greeting` value above
-is captured and cloned into generated reactive and event closures. Use it for
-normal page functions. Use `page!(|| { ... })` or `page!(|props: Props| { ... })`
-only for reusable factories invoked later; closure forms keep strict capture
-validation, so body values must be parameters or local bindings.
+### Compile-Time Accessibility (0.4.0+)
+
+`page!` validates statically decidable accessibility requirements during macro
+expansion. Treat a validation error as a markup contract: add the missing
+label, accessible name, valid role, safe `tabindex`, or iframe title instead
+of postponing it to runtime. Use `a11y: off` only on the individual element
+with an intentional, documented exception.
+
+See [`page!` accessibility validation](../../pages/references/page-macro.md#validation-rules-compile-time) for the complete rule table and examples.
 
 ---
 
@@ -180,6 +181,10 @@ head!({
 **Feature:** `pages`
 
 Type-safe form component bound to a `#[server_fn]` submission handler.
+
+In 0.4.0+, generated form controls satisfy the structural label requirement by
+construction. Keep field labels meaningful; generated image submit inputs use
+their non-empty `alt` as an `aria-label`.
 
 ### Syntax (rc.22+)
 

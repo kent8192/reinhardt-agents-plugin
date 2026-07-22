@@ -50,7 +50,10 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - Use `reinhardt-i18n` for language-specific UI text, server-provided prompts, and generated copy, including Japanese output
 - Boolean attributes require expressions, not literals (`disabled: is_disabled`, NOT `disabled: true`)
 - `img` elements require both `src` and `alt` (compile-time enforcement)
-- `button` elements require text content or `aria-label`/`aria-labelledby`
+- In 0.4.x, `page!` statically validates accessibility: label-requiring `input` types, `select`, and `textarea` need a non-hidden accessible label or valid ARIA name; `button` and interactive links need an accessible name; and `iframe` needs a non-empty `title`
+- Static `role` values must be concrete WAI-ARIA 1.3 roles, and static `tabindex` values are limited to `0` and `-1`
+- Use `a11y: off` only on the individual element whose intentional runtime or external labeling cannot be expressed statically; never use it as a broad workaround
+- `form!` generated controls satisfy the structural label requirement by construction; keep field labels meaningful, and give generated image submit inputs meaningful non-empty `alt` text (used as their `aria-label`)
 - URL attributes (`href`, `src`, `action`, `formaction`) block dangerous schemes (`javascript:`, `data:`, `vbscript:`)
 - ALL code comments must be in English
 - Use `reinhardt-query` for any SQL construction, NEVER raw SQL
