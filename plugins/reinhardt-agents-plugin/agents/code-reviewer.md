@@ -91,6 +91,10 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] Internal button-triggered redirects use `reinhardt::pages::navigate(..., NavigationType::Push)` or the current router handle API, not `window.location.set_href`
 - [ ] App-local i18n needed by Pages clients crosses the boundary through a registered `#[server_fn]` plus `use_resource` fallback, not duplicated client/server gettext code
 - [ ] Component examples import services, routes, serializers, server functions, and shared components at module scope instead of repeating full `crate::...` paths inside `page!` or event handlers
+- [ ] **(0.4.0)** `ClientForm` is derived only from a non-generic named DTO that is the canonical supported request contract; no hand-written duplicate field tokens or request assembly drift alongside it
+- [ ] **(0.4.0)** `ClientFormChoices` uses a fieldless externally tagged enum whose serde serialize/deserialize names agree; data variants, tagged/untagged encodings, directional renames with different wire names, and colliding aliases are rejected
+- [ ] **(0.4.0)** Exported DTOs have public editable fields; hidden/default fields have a valid skip/default contract, and generated `server_fn` submit DTOs have no serde-skipped request fields
+- [ ] **(0.4.0)** Generated client-form submit UI reflects the runtime's pending, success, and error state; validation failure does not invoke the server function and operation errors are not presented as validation errors
 
 ### Testing
 
@@ -100,6 +104,7 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] Fixtures used for shared setup
 - [ ] `#[serial]` used for global state tests
 - [ ] DI override tests (`with_di_overrides!`, `register_override`) depend on the `testing` feature; keep `#[serial(di_registry)]` only for 0.1.x registry overrides or other global state because 0.2.x / 0.3.x use per-context registry isolation
+- [ ] **(0.4.0)** Client-form tests cover DTO reconstruction, optional-string normalization, choices, hidden defaults, validation short-circuiting, and async submission lifecycle on the appropriate native/WASM surface
 
 ### Documentation & Style
 
