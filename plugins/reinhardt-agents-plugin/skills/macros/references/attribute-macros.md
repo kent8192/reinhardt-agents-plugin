@@ -560,6 +560,35 @@ pub struct UpdateUserRequest {
 
 ## Frontend (Pages/WASM)
 
+### `#[component]` (0.4.0-alpha.1+)
+
+**Crate:** `reinhardt-pages/macros`
+
+Define a route-backed Page component. The macro emits route metadata consumed
+by `ClientRouter::component(...)`.
+
+```rust
+use reinhardt_pages::{Page, Path, component, page};
+use reinhardt_urls::routers::ClientRouter;
+
+#[component("/users/{id}/", name = "user-detail")]
+fn user_page(Path(id): Path<i64>) -> Page {
+    page!(|id: i64| {
+        div { { id.to_string() } }
+    })(id)
+}
+
+let router = ClientRouter::new().component(user_page);
+```
+
+The `name` argument is required, must be a string literal, and is the public
+route name. Do not use `#[component("/path/", "name")]`,
+`#[component("/path/", route_name)]`, or `name = route_name`; all three forms
+are rejected. Migrate a positional string mechanically to `name = "..."`, but
+choose the public name explicitly when replacing an identifier shorthand.
+
+---
+
 ### `#[server_fn]`
 
 **Crate:** `reinhardt-pages/macros`

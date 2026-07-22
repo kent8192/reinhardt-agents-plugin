@@ -66,6 +66,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - Call `LatestResourceValue::refetch_on_success()` only when the server-backed resource must refresh after a tracked action transitions into success, and retain the returned handle for that behavior's lifetime; it does not refetch merely because an action was already successful when the handle was created
 - Route internal button-triggered redirects through `reinhardt::pages::navigate(..., NavigationType::Push)` or the current router handle API; use `window.location.set_href` only for external URLs or hard-navigation fallbacks
 - For app-local server-side translations needed by Pages clients, expose a small `#[server_fn]`, register its marker in the app/server router, and load it with `use_resource` plus a stable fallback instead of duplicating gettext logic behind client/server cfg gates
+- In 0.4.0-alpha.1+, route-backed `#[component]` wrappers must use `#[component("/path/", name = "public-route-name")]`: `name` is a required string literal that becomes ClientRouter route metadata. Never use a positional route name or bare identifier shorthand
 - Put route-backed `#[component]` wrappers under `src/apps/<app>/client/components/`, not in app-local `pages.rs` or `client/pages`
 - For `#[server_fn]`, keep endpoint-specific request flows visible; do not move the same logic into `server/`, `service/`, or `services/` unless the extraction creates a narrower contract, shared dependency, or independently testable invariant
 - Keep simple `Model::objects()` CRUD visible inside the `#[server_fn]` or nearby endpoint helper; avoid semantic wrappers such as `get_project_model`, `list_document_chunks`, or `document_path` when they only hide a direct ORM call
@@ -93,3 +94,4 @@ For the latest API definitions:
 5. Read `reinhardt/crates/reinhardt-pages/src/api.rs` for API client
 6. Read `reinhardt/crates/reinhardt-pages/src/tables.rs` for table component
 7. Read `reinhardt/crates/reinhardt-pages/src/testing.rs` for test utilities
+8. Read `reinhardt/crates/reinhardt-pages/macros/src/component.rs` for route-backed `#[component]` parsing and diagnostics

@@ -39,7 +39,7 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 2. Use `#[api_view]` for function-based API views
 3. Use `#[action]` for custom ViewSet actions
 4. Use `#[routes]` for URL pattern registration
-5. Use `#[component]` for 0.3 route-backed Pages components
+5. Use `#[component]` for route-backed Pages components; in 0.4.0-alpha.1+, write `#[component("/path/", name = "public-route-name")]`
 
 > **0.2.x note:** `#[url_patterns]` is removed in 0.2.x — use `#[routes]` for all URL registration.
 
@@ -75,6 +75,7 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 - `#[user]` auto-implements `BaseUser` and `AuthIdentity` traits on native targets and is inert on WASM in 0.3.x
 - HTTP decorators (`#[get]`, etc.) accept `name` and `use_inject` options
 - Register 0.3 endpoint-macro handlers with `ServerRouter::endpoint(...)`; do not use removed raw `ServerRouter::function` / `.route` registration
+- **(0.4.0-alpha.1+)** Route-backed `#[component]` declarations require a string-literal `name = "..."`; positional names and bare identifiers are rejected
 - `guard!` precedence: `!` > `&` > `|` — use parentheses for clarity
 - `installed_apps!` validates app names at compile time
 - `path!` validates URL patterns at compile time (must start with `/`, snake_case params)
