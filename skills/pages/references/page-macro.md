@@ -372,7 +372,7 @@ In 0.2.x, `bind listener_value` is added for typed value conversion in event lis
 
 ```rust
 // 0.2.x — bind listener_value for typed extraction
-label { r#for: "count", "Count" }
+label { for: "count", "Count" }
 input {
     id: "count",
     type: "number",
@@ -418,8 +418,8 @@ at the component level.
 
 ```rust
 page!(|| {
-    label { r#for: "search", "Search" }
-    input { id: "search", r#type: "search", name: "search" }
+    label { for: "search", "Search" }
+    input { id: "search", type: "search", name: "search" }
 
     button {
         aria_label: "Open settings",
@@ -438,7 +438,7 @@ the `off` marker, which keeps the exception visible in source.
 
 ```rust
 input {
-    r#type: "range",
+    type: "range",
     name: "decorative-volume",
     a11y: off,
 }
@@ -470,7 +470,7 @@ fn todo_app(todos: Signal<Vec<String>>, filter: Signal<String>) -> Page {
 
             header {
                 h1 { "My Todo App" }
-                label { r#for: "new-todo", "Add a todo" }
+                label { for: "new-todo", "Add a todo" }
                 input {
                     id: "new-todo",
                     type: "text",
