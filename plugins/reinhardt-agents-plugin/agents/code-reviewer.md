@@ -36,6 +36,15 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] Delion plugins depend on `reinhardt` facade, not `reinhardt-dentdelion` directly
 - [ ] No circular dependency chains
 
+### Authentication & Password Hashing
+
+- [ ] New passwords use an explicit preferred hasher (normally Argon2id); a deployed algorithm change uses `PasswordHashPolicy` with deliberate preferred-then-legacy ordering
+- [ ] Login-time upgrades use `check_password_with_policy_update` (or `check_password_with_update`) and persist only `PasswordCheck::ValidUpdated`
+- [ ] A rehash write is conditional on the prior password hash or a row version; a lost race reloads and rechecks rather than overwriting a concurrent reset or password change
+- [ ] Valid legacy or stale credentials remain valid when an opportunistic replacement hash cannot be generated
+- [ ] `bcrypt-hasher` is explicitly enabled when `BcryptHasher` is selected as a preferred or legacy policy hasher, and its 72-byte input limit is handled before registration or login policy changes
+- [ ] `HttpBasicAuth` has its required hasher feature enabled and uses `with_policy` and `try_add_user` when policy errors must be surfaced; code does not bypass its managed hash store
+
 ### ORM & Queries
 
 - [ ] `reinhardt-query` used for all SQL construction (no raw SQL), except an
