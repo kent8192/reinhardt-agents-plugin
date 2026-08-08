@@ -257,6 +257,19 @@ Tests that mutate shared i18n state or catalogs must use `#[serial(i18n)]`.
 Keep the Arrange/Act/Assert structure and use strict assertions for both the
 pre-switch and post-switch rendered text.
 
+## Query Cache Tests (0.4.x)
+
+For `use_query`, test the cache contract rather than only the final rendered
+text:
+
+- concurrent consumers of one `QueryKey` issue one request;
+- `is_pending()` and `is_fetching()` distinguish initial and background work;
+- the last successful value remains visible during a refetch;
+- a successful `use_mutation(...).invalidates(key)` triggers the exact query;
+- canonical server-function keys remain stable for equivalent JSON arguments;
+- request-bound or injected server functions are not assumed to prefetch during
+  native SSR.
+
 ## Testing Standards
 
 - ALL tests MUST use `rstest` (per project standards)

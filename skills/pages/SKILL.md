@@ -63,6 +63,8 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - Since 0.2.x, reactive expressions in `page!` are auto-wrapped — explicit `Page::reactive(...)` is no longer needed
 - Since 0.2.x, `use_effect`/`use_memo`/`use_callback` take explicit dependency arrays
 - Use `use_action` for async mutations, `use_resource` for async reads or derived text, and `use_callback` / `use_callback_with` for event handlers; keep `spawn_local` as an escape hatch for low-level browser integration only
+- Use `use_query` and a stable `QueryKey` for app-wide keyed reads that should deduplicate, cache, poll, or be invalidated by `use_mutation(...).invalidates(query_key)`. `use_resource` remains the local component-scoped read primitive.
+- `#[server_fn]` generates a marker-module `key(...)` helper for canonical JSON arguments; use it for query identity instead of embedding raw arguments in hydration IDs. Request-extractor or `#[inject]` server functions skip native SSR prefetch.
 - In 0.3.x, use `use_resource(fetcher, deps)` for both mount-only and dependency-driven resources; replace `create_resource*`
 - In 0.3.x, replace `use_effect_event*` with `use_callback*` or `.get_untracked()` inside the effect
 - Route internal button-triggered redirects through `reinhardt::pages::navigate(..., NavigationType::Push)` or the current router handle API; use `window.location.set_href` only for external URLs or hard-navigation fallbacks
