@@ -257,6 +257,18 @@ Tests that mutate shared i18n state or catalogs must use `#[serial(i18n)]`.
 Keep the Arrange/Act/Assert structure and use strict assertions for both the
 pre-switch and post-switch rendered text.
 
+## 0.4.x Async SSR and Resource Regression Tests
+
+- Use an async native test and await `SsrRenderer` entry points; cover both
+  `render_page(...).await` plus `SsrStream::collect_string()` and the buffered
+  `render_page_to_string(...).await` helper.
+- Register deterministic resource fetchers and assert `Loading`, `Success`,
+  and `Error` behavior, timeout/fallback behavior, serialized hydration state,
+  and the no-refetch hydration path. Add a stable explicit key for conditional
+  `use_resource_with_key` calls.
+- When suspense streaming is enabled, assert the fallback shell arrives before
+  the replacement chunk; use `SsrChunk::into_bytes()` in HTTP stream adapters.
+
 ## Testing Standards
 
 - ALL tests MUST use `rstest` (per project standards)

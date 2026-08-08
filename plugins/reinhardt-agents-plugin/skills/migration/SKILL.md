@@ -64,6 +64,7 @@ For each migration task:
 - For 0.1.x → 0.2.x upgrades, this is a **major version migration** with extensive breaking changes. Use `references/upgrade-workflow.md` "Major Version Upgrade" section and `reinhardt/instructions/MIGRATION_0.2.md` for the full migration path.
 - For 0.2.x → 0.3.x upgrades, read `references/0.3-upgrade.md` first. If a local `reinhardt-web` checkout has `instructions/MIGRATION_0.3.md`, prefer that current guide and use the bundled reference as the fallback checklist.
 - For 0.3.x → 0.4.x development upgrades, extract every target CHANGELOG breaking change and its linked PR/Issue before editing. In 0.4.0-alpha.1+, migrate route-backed `#[component(PATH, "name")]` declarations to `#[component(PATH, name = "name")]`; replace identifier shorthand with a deliberate public route-name string.
+- For 0.3.x → 0.4.x Pages SSR, update `SsrRenderer` calls to `.await`; choose streamed `render_page(...).await` / `SsrStream` or buffered `render_page_to_string(...).await`, and verify native `use_resource` hydration with an explicit resource timeout.
 - After all migrations, run `cargo check` and `cargo test` to verify
 - If `cargo check` fails after migration, diagnose and fix before proceeding
 

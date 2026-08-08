@@ -51,6 +51,17 @@ well as page rendering:
 - Native tests use `runtime.submit_async(...)`; generated `form.submit(...)`
   is a WASM-client helper.
 
+## Pages Async SSR and Resource Coverage (0.4.x)
+
+When generating native Pages SSR tests, await `SsrRenderer` entry points and
+cover both output modes:
+
+- Assert `render_page(...).await` stream collection and buffered
+  `render_page_to_string(...).await` output.
+- Register deterministic resource fetchers and cover timeout, `Success` /
+  `Error` hydration payloads, suspense fallback/replacement chunks, and stable
+  `use_resource_with_key` identities for conditional hooks.
+
 ## Output Format
 
 Return test code ready to be inserted into the appropriate file. Include:
