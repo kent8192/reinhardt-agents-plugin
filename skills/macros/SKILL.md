@@ -25,9 +25,10 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 ### Model Definition
 
 1. Use `#[model(app_label = "...")]` to define a database model
-2. Use `#[field(...)]` attributes on every scalar field, including unconstrained fields
-3. Use `#[rel(...)]` attributes for relationships
-4. Optionally use `#[user(...)]` for user model with auth traits
+2. For 0.4.x, keep an explicit `table_name` for deployed tables; otherwise use the app-label-based convention and review the generated migration
+3. Use `#[field(...)]` attributes on every scalar field, including unconstrained fields
+4. Use `#[rel(...)]` attributes for relationships
+5. Optionally use `#[user(...)]` for user model with auth traits
 
 > **0.3.x note:** `#[model]` still auto-generates `{Model}Info`; relation fields now use `RelationInfo<T>` / `ManyToManyInfo<Source, Target>` payloads.
 
@@ -65,6 +66,7 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 
 - ALL macros are re-exported through the `reinhardt` facade crate
 - `#[model]` auto-derives `Model`, `Serialize`, `Deserialize`, `Clone`, `Debug`
+- **(0.4.x)** `#[model]` requires `app_label`; omitted `table_name` uses singular acronym-aware snake_case under that app label and does not pluralize
 - Every scalar field inside `#[model]` should have `#[field]` or `#[field(...)]`; relationship fields should have `#[rel(...)]`
 - Use `#[derive(Validate)]` / `#[validate(...)]` for request validation instead of duplicating validation logic in services
 - `#[user]` auto-implements `BaseUser` and `AuthIdentity` traits on native targets and is inert on WASM in 0.3.x
