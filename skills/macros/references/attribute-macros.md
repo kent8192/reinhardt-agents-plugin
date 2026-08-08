@@ -553,6 +553,35 @@ pub struct UpdateUserRequest {
 
 ## Frontend (Pages/WASM)
 
+### `#[layout]` (0.4.x)
+
+**Crate:** `reinhardt-pages/macros`
+
+Define a route-backed Pages shell for a nested `ClientRouter` tree. The
+function returns `Page`, accepts any needed `Path` / `Query` extractors, and
+has exactly one plain `Outlet` parameter:
+
+```rust
+use reinhardt::pages::{layout, page, Outlet, Page, Path};
+
+#[layout("/workspaces/{workspace_id}/", name = "workspace-shell")]
+fn workspace_shell(Path(workspace_id): Path<i64>, outlet: Outlet) -> Page {
+    page!(|workspace_id: i64, outlet: Outlet| {
+        section {
+            h1 { { format!("Workspace {workspace_id}") } }
+            { outlet }
+        }
+    })(workspace_id, outlet)
+}
+```
+
+Register child `#[component]` functions with
+`ClientRouter::new().routes(...)`. The layout path is absolute, child paths
+are relative, and `children.index(...)` owns the layout base route. Layout and
+leaf route names share one namespace, so choose explicit unique names. See
+the [Pages routing and SSR reference](../../pages/references/routing-ssr.md)
+for outlet preservation in browser WASM and async SSR behavior.
+
 ### `#[server_fn]`
 
 **Crate:** `reinhardt-pages/macros`

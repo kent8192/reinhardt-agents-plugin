@@ -111,6 +111,11 @@ pub fn routes() -> UnifiedRouter {
 
 - **0.1.x**: `ClientRouter` has `named_route()`, `named_route_params()`, `named_route_result()`, `named_route_path()`, `named_page()` methods
 - **0.2.x**: All `named_*` methods removed. Every `ClientRouter::route*` method requires `name` as mandatory first argument
+- **0.4.x**: Use `ClientRouter::routes(...)` for nested layout trees. A
+  `#[layout]` path is absolute, child `#[component]` paths are relative, and
+  the layout receives an `Outlet`; use `children.index(...)` for the layout
+  base route. Layout and leaf names share one namespace, and guards/metadata
+  should be attached to the route tree where they apply.
 
 ```rust
 // 0.1.x
@@ -121,6 +126,9 @@ let router = ClientRouter::new()
 let router = ClientRouter::new()
     .route("user_detail", "/users/:id", handler);
 ```
+
+For the 0.4.x layout API and its SSR/WASM mounting behavior, see the [Pages
+routing and SSR reference](../../pages/references/routing-ssr.md).
 
 ### UnifiedRouter Methods
 

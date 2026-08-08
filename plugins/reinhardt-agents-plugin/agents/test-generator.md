@@ -51,6 +51,22 @@ well as page rendering:
 - Native tests use `runtime.submit_async(...)`; generated `form.submit(...)`
   is a WASM-client helper.
 
+## Pages Routing, SSR, and Macro Coverage (0.4.x)
+
+When generating Pages regression tests, cover the route tree and both rendering
+targets:
+
+- Native `ClientRouter::routes` tests assert composed layout/child paths,
+  inherited parameters, `children.index(...)`, reverse lookup, and duplicate
+  route-name or path-parameter rejection.
+- Browser-WASM navigation tests assert sibling routes preserve the shared
+  `#[layout]` shell and remount only the `Outlet` subtree.
+- Async native SSR tests await `SsrRenderer`; cover `SsrStream` collection and
+  buffered `render_page_to_string`, resource timeout, `Success` / `Error`
+  hydration payloads, and stable `use_resource_with_key` identities.
+- `page!` compile/render fixtures use the HTML spelling `type:` on inputs and
+  buttons. Do not generate `r#type:` inside the macro DSL.
+
 ## Output Format
 
 Return test code ready to be inserted into the appropriate file. Include:

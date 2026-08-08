@@ -57,6 +57,21 @@ Guide developers through writing high-quality tests using rstest, AAA pattern, r
 4. Verify shared `#[dto]` validation on both native and WASM surfaces when the
    request type crosses the client/server boundary.
 
+### Pages SSR and Layout Tests (0.4.x)
+
+1. Build a native `ClientRouter::routes` fixture with a `#[layout]` shell and
+   `Outlet`; assert composed paths, inherited parameters, index routes, reverse
+   lookup, and unique layout/leaf names.
+2. Add browser-WASM navigation coverage for sibling children: the shared layout
+   must remain mounted while only the outlet subtree is remounted.
+3. Use async native tests for `SsrRenderer`; cover streamed
+   `render_page(...).await` plus `SsrStream::collect_string()`, buffered
+   `render_page_to_string(...).await`, resource timeout, and serialized
+   `Success` / `Error` hydration state.
+4. For conditional resource hooks, use and assert a stable
+   `use_resource_with_key` hydration key. Compile page fixtures with direct
+   HTML `type:` attributes rather than `r#type:`.
+
 ## Important Rules
 
 - **NEVER** use `#[test]` — always use `#[rstest]`
