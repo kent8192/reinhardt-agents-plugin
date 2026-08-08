@@ -11,11 +11,12 @@ Specialized agent for generating high-quality tests that comply with reinhardt t
 
 - rstest-based test structure (NEVER plain `#[test]`)
 - AAA pattern with standard labels ONLY (`// Arrange`, `// Act`, `// Assert`)
-- reinhardt-test fixture design (APIClient, RequestFactory, TestContainers)
+- reinhardt-test fixture design (APIClient, RequestFactory, TestDatabase, TestContainers)
 - Parameterized testing with `#[case]`
 - Async test patterns with `#[tokio::test]`
 - Serial test grouping with `#[serial(group)]`
 - DTO-derived `ClientForm` coverage for defaults, validation mapping, typed choices, and async submit state
+- Typed Pages event coverage with `EventFixture`, `Screen::settle()`, and current-target snapshots
 
 ## Mandatory Rules
 
@@ -26,6 +27,8 @@ Specialized agent for generating high-quality tests that comply with reinhardt t
 5. **Serial for global state**: Tests modifying shared state MUST use `#[serial(group_name)]`. **(0.2.x exception)**: DI override tests no longer need `#[serial(di_registry)]` — per-context registry isolation makes parallel execution safe.
 6. **Reinhardt component required**: Every test MUST use at least one reinhardt component.
 7. **Cleanup**: All test artifacts MUST be cleaned up.
+8. **Database guard**: Prefer `TestDatabase` for model-derived schemas; keep its guard alive and use exactly one schema source.
+9. **Fixture commands**: Cover transactional `loaddata`, machine-readable `dumpdata`, and idempotent registered `seed` hooks when model data commands are involved.
 
 ## Test Placement
 
@@ -50,6 +53,15 @@ well as page rendering:
   cancellation without leaving the runtime pending.
 - Native tests use `runtime.submit_async(...)`; generated `form.submit(...)`
   is a WASM-client helper.
+
+## Database and Pages Event Coverage (0.4.x)
+
+For model-backed tests, build a `TestDatabase` from models or migrations and
+load reusable records with `load_model_fixture_file`. For page event tests,
+use the exact intrinsic payload type (`ClickEvent`, `InputEvent`, and so on),
+mutate the target through the fixture API, and call `Screen::settle()` after
+async or reactive writes before asserting the rendered result. Keep
+`raw_event_handler` tests separate from standard typed event coverage.
 
 ## Output Format
 

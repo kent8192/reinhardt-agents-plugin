@@ -1,6 +1,6 @@
 ---
 name: pages
-description: Use when building WASM frontend pages with reinhardt-pages - covers page!/head!/form! macros, reactive hooks (Signal/Effect/useState), i18n, routing, SSR/hydration, server functions, and API client
+description: Use when building WASM frontend pages with reinhardt-pages - covers page!/head!/form! macros, reactive hooks (Signal/Effect/useState), typed events, query cache, component-scoped styles, i18n, routing, SSR/hydration, server functions, and API client
 versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.x"]
 ---
 
@@ -14,7 +14,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - User works with `page!`, `head!`, `form!` macros or `#[server_fn]`
 - User sets up reactive state with Signal, Effect, Memo, or hooks
 - User configures client-side routing, SSR, or hydration
-- User mentions: "page", "head", "form", "server_fn", "Signal", "useState", "useEffect", "watch", "i18n", "translation", "locale", "t!", "SSR", "hydration", "WASM", "frontend", "router", "ApiQuerySet", "Table", "prelude", "component"
+- User mentions: "page", "head", "form", "server_fn", "Signal", "useState", "useEffect", "use_retained_effect", "watch", "query", "QueryKey", "EventFixture", "style!", "#[style_def]", "i18n", "translation", "locale", "t!", "SSR", "hydration", "WASM", "frontend", "router", "ApiQuerySet", "Table", "prelude", "component"
 
 ## Workflow
 
@@ -23,11 +23,14 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 1. **Define Page Component** — read `references/page-macro.md`
 2. **Add Head Section** — read `references/head-form-macros.md` (if SSR)
 3. **Set Up Reactivity** — read `references/reactive-hooks.md`
-4. **Add Pages I18n** — read `references/i18n.md` for localized UI, locale switching, or SSR/hydration translations
-5. **Configure Routing** — read `references/routing-ssr.md` (if SPA)
-6. **Add Server Functions** — read `references/head-form-macros.md` (`#[server_fn]` section)
-7. **Connect API** — read `references/api-tables.md` (if data fetching)
-8. **Test** — read `references/testing-guide.md`
+4. **Choose Async Read Scope** — read `references/query-cache.md` for data shared across components, or keep `use_resource` for local reads
+5. **Add Typed Events** — read `references/events.md` when handling intrinsic or custom DOM events
+6. **Add Component Styles** — read `references/style-dsl.md` when using `style!` / `#[style_def]`
+7. **Add Pages I18n** — read `references/i18n.md` for localized UI, locale switching, or SSR/hydration translations
+8. **Configure Routing** — read `references/routing-ssr.md` (if SPA)
+9. **Add Server Functions** — read `references/head-form-macros.md` (`#[server_fn]` section)
+10. **Connect API** — read `references/api-tables.md` (if data fetching)
+11. **Test** — read `references/testing-guide.md`
 
 ### Creating a Form
 
@@ -45,6 +48,8 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - For user-facing relation inputs, show representative values such as `title`, `name`, or `slug`; do not ask users to type raw foreign-key primary keys unless the surface is internal/admin-only or no useful representative field exists
 - Configure `cfg_aliases` in `build.rs` for `wasm`/`native` and `server`/`client` aliases
 - Event handlers in `page!` are auto-handled across platforms (no manual `#[cfg(wasm)]` needed)
+- Standard intrinsic events infer exact 0.4.x payload types such as `ClickEvent`, `InputEvent`, and `ChangeEvent`. Use `raw_event_handler` with `platform::Event` only for low-level or custom events; component event props keep their declared type.
+- Target extraction helpers such as `value()`, `checked()`, `selected_values()`, and `files()` return `Result` and read an owned `current_target` snapshot that remains valid across `await`.
 - Use `watch {}` for reactive conditionals (not static `if` with extracted Signal values)
 - Use route reverse helpers for `href`, `action`, and `formaction` when named routes exist; avoid hardcoded paths
 - For catalog-backed Pages UI in 0.4.x, enable both facade features `pages` and `i18n`, then use `I18nContext` with `t!` (or `tr` / `tn` / `tp` / `tnp`) instead of per-label asynchronous translation resources
@@ -56,13 +61,18 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - URL attributes (`href`, `src`, `action`, `formaction`) block dangerous schemes (`javascript:`, `data:`, `vbscript:`)
 - ALL code comments must be in English
 - Use `reinhardt-query` for any SQL construction, NEVER raw SQL
-- `#[server_fn]` functions should inject shared keyed services for application business logic (`Depends<K, T>`) instead of constructing settings directly and calling free functions
+- In 0.4.x, `#[server_fn]` functions should inject shared self-keyed services as direct `T` / `Depends<T>`, or explicit application keys as `KeyedDepends<K, T>`; `Depends<K, T>` is a 0.3 migration spelling.
 - Prefer DI services over utility-function clusters for business operations that own domain policy, state transitions, validation policy, orchestration dependencies, lifecycle scoping, or test overrides
 - Reserve utility functions for pure codecs, DTO conversion, error mapping, provider-local wire conversion, and narrow private transformations that do not need request-scoped dependencies
 - Keep Pages app `services/` modules focused on injectable keys, provider functions, and service structs/functions; put prompt builders, provider adapters, parsers, converters, repository/database internals, and narrow private helpers under app-local `server/` modules
 - Since 0.2.x, reactive expressions in `page!` are auto-wrapped — explicit `Page::reactive(...)` is no longer needed
 - Since 0.2.x, `use_effect`/`use_memo`/`use_callback` take explicit dependency arrays
+- In 0.4.x, cleanup-free `use_effect` / `use_layout_effect` closures return `()`, while cleanup-capable closures return `Option<C>`. Use `use_retained_effect` / `use_retained_layout_effect` when registration-style code must retain its guard for the component lifetime.
+- In 0.4.x, reactive handles (`Signal`, `Memo`, `Effect`, `Callback`, `Action`, and `Resource`) are `Copy` scope keys. Create low-level handles inside an active `ReactiveScope`; do not clone reactive handles for ownership, but keep non-reactive setters and reference-counted values cloned when required.
+- Use `SetStateExt::update` for functional state updates such as `set_count.update(|current| current + 1)`; retain `set_count(value)` for direct replacement.
 - Use `use_action` for async mutations, `use_resource` for async reads or derived text, and `use_callback` / `use_callback_with` for event handlers; keep `spawn_local` as an escape hatch for low-level browser integration only
+- Use `use_query` and a stable `QueryKey` for app-wide keyed reads that should deduplicate, cache, poll, or be invalidated by `use_mutation(...).invalidates(query_key)`. `use_resource` remains the local component-scoped read primitive.
+- `#[server_fn]` generates a marker-module `key(...)` helper for canonical JSON arguments; use it for query identity rather than embedding raw arguments in hydration IDs. Server functions with request extractors or `#[inject]` parameters skip native SSR prefetch.
 - In 0.3.x, use `use_resource(fetcher, deps)` for both mount-only and dependency-driven resources; replace `create_resource*`
 - In 0.3.x, replace `use_effect_event*` with `use_callback*` or `.get_untracked()` inside the effect
 - Route internal button-triggered redirects through `reinhardt::pages::navigate(..., NavigationType::Push)` or the current router handle API; use `window.location.set_href` only for external URLs or hard-navigation fallbacks
@@ -75,6 +85,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - Test service-boundary domain rules directly when a service owns lifecycle, validation, state-transition, or orchestration policy
 - Use 0.3 Pages primitives directly where relevant: `#[wasm_server_api]`, `Portal` / `mount_portal`, `ActivityBoundary`, `ViewTransitionBoundary`, and `FieldArray`
 - Keep shared app code cfg-clean across native and `wasm32-unknown-unknown`; rely on documented inert stubs instead of broad call-site `#[cfg]` workarounds
+- Component-scoped styles use `#[style_def] static ... = style! { ... };`; link the generated `__reinhardt__/components.css` asset once per document because the macro does not inject a link. Plain `class:` and `style:` attributes remain valid.
 
 ## Cross-Domain References
 
@@ -82,6 +93,9 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - DI patterns: `../dependency-injection/references/di-patterns.md`
 - Auth backends: `../authentication/references/auth-backends.md`
 - Macro overview: `../macros/references/attribute-macros.md`
+- Typed Pages events: `references/events.md`
+- Keyed query cache: `references/query-cache.md`
+- Component-scoped style DSL: `references/style-dsl.md`
 - View patterns: `../api-development/references/view-patterns.md`
 
 ## Dynamic References

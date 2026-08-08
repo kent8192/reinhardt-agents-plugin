@@ -257,6 +257,49 @@ Tests that mutate shared i18n state or catalogs must use `#[serial(i18n)]`.
 Keep the Arrange/Act/Assert structure and use strict assertions for both the
 pre-switch and post-switch rendered text.
 
+## Typed Event and Reactive Settling Tests (0.4.x)
+
+Native component tests use the same intrinsic payload catalog as the browser.
+Dispatch an `EventFixture` through the queried element, then call
+`Screen::settle()` to drain handlers, nested tasks, and reactive rerenders:
+
+```rust
+let screen = render(page!({
+    label { "Name" }
+    input { aria_label: "Name" }
+}));
+
+screen
+    .get_by_label("Name")
+    .dispatch(EventFixture::input().value("Ada"))?;
+screen.settle();
+
+assert_eq!(screen.get_by_label("Name").value().as_deref(), Some("Ada"));
+```
+
+Use the convenience fixtures `click`, `submit`, `input`, `change`, `key_down`,
+and `pointer_move`, and use target-state setters for `checked`,
+`selected_values`, `files`, and `content_editable`. Cover the distinction
+between `target` and `current_target`, and use `raw_event_handler` only in a
+separate escape-hatch test.
+
+## Query Cache Tests (0.4.x)
+
+For `use_query`, test the cache contract rather than only the final rendered
+text:
+
+- concurrent consumers of one `QueryKey` issue one request;
+- `is_pending()` and `is_fetching()` distinguish initial and background work;
+- the last successful value remains visible during a refetch;
+- a successful `use_mutation(...).invalidates(key)` triggers the exact query;
+- canonical server-function keys remain stable for equivalent JSON arguments;
+- request-bound or injected server functions are not assumed to prefetch during
+  native SSR.
+
+For `#[style_def]` changes, assert that the generated stylesheet is linked once
+and that CSS-only changes pass through the asset pipeline without requiring a
+native/WASM rebuild.
+
 ## Testing Standards
 
 - ALL tests MUST use `rstest` (per project standards)

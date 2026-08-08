@@ -1,5 +1,37 @@
 # Reinhardt Model Patterns Reference
 
+## Model Identity and Table Naming (0.4.x)
+
+Every `#[model]` must declare an explicit `app_label`. `table_name` is optional
+for new models: when omitted, Reinhardt uses the app label plus the singular,
+acronym-aware snake_case model name. There is no automatic pluralization.
+
+```rust
+#[model(app_label = "accounts")]
+#[derive(Debug, Clone)]
+pub struct User {
+    #[field(primary_key = true)]
+    pub id: i64,
+}
+```
+
+The examples below use an explicit table name when the physical schema is part
+of the contract. For an existing table, keep its explicit `table_name` while
+adding `app_label`; omitting it can generate a `RenameTable` migration. The
+same preservation rule applies to generated many-to-many through tables and
+their columns.
+
+| Model | `app_label` | Default table name |
+|-------|-------------|--------------------|
+| `User` | `accounts` | `accounts_user` |
+| `BlogPost` | `blog` | `blog_blog_post` |
+| `HTTPRoute` | `routing` | `routing_http_route` |
+| `Person` | `people` | `people_person` |
+
+When a qualified string foreign key names a model, resolve it through the
+registered app/model identity. For a deployed schema, review the generated
+migration rather than accepting a drop/create or rename accidentally.
+
 ## Basic Model Definition
 
 Models are defined as Rust structs with the `#[model]` attribute macro. The macro generates the database table mapping, field definitions, and QuerySet integration.
@@ -8,7 +40,7 @@ Models are defined as Rust structs with the `#[model]` attribute macro. The macr
 use reinhardt::db::prelude::*;
 use chrono::{DateTime, Utc};
 
-#[model(table_name = "users")]
+#[model(app_label = "accounts", table_name = "users")]
 #[derive(Debug, Clone)]
 pub struct User {
     #[field(primary_key = true)]
@@ -76,7 +108,7 @@ than a scalar ID column.
 #### Anti-pattern
 
 ```rust
-#[model(table_name = "articles")]
+#[model(app_label = "content", table_name = "articles")]
 #[derive(Debug, Clone)]
 pub struct Article {
     #[field(primary_key = true)]
@@ -90,7 +122,7 @@ pub struct Article {
 #### Preferred
 
 ```rust
-#[model(table_name = "articles")]
+#[model(app_label = "content", table_name = "articles")]
 #[derive(Debug, Clone)]
 pub struct Article {
     #[field(primary_key = true)]
@@ -121,6 +153,18 @@ pub source_system_record_id: String, // nosemgrep: reinhardt-no-scalar-fk-id -- 
 Never use the suppression for a Reinhardt relationship; replace that scalar with
 the appropriate `#[rel(...)]` field instead.
 
+### Generated Foreign-Key ID Accessors (0.4.x)
+
+ForeignKey and OneToOne fields generate a consistent `*_id()` method on native
+and WASM targets. It returns the related primary key by value:
+
+```rust
+let question_id = choice.question_id();
+```
+
+Do not write `*choice.question_id()` or maintain separate target-specific
+accessor code. This is a source-compatible migration point for shared modules.
+
 ## Typed Generated Columns (0.4.x)
 
 **Source:** [original PR #5586](https://github.com/kent8192/reinhardt-web/pull/5586)
@@ -134,7 +178,7 @@ Prefer the portable, DDL-safe `SchemaExpr` subset. It accepts
 ```rust
 use reinhardt::db::migrations::SchemaExpr;
 
-#[model(table_name = "users")]
+#[model(app_label = "accounts", table_name = "users")]
 #[derive(Debug, Clone)]
 pub struct User {
     #[field(primary_key = true)]
@@ -199,7 +243,48 @@ workflow depend on a model that has no writable fields.
 | `serde_json::Value` | `JSONB` | Requires `serde_json` |
 | `Uuid` | `UUID` | From `uuid` crate. `#[model]` generates `Uuid::now_v7()` for `Option<Uuid>` primary keys (time-ordered, better B-tree index performance) |
 | `Decimal` | `NUMERIC` / `DECIMAL` | From `rust_decimal` crate |
+| `Json<T>` | `JSONB` / `JSON` / `TEXT` | Typed JSON wrapper; backend storage follows the model field metadata |
 | `Option<T>` | Nullable variant of `T` | Column allows `NULL` |
+
+## Typed JSON Fields (0.4.x)
+
+Use `Json<T>` when a model field stores a structured JSON document. The wrapper
+serializes and deserializes like `T` while keeping the model metadata and
+backend column mapping explicit:
+
+```rust
+use reinhardt::db::prelude::*;
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StyleSettings {
+    pub accent: String,
+    pub compact: bool,
+}
+
+#[model(app_label = "profiles")]
+#[derive(Debug, Clone)]
+pub struct Profile {
+    #[field(primary_key = true)]
+    pub id: i64,
+
+    #[field]
+    pub style_settings: Json<StyleSettings>,
+
+    #[field(null = true)]
+    pub metadata: Option<Json<serde_json::Value>>,
+}
+```
+
+`Json::new`, `as_inner`, `as_inner_mut`, and `into_inner` provide typed access;
+`to_json_value` and `from_json_value` are useful at serialization boundaries.
+`Option<Json<T>>::None` maps to SQL `NULL`. A present wrapper containing
+`serde_json::Value::Null` is a JSON `null`, not SQL `NULL`. Hydration failures
+should retain the model, field, row, and column context from the ORM error.
+
+JSON path lookup is not implied by the typed wrapper. Use the supported query
+filter APIs or a deliberate backend-specific boundary when a query needs JSON
+path semantics.
 
 ## Relations
 
@@ -208,7 +293,7 @@ workflow depend on a model that has no writable fields.
 A many-to-one relationship. Defined with the `#[rel]` attribute on the field.
 
 ```rust
-#[model(table_name = "posts")]
+#[model(app_label = "content", table_name = "posts")]
 #[derive(Debug, Clone)]
 pub struct Post {
     #[field(primary_key = true)]
@@ -240,7 +325,7 @@ The `on_delete` option controls referential integrity:
 A many-to-many relationship creates a join table automatically.
 
 ```rust
-#[model(table_name = "articles")]
+#[model(app_label = "content", table_name = "articles")]
 #[derive(Debug, Clone)]
 pub struct Article {
     #[field(primary_key = true)]
@@ -253,7 +338,7 @@ pub struct Article {
     pub tags: ManyToManyField<Article, Tag>,
 }
 
-#[model(table_name = "tags")]
+#[model(app_label = "content", table_name = "tags")]
 #[derive(Debug, Clone)]
 pub struct Tag {
     #[field(primary_key = true)]

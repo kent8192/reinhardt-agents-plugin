@@ -73,7 +73,7 @@ use reinhardt::pages::prelude::*;
 
 // Provide context
 let theme = Signal::new("dark".to_string());
-provide_context("theme", theme.clone());
+provide_context("theme", theme);
 
 // Consume context (anywhere in the subtree)
 let theme: Signal<String> = get_context("theme").unwrap();
@@ -93,6 +93,7 @@ let theme: Signal<String> = get_context("theme").unwrap();
 | Hook | Signature | Description |
 |------|-----------|-------------|
 | `use_state` | `use_state(initial: T) -> (Signal<T>, SetState<T>)` | Local reactive state (takes value, not closure) |
+| `SetStateExt::update` | `set_state.update(|current| replacement)` | **(0.4.x)** Replace state from its current value without a separate read/clone |
 | `use_reducer` | `use_reducer(reducer, init) -> (Signal<S>, Dispatch<A>)` | State with reducer pattern |
 | `use_shared_state` | `use_shared_state(initial: T) -> (SharedSignal<T>, SharedSetState<T>)` | Shared state across components |
 | `use_optimistic` | `use_optimistic(initial: T) -> OptimisticState<T>` | Optimistic UI updates |
@@ -101,6 +102,7 @@ let theme: Signal<String> = get_context("theme").unwrap();
 // use_state takes a value directly (NOT a closure)
 let (count, set_count) = use_state(0);
 set_count(5);
+set_count.update(|current| current + 1);
 ```
 
 ### Effect Hooks
@@ -109,20 +111,49 @@ set_count(5);
 |------|-----------|-------------|
 | `use_effect` | `use_effect(closure, deps)` | Side effect (async-safe) |
 | `use_layout_effect` | `use_layout_effect(closure, deps)` | Synchronous effect before paint |
+| `use_retained_effect` | `use_retained_effect(closure, deps)` | **(0.4.x)** Registration-style effect whose guard is retained for component lifetime |
+| `use_retained_layout_effect` | `use_retained_layout_effect(closure, deps)` | **(0.4.x)** Retained layout effect |
 
 ```rust
 use_effect(
-    {
-        let count = count.clone();
-        move || {
-            // Runs when dependencies change
-            log!("Count is: {}", count.get());
-            None::<fn()>
-        }
+    move || {
+        // Runs when dependencies change; `()` means no cleanup.
+        log!("Count is: {}", count.get());
     },
-    (count.clone(),),
+    (count,),
 );
 ```
+
+In 0.4.x, an effect closure can return `()` when it has no cleanup. A cleanup
+capable closure returns `Option<C>` as before:
+
+```rust
+use_effect(
+    move || {
+        let subscription = subscribe_to_changes();
+        Some(move || subscription.dispose())
+    },
+    (account_id,),
+);
+```
+
+`use_effect` and `use_layout_effect` return an RAII guard. If registration-style
+code intentionally does not own that guard, use `use_retained_effect` or
+`use_retained_layout_effect`; the retained hook stores the guard in the mounted
+reactive node store. Keep the ordinary hooks when explicit guard ownership and
+early disposal are part of the component's design.
+
+### Copy Reactive Handles and Scope (0.4.x)
+
+`Signal`, `Memo`, `Effect`, `Callback`, `Action`, and `Resource` are `Copy`
+handles backed by a scope-owned generational arena. Remove clone ceremony for
+these reactive keys and create low-level nodes only while a `ReactiveScope` is
+active. The handle does not keep a disposed scope alive. Normal Pages SSR,
+hydration, and client launcher entrypoints manage the scope automatically.
+
+`Callback::new` also requires an active scope. Use `Callback::new_in_scope` for
+callbacks created outside a component scope. Reference-counted non-reactive
+values and setter functions may still need ordinary `clone()` calls.
 
 **When to use `use_layout_effect`**: DOM measurements, preventing visual flicker.
 **When to use `use_effect`** (preferred): Data fetching, subscriptions, logging.
@@ -241,15 +272,12 @@ Async data loading with reactive dependencies.
 #[cfg(wasm)]
 {
     let user_id = Signal::new(1);
-    let user = use_resource(
-        {
-            let user_id = user_id.clone();
-            move || {
-                let id = user_id.get();
-                async move { fetch_user(id).await }
-            }
+let user = use_resource(
+        move || {
+            let id = user_id.get();
+            async move { fetch_user(id).await }
         },
-        (user_id.clone(),),
+        (user_id,),
     );
 
     // Mount-only loading
@@ -388,7 +416,9 @@ page!({
 ### watch Best Practices
 
 - **Pass Signals directly** to `page!` — don't extract values before the macro
-- **Clone Signals freely** — `Signal::clone()` is cheap (Rc-based)
+- **(0.4.x)** Reactive handles are `Copy` scope keys; pass them directly and
+  do not clone them to extend their lifetime beyond the owning scope. Clone
+  non-reactive reference-counted values only when their ownership requires it.
 - **One expression per watch** — each block must contain exactly one `if`, `match`, or `for`
 - **Don't nest watch blocks** — use multiple sibling watch blocks instead
 
@@ -397,8 +427,8 @@ page!({
 - **Fine-grained reactivity**: Only DOM nodes depending on changed Signals update (not entire component trees)
 - **Pull-based model**: Signals track dependencies automatically via `.get()` calls
 - **Batching**: Multiple Signal changes batch into a single update cycle via micro-tasks
-- **Memory management**: All reactive nodes auto-cleanup when dropped
-- **`std::mem::forget`**: Use for Effects that should live for the entire page lifetime (e.g., routing)
+- **Memory management**: Scope-owned reactive nodes auto-cleanup when their scope is disposed
+- **`std::mem::forget`**: Use only for an intentionally application-lifetime guard outside the managed Pages scope; component registration should use `use_retained_effect` when it does not own the guard
 - **watch compiles to `Page::reactive()`**: The reactive closure is tracked by the runtime and re-evaluated on Signal changes
 
 ## Version Differences (0.2.x)
@@ -495,3 +525,15 @@ In 0.2.x, `{expr}`, `if`, and `for` inside `page!` are unconditionally wrapped i
 - `create_resource_with_deps(fetcher, deps)` is removed; use `use_resource(fetcher, deps)`.
 - `use_effect_event` and `use_effect_event_with` are removed; use `use_callback` / `use_callback_with` or read non-dependency values with `.get_untracked()` inside the effect.
 - Shared Pages modules should rely on documented inert native/WASM stubs instead of broad call-site `#[cfg]` workarounds.
+
+## Version Differences (0.4.x)
+
+- Cleanup-free `use_effect` and `use_layout_effect` closures may return `()`;
+  cleanup-capable closures continue to return `Option<C>`.
+- `use_retained_effect` and `use_retained_layout_effect` retain registration
+  guards in the mounted component scope.
+- Reactive handles are `Copy` scope keys. Do not clone them to extend lifetime
+  beyond the owning `ReactiveScope`, and use `Callback::new_in_scope` for
+  callbacks created outside that scope.
+- `SetStateExt::update` receives `&T` and returns the replacement value, which
+  avoids a separate reactive read in functional update callbacks.

@@ -43,6 +43,7 @@ pub struct Post {
 | Option | Type | Description |
 |--------|------|-------------|
 | `app_label` | `&str` | App this model belongs to (required) |
+| `table_name` | `&str` | **(0.4.x)** Optional physical table name. When omitted, uses `<app_label>_<singular_acronym_aware_snake_case_model_name>` without pluralization. Keep it explicit for deployed tables whose names must not change. |
 | `manager` | `Path` | (rc.23+, #3981) Opt the model into a user-supplied `CustomManager` implementor. Emits a `HasCustomManager` impl that wires the model to the named type. `Model::objects()` is untouched and still returns `Manager<Self>`. See `modeling/references/model-patterns.md` for usage examples and `modeling/references/queryset-api.md` for the trait surface. |
 | `info` | `bool` | **(0.2.x)** Opt-out of auto-generated `{Model}Info` companion struct. Set `info = false` to disable. Defaults to `true` in 0.2.x. |
 
@@ -50,7 +51,12 @@ pub struct Post {
 
 **UUID Generation:** For `Option<Uuid>` primary key fields, the `#[model]` macro generates `Uuid::now_v7()` (UUID v7, time-ordered) instead of `Uuid::new_v4()`. UUID v7 provides better B-tree index performance due to temporal ordering.
 
-**Generated:** `Model` trait implementation with `fn objects() -> Manager<Self>`, field accessors, table name derivation.
+**Generated:** `Model` trait implementation with `fn objects() -> Manager<Self>`, field accessors, relation metadata, and table name derivation. ForeignKey and OneToOne fields also expose `*_id()` accessors that return the related primary key by value on native and WASM.
+
+For structured JSON columns, use `Json<T>` as the field type. It preserves
+typed serialization and distinguishes `Option<Json<T>>::None` (SQL `NULL`)
+from a present JSON `null` value. See the modeling reference for hydration
+error context and backend storage mapping.
 
 ### `#[dto]` (0.4.0)
 
@@ -381,14 +387,16 @@ pub struct AppConfig {
 **Crate:** `reinhardt-di/macros`
 
 Mark an async function as a dependency provider with automatic registration.
-In 0.3.x, provider functions are async-only. Return `FactoryOutput<K, T>` when the produced value type needs an
-explicit provider identity. `#[injectable_factory]` remains only as a deprecated
-0.2 compatibility alias.
+In 0.4.x, a self-keyed provider returns its value as direct `T`. Use
+`KeyedFactoryOutput<K, T>` only when an application-owned explicit key is part
+of the dependency contract, and consume it as `KeyedDepends<K, T>`.
+`FactoryOutput<K, T>` remains a compatibility alias and
+`#[injectable_factory]` remains only a deprecated 0.2 compatibility alias.
 The `DbSettings` parameter below represents an application-owned settings type
 or fragment that your app has registered as an injectable value.
 
 ```rust
-use reinhardt::di::{FactoryOutput, injectable, injectable_key};
+use reinhardt::di::{KeyedFactoryOutput, injectable, injectable_key};
 
 #[injectable_key]
 struct PrimaryDatabase;
@@ -396,8 +404,8 @@ struct PrimaryDatabase;
 #[injectable(scope = "singleton")]
 async fn create_db_pool(
     #[inject] settings: DbSettings,
-) -> FactoryOutput<PrimaryDatabase, DatabaseConnection> {
-    FactoryOutput::new(DatabaseConnection::connect(&settings.database_url).await.unwrap())
+) -> KeyedFactoryOutput<PrimaryDatabase, DatabaseConnection> {
+    KeyedFactoryOutput::new(DatabaseConnection::connect(&settings.database_url).await.unwrap())
 }
 ```
 

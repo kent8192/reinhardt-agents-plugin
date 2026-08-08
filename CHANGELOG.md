@@ -7,11 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add typed JSON model-field guidance for `Json<T>`, including SQL `NULL` and
+  JSON `null` semantics from [#68](https://github.com/kent8192/reinhardt-agents-plugin/issues/68).
+- Add 0.4.x self-keyed and explicit-key DI guidance from [#70](https://github.com/kent8192/reinhardt-agents-plugin/issues/70).
+- Add model-derived `TestDatabase` and model fixture loading guidance from
+  [#71](https://github.com/kent8192/reinhardt-agents-plugin/issues/71) and
+  [#73](https://github.com/kent8192/reinhardt-agents-plugin/issues/73).
+- Add typed Pages query-cache, event, and component-style references for
+  [#77](https://github.com/kent8192/reinhardt-agents-plugin/issues/77),
+  [#79](https://github.com/kent8192/reinhardt-agents-plugin/issues/79), and
+  [#80](https://github.com/kent8192/reinhardt-agents-plugin/issues/80).
+
 ### Changed
 
 - Align Pages, macro, and code-review guidance with direct `page!({ ... })`
   bodies, implicit `Clone` captures, and strict closure factories from
   reinhardt-web #5574.
+- Document value-returning generated foreign-key ID accessors from
+  [#69](https://github.com/kent8192/reinhardt-agents-plugin/issues/69).
+- Document unit-returning cleanup-free effects from
+  [#72](https://github.com/kent8192/reinhardt-agents-plugin/issues/72).
+- Document functional `SetStateExt::update` state updates from
+  [#74](https://github.com/kent8192/reinhardt-agents-plugin/issues/74).
+- Document retained effect hooks and `()` cleanup-free effects from
+  [#75](https://github.com/kent8192/reinhardt-agents-plugin/issues/75).
+- Document typed relation traversal, join-loading roles, nullable paths, and
+  write restrictions from [#76](https://github.com/kent8192/reinhardt-agents-plugin/issues/76).
+- Document `Copy` reactive handles and scope ownership from
+  [#78](https://github.com/kent8192/reinhardt-agents-plugin/issues/78).
+- Document required `app_label`, acronym-aware default table names, and
+  deployed-schema migration safety from [#81](https://github.com/kent8192/reinhardt-agents-plugin/issues/81).
 
 ## [0.4.0] - 2026-07-22
 

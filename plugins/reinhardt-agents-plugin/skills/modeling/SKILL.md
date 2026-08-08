@@ -14,28 +14,32 @@ Guide developers through model definition, database operations, and migration ma
 - User works with QuerySet operations or ORM queries
 - User generates or applies migrations
 - User asks about SQLAlchemy-style queries or sessions
-- User mentions: "model", "table", "migration", "QuerySet", "field", "relation", "ForeignKey", "ManyToMany", "database", "schema", "objects", "Manager", "Session", "select", "migrate", "makemigrations"
+- User mentions: "model", "table", "migration", "QuerySet", "field", "relation", "ForeignKey", "ManyToMany", "Json<T>", "database", "schema", "objects", "Manager", "Session", "select", "migrate", "makemigrations", "dumpdata", "loaddata", "seed"
 
 ## Workflow
 
 ### Defining a Model
 
 1. Read `references/model-patterns.md` for field types and relation patterns
-2. Before writing any `#[model]`, inventory every ForeignKey, OneToOne, and ManyToMany relationship; choose its `#[rel(...)]` marker field, target, and deletion behavior
-3. Guide model struct definition with `#[model]` attribute
-4. Choose appropriate scalar field types and constraints
-5. For 0.4.x generated columns, use the typed `SchemaExpr` contract in
+2. For 0.4.x, set the required `app_label` and decide whether to keep an explicit `table_name`; preserve deployed table names instead of accepting an accidental rename
+3. Before writing any `#[model]`, inventory every ForeignKey, OneToOne, and ManyToMany relationship; choose its `#[rel(...)]` marker field, target, and deletion behavior
+4. Guide model struct definition with `#[model]` attribute
+5. Choose appropriate scalar and `Json<T>` field types and constraints
+6. For 0.4.x generated columns, use the typed `SchemaExpr` contract in
    `references/model-patterns.md` before choosing a raw SQL escape hatch
-6. Define the inventoried relationships with `#[rel(...)]`
-7. After editing, audit every `*_id` field in each `#[model]`: replace relationship-shaped scalar IDs with `#[rel(...)]` marker fields, or document why a retained scalar is intentionally denormalized or external and add a narrow inline `nosemgrep: reinhardt-no-scalar-fk-id -- <reason>` exception
-8. Implement `pub use` re-exports in the module entry file
+7. Define the inventoried relationships with `#[rel(...)]`
+8. After editing, audit every `*_id` field in each `#[model]`: replace relationship-shaped scalar IDs with `#[rel(...)]` marker fields, or document why a retained scalar is intentionally denormalized or external and add a narrow inline `nosemgrep: reinhardt-no-scalar-fk-id -- <reason>` exception
+9. Implement `pub use` re-exports in the module entry file
 
 ### ORM Operations (Django-style)
 
 1. Read `references/queryset-api.md` for the `Model::objects()` API
 2. Use `Model::objects()` for application-level CRUD (recommended)
-3. Chain methods: `filter()`, `order_by()`, `limit()`, `select_related()`, etc.
+3. Chain methods: `filter()`, `order_by()`, `limit()`, typed `select_related()` / `prefetch_related()`, etc.
 4. Execute with `.all().await`, `.get().await`, `.count().await`, `.exists().await`
+5. For model-to-model traversal, use the generated `rel_*` accessor and call
+   `.into_typed()` before typed field filters or nested relation traversal; keep
+   string relation paths only for compatibility code.
 
 ### SQLAlchemy-Style Operations
 
@@ -62,6 +66,16 @@ Guide developers through model definition, database operations, and migration ma
 5. Apply: `cargo run --bin manage migrate`
 6. For custom operations (indexes, data migrations), write hand-written migration files
 
+### Model Fixtures and Data Commands
+
+1. Read the fixture section of `references/migration-guide.md` before adding
+   repeatable development data
+2. Use `manage dumpdata` / `manage loaddata` for portable model fixtures and
+   `manage seed` for registered, idempotent application seed hooks
+3. In tests, prefer `reinhardt_test::fixtures::load_model_fixture_file(path)`
+   with a `TestDatabase` guard so schema setup and fixture loading use the same
+   database lifecycle
+
 ## Important Rules
 
 - ALWAYS use `Model::objects()` for application-level CRUD
@@ -74,8 +88,13 @@ Guide developers through model definition, database operations, and migration ma
 - Migration files use declarative `Operation` variants — there are NO `up`/`down` methods
 - Migration names are auto-generated from detected changes (`--name` is optional)
 - Field types map to Rust types (String, i32, i64, bool, Option<T>, DateTime<Utc>)
+- **(0.4.x)** `#[model]` requires an explicit `app_label`. If `table_name` is omitted, the default is `<app_label>_<singular_acronym_aware_snake_case_model_name>`; do not rely on pluralization. Keep an explicit deployed `table_name` when adopting the convention.
+- **(0.4.x)** Use `Json<T>` for typed JSON fields. `Option<Json<T>>::None` is SQL `NULL`, while `Some(Json::new(serde_json::Value::Null))` is a present JSON `null` value.
 - Put `#[field(...)]` on every scalar model field, even when no options are required
 - Use `#[rel(...)]` for model relationships; do not represent foreign keys as unmanaged scalar IDs unless the scalar is intentionally denormalized or external, and document that non-relationship purpose next to the field with a narrow `nosemgrep: reinhardt-no-scalar-fk-id -- <reason>` exception
+- **(0.4.x)** Generated `*_id()` accessors return the related primary key by value on native and WASM; do not dereference the accessor or add target-specific copies.
+- **(0.4.x)** Typed relation paths compile-check relation names and nested fields. Use typed `select_related` for single-valued relations and typed `prefetch_related` for reverse one-to-many / many-to-many relations. Typed related filters are SELECT-only; use a subquery for writes.
+- **(0.4.x)** `dumpdata` emits machine-readable `FixtureRecord` JSON, `loaddata` loads explicit primary keys transactionally, and `seed` runs only registered idempotent seed hooks. Do not treat arbitrary fixture labels as registered seed hooks.
 - ALL model struct fields that can be NULL must use `Option<T>`
 - **(0.4.x)** Prefer `generated = SchemaExpr::...` for generated columns. Use
   `generated_sql = "..."` only for trusted backend-specific expressions that
