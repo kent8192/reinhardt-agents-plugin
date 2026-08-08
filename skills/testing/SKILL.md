@@ -39,6 +39,18 @@ Guide developers through writing high-quality tests using rstest, AAA pattern, r
 3. Ensure Docker Desktop is running
 4. Use `#[serial(db)]` if tests share global database state
 
+### Model Fixture and Command Tests
+
+1. Test `dumpdata` with machine-readable `{ model, pk, fields }` records
+2. Test `loaddata` with explicit primary keys, foreign-key ordering,
+   many-to-many arrays, binary values, and transactional rollback on invalid
+   input
+3. Test `seed` with registered idempotent hooks, selected app labels, and an
+   error for an unknown requested label
+4. For reusable JSON fixtures, call
+   `reinhardt_test::fixtures::load_model_fixture_file(path)` after the test
+   database schema is ready
+
 ### 0.3 Migration Regression Tests
 
 1. Run the migration skill's 0.3 scan commands before writing tests

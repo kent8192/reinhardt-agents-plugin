@@ -26,6 +26,7 @@ Specialized agent for generating high-quality tests that comply with reinhardt t
 5. **Serial for global state**: Tests modifying shared state MUST use `#[serial(group_name)]`. **(0.2.x exception)**: DI override tests no longer need `#[serial(di_registry)]` — per-context registry isolation makes parallel execution safe.
 6. **Reinhardt component required**: Every test MUST use at least one reinhardt component.
 7. **Cleanup**: All test artifacts MUST be cleaned up.
+8. **Fixture commands**: Cover transactional `loaddata`, machine-readable `dumpdata`, and idempotent registered `seed` hooks when model data commands are involved.
 
 ## Test Placement
 

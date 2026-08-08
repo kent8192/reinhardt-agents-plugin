@@ -107,6 +107,7 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] Fixtures used for shared setup
 - [ ] `#[serial]` used for global state tests
 - [ ] DI override tests (`with_di_overrides!`, `register_override`) depend on the `testing` feature; keep `#[serial(di_registry)]` only for 0.1.x registry overrides or other global state because 0.2.x / 0.3.x use per-context registry isolation
+- [ ] **(0.4.x)** `dumpdata`/`loaddata` coverage checks `FixtureRecord` shape, explicit-PK and relationship ordering, binary/JSON-null handling, sequence reset, and transactional rollback; `seed` coverage checks registered idempotent hooks and unknown-label errors
 
 ### Documentation & Style
 
