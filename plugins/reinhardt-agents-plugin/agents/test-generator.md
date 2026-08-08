@@ -51,6 +51,17 @@ well as page rendering:
 - Native tests use `runtime.submit_async(...)`; generated `form.submit(...)`
   is a WASM-client helper.
 
+## Pages Layout Route Coverage (0.4.x)
+
+When generating Pages route tests, cover both the route tree and browser mount
+behavior:
+
+- Native `ClientRouter::routes` tests assert composed paths, inherited
+  parameters, `children.index(...)`, reverse lookup, and duplicate route-name
+  or path-parameter rejection.
+- Browser-WASM navigation tests assert sibling routes preserve the shared
+  `#[layout]` shell and remount only the `Outlet` subtree.
+
 ## Output Format
 
 Return test code ready to be inserted into the appropriate file. Include:

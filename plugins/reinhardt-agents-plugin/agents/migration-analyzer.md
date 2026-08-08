@@ -53,6 +53,11 @@ components for `#[component(PATH, NAME)]`: rewrite positional string names as
 `name = "..."`, and replace identifier shorthand with an explicitly chosen
 public route-name string.
 
+For Pages-specific 0.3.x → 0.4.x migrations, also identify hand-composed
+nested shells that should become `ClientRouter::routes` plus `#[layout]` /
+`Outlet`, checking absolute root paths, relative child paths, index routes, and
+globally unique layout/leaf route names.
+
 ### Step 2: GitHub Context Enrichment
 
 For each CHANGELOG entry referencing a PR number `(#NNN)`:
@@ -154,3 +159,4 @@ Return a structured report in this format:
 - For 0.2.x → 0.3.x upgrades, include ALL removed APIs and layout migrations from `MIGRATION_0.3.md` or `0.3-upgrade.md`, even when the app scan only finds a subset
 - For 0.2.x → 0.3.x upgrades, explicitly scan for `AuthUser`, `create_resource*`, `use_effect_event*`, raw `ServerRouter` function/route registration, `FunctionHandler`, `DependsResult`, `DependsOption`, `pages.rs`, `server_urls`, `client/pages`, and broad `src/shared/forms.rs` / `src/shared/types.rs` usage
 - For 0.3.x → 0.4.x upgrades, explicitly scan `*.rs` application code for route-backed `#[component]` declarations with a positional second argument or identifier shorthand. Report every hit with the required `name = "..."` replacement and verify that the chosen public route name remains unique.
+- For Pages layout migrations, explicitly report route-tree layout/path/name violations and missing outlet-preservation coverage.
