@@ -127,6 +127,18 @@ use_effect(
 **When to use `use_layout_effect`**: DOM measurements, preventing visual flicker.
 **When to use `use_effect`** (preferred): Data fetching, subscriptions, logging.
 
+### Copy Reactive Handles and Scope (0.4.x)
+
+`Signal`, `Memo`, `Effect`, `Callback`, `Action`, and `Resource` are `Copy`
+handles backed by a scope-owned generational arena. Remove clone ceremony for
+these reactive keys and create low-level nodes only while a `ReactiveScope` is
+active. The handle does not keep a disposed scope alive. Normal Pages SSR,
+hydration, and client launcher entrypoints manage the scope automatically.
+
+`Callback::new` also requires an active scope. Use `Callback::new_in_scope` for
+callbacks created outside a component scope. Reference-counted non-reactive
+values and setter functions may still need ordinary `clone()` calls.
+
 ### Derived Value Hooks
 
 | Hook | Signature | Description |
