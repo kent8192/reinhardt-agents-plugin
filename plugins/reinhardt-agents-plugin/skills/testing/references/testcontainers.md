@@ -12,6 +12,49 @@ Verify Docker is available:
 docker info | head -5
 ```
 
+## Model-Derived `TestDatabase` (0.4.x)
+
+Use `TestDatabase` when a test needs a complete model schema and a connection
+guard, rather than rebuilding tables by hand. The builder accepts exactly one
+schema source and owns the temporary backing resource until the guard is
+dropped:
+
+```rust
+use reinhardt_db::backends::types::DatabaseType;
+use reinhardt_testkit::fixtures::TestDatabase;
+
+let database = TestDatabase::builder()
+    .sqlite()
+    .model::<User>()
+    .model::<Post>()
+    .build()
+    .await?;
+
+let conn = database.connection();
+assert_eq!(database.database_type(), DatabaseType::Sqlite);
+```
+
+Choose one of these schema sources:
+
+| Builder | Use |
+|---------|-----|
+| `.model::<M>()` / `test_database!(A, B)` | Derive schema from model metadata, including relationships, through tables, constraints, and indexes |
+| `.migrations::<Provider>()` | Apply a typed migration provider |
+| `.migrations_from_dir(path)` | Apply migrations from a filesystem directory |
+
+The default `.sqlite()` backend uses a temporary file. Use `.sqlite_memory()`
+for a fast isolated database when the test does not need an ORM global or DI
+context. Use `.postgres()` with the `testcontainers` feature when backend-specific
+behavior is part of the contract. `.build()` applies the selected schema before
+returning the guard.
+
+`with_orm_global()` mutates the process-global ORM configuration and restores
+the previous value on drop. `with_di_context()` creates a DI context and makes
+it available through `di_context()`. SQLite in-memory databases cannot
+initialize either integration; use a file-backed SQLite database or Postgres
+for those tests. Keep the guard alive for every operation that uses its
+connection or context.
+
 ## Using `reinhardt-test` Fixtures (Recommended)
 
 The `reinhardt-test` crate provides pre-built TestContainers fixtures. Use these instead of manually constructing `GenericImage` containers.

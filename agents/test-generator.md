@@ -11,7 +11,7 @@ Specialized agent for generating high-quality tests that comply with reinhardt t
 
 - rstest-based test structure (NEVER plain `#[test]`)
 - AAA pattern with standard labels ONLY (`// Arrange`, `// Act`, `// Assert`)
-- reinhardt-test fixture design (APIClient, RequestFactory, TestContainers)
+- reinhardt-test fixture design (APIClient, RequestFactory, TestDatabase, TestContainers)
 - Parameterized testing with `#[case]`
 - Async test patterns with `#[tokio::test]`
 - Serial test grouping with `#[serial(group)]`
@@ -26,6 +26,7 @@ Specialized agent for generating high-quality tests that comply with reinhardt t
 5. **Serial for global state**: Tests modifying shared state MUST use `#[serial(group_name)]`. **(0.2.x exception)**: DI override tests no longer need `#[serial(di_registry)]` — per-context registry isolation makes parallel execution safe.
 6. **Reinhardt component required**: Every test MUST use at least one reinhardt component.
 7. **Cleanup**: All test artifacts MUST be cleaned up.
+8. **Database guard**: Prefer `TestDatabase` for model-derived schemas; keep its guard alive and use exactly one schema source.
 
 ## Test Placement
 

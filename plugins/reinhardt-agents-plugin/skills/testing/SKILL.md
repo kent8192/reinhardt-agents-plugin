@@ -12,7 +12,7 @@ Guide developers through writing high-quality tests using rstest, AAA pattern, r
 
 - User wants to write tests for reinhardt code
 - User asks about testing strategies or patterns
-- User mentions: "test", "fixture", "TestContainers", "assert", "rstest", "integration test", "unit test", "ClientForm", "DTO form test", "form validation test"
+- User mentions: "test", "fixture", "TestDatabase", "TestContainers", "assert", "rstest", "integration test", "unit test", "ClientForm", "DTO form test", "form validation test"
 
 ## Workflow
 
@@ -35,9 +35,17 @@ Guide developers through writing high-quality tests using rstest, AAA pattern, r
 ### Database Tests
 
 1. Read `references/testcontainers.md` for container setup
-2. Use rstest fixtures for PostgreSQL/MySQL/Redis containers
-3. Ensure Docker Desktop is running
-4. Use `#[serial(db)]` if tests share global database state
+2. Prefer `TestDatabase` for model-derived or migration-derived schemas; choose
+   `.sqlite()`, `.sqlite_memory()`, or `.postgres()` deliberately
+3. Select exactly one schema source: `.model::<M>()`, `.migrations::<Provider>()`,
+   or `.migrations_from_dir(path)`
+4. Use `.with_orm_global()` / `.with_di_context()` only when the test needs
+   those process/context integrations; SQLite memory cannot initialize the ORM
+   global or DI context
+5. Use rstest fixtures for PostgreSQL/MySQL/Redis containers when a real service
+   is required
+6. Ensure Docker Desktop is running
+7. Use `#[serial(db)]` if tests share global database state
 
 ### 0.3 Migration Regression Tests
 
@@ -70,6 +78,7 @@ Guide developers through writing high-quality tests using rstest, AAA pattern, r
 - Add focused regression tests for review-found bugs before broad happy-path expansion
 - In 0.3.x migrations, update stale fixtures that use `AuthUser`, `create_resource*`, `use_effect_event*`, raw `ServerRouter` registration, `DependsResult`, `DependsOption`, `pages.rs`, or `server_urls`
 - When generated `{Model}Info` relation fields change shape, update serializer/browser-test expectations intentionally rather than broadening assertions
+- **(0.4.x)** Keep a `TestDatabase` guard alive for the whole test; it owns the temporary backing resource and restores any ORM global/DI context on drop
 
 ## Cross-Domain References
 
