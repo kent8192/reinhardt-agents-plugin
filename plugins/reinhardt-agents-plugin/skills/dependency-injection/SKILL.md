@@ -20,8 +20,14 @@ Guide developers through DI configuration using reinhardt-di, including service 
 
 1. Read `references/di-patterns.md` for injection patterns
 2. Determine scope (request-scoped vs singleton)
-3. For Reinhardt 0.3 provider functions, return `FactoryOutput<K, T>` from `#[injectable(scope = "...")]`
-4. Use `#[inject] dependency: Depends<K, T>` in handlers or `#[server_fn]` functions to receive keyed provider output
+3. For Reinhardt 0.4 provider functions, return direct `T` when the output type
+   is the unique dependency identity; use `KeyedFactoryOutput<K, T>` only for an
+   explicit application key
+4. Use direct `#[inject] dependency: T` / `Depends<T>` for self-keyed values and
+   `KeyedDepends<K, T>` for explicit keyed output in handlers or `#[server_fn]`
+   functions
+5. Read the 0.3 compatibility section in `references/di-patterns.md` only when
+   migrating older `FactoryOutput<K, T>` / `Depends<K, T>` code
 
 ### Integrating with Database/Auth
 
@@ -35,9 +41,10 @@ Guide developers through DI configuration using reinhardt-di, including service 
 - Custom injection logic requires `#[async_trait] impl Injectable` (method is `inject`, not `resolve`)
 - Prefer `#[injectable]` for registering provider functions and injectable structs (async, explicit scope, auto-registered)
 - `#[injectable_factory]` is a deprecated 0.2 compatibility alias in 0.3.x — do not use it in new code
-- Use `#[injectable_key]` plus `FactoryOutput<K, T>` for 0.3 provider functions; the key type is the provider identity
-- Consume keyed provider outputs with `Depends<K, T>`; remove old `DependsResult` / `DependsOption` sugar aliases and deleted `Injected<T>` wrappers
-- In 0.3.x, inject direct `T` values for normal dependencies and use `Depends<K, T>` only for keyed `FactoryOutput<K, T>` provider output
+- **(0.3.x)** Use `#[injectable_key]` plus `FactoryOutput<K, T>` for legacy provider functions; the key type is the provider identity
+- **(0.3.x)** Consume legacy keyed provider outputs with `Depends<K, T>`; remove old `DependsResult` / `DependsOption` sugar aliases and deleted `Injected<T>` wrappers
+- **(0.4.x)** Return direct `T` from a self-keyed provider and inject it as direct `T` or `Depends<T>` when the wrapper is useful. Explicit keys use `KeyedFactoryOutput<K, T>` and `KeyedDepends<K, T>`.
+- **(0.4.x)** `FactoryOutput<K, T>` is a compatibility alias, not the preferred explicit-key spelling; do not introduce new `Depends<K, T>` uses outside a 0.3 migration.
 - Treat DI as common dependency injection for readability and swappability, not as an abstraction layer for every use case
 - DI-ify dependencies reused across multiple endpoints: settings, provider factories/registries, shared DB accessors, job queues, event publishers, storage adapters, and external provider adapters
 - For 0.4 durable jobs, enable `tasks-durable` and `di`; treat `SharedDurableQueue` and `DurableQueueKey` as framework-managed, not app `#[injectable]` provider output. Use an app-owned wrapper/key for app-level DI until the framework exposes a durable-queue registration. For explicit application keys, use `KeyedFactoryOutput<K, T>` and `KeyedDepends<K, T>`; `FactoryOutput<K, T>` and `Depends<K, T>` are pre-0.4 forms.
@@ -46,7 +53,7 @@ Guide developers through DI configuration using reinhardt-di, including service 
 - Keep pure codecs, DTO conversion, error mapping, provider-local wire conversion, provider adapters, prompt builders, parsers, converters, repository/database internals, and narrow private helpers under app-local `server/` modules, not `services/`
 - Keep endpoint-specific validation, DTO assembly, persistence flows, generation flows, and outline/edit workflows in the `server_fn` / HTTP endpoint or a small private helper beside it
 - Avoid thick facades such as `OutlineService`, `ManuscriptService`, or `DocumentService` when they only hide one endpoint-specific flow
-- When a helper needs request-scoped dependencies such as database connections, settings, storage, queues, providers, or another service, prefer an explicit keyed service dependency (`Depends<K, T>`) registered through DI
+- When a helper needs request-scoped dependencies such as database connections, settings, storage, queues, providers, or another service, prefer an explicit keyed service dependency (`KeyedDepends<K, T>` in 0.4.x) registered through DI
 - Do not "improve" a `#[server_fn]` by only moving the same control flow into `server/`, `service/`, or `services/`; extraction must create a narrower contract, reusable dependency, or independently testable invariant
 - If the extracted code still owns the endpoint request shape, response DTO, persistence order, and provider sequence, it is still the endpoint workflow and should stay visible near the `#[server_fn]`
 - Inline and delete single-use delegated helpers when they only forward one endpoint/section's request, dependencies, and control flow
