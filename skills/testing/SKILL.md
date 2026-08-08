@@ -12,7 +12,7 @@ Guide developers through writing high-quality tests using rstest, AAA pattern, r
 
 - User wants to write tests for reinhardt code
 - User asks about testing strategies or patterns
-- User mentions: "test", "fixture", "TestContainers", "assert", "rstest", "integration test", "unit test", "ClientForm", "DTO form test", "form validation test"
+- User mentions: "test", "fixture", "EventFixture", "Screen::settle", "TestContainers", "assert", "rstest", "integration test", "unit test", "ClientForm", "DTO form test", "form validation test"
 
 ## Workflow
 
@@ -70,6 +70,7 @@ Guide developers through writing high-quality tests using rstest, AAA pattern, r
 - Add focused regression tests for review-found bugs before broad happy-path expansion
 - In 0.3.x migrations, update stale fixtures that use `AuthUser`, `create_resource*`, `use_effect_event*`, raw `ServerRouter` registration, `DependsResult`, `DependsOption`, `pages.rs`, or `server_urls`
 - When generated `{Model}Info` relation fields change shape, update serializer/browser-test expectations intentionally rather than broadening assertions
+- **(0.4.x)** Pages event tests use the exact intrinsic payload type, `EventFixture`, and `Screen::settle()` after async or reactive writes; use raw platform events only for explicit escape-hatch coverage
 
 ## Cross-Domain References
 

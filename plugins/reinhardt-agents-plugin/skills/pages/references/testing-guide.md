@@ -257,6 +257,32 @@ Tests that mutate shared i18n state or catalogs must use `#[serial(i18n)]`.
 Keep the Arrange/Act/Assert structure and use strict assertions for both the
 pre-switch and post-switch rendered text.
 
+## Typed Event and Reactive Settling Tests (0.4.x)
+
+Native component tests use the same intrinsic payload catalog as the browser.
+Dispatch an `EventFixture` through the queried element, then call
+`Screen::settle()` to drain handlers, nested tasks, and reactive rerenders:
+
+```rust
+let screen = render(page!({
+    label { "Name" }
+    input { aria_label: "Name" }
+}));
+
+screen
+    .get_by_label("Name")
+    .dispatch(EventFixture::input().value("Ada"))?;
+screen.settle();
+
+assert_eq!(screen.get_by_label("Name").value().as_deref(), Some("Ada"));
+```
+
+Use the convenience fixtures `click`, `submit`, `input`, `change`, `key_down`,
+and `pointer_move`, and use target-state setters for `checked`,
+`selected_values`, `files`, and `content_editable`. Cover the distinction
+between `target` and `current_target`, and use `raw_event_handler` only in a
+separate escape-hatch test.
+
 ## Testing Standards
 
 - ALL tests MUST use `rstest` (per project standards)

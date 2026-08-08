@@ -201,7 +201,10 @@ button { disabled: true, "Submit" }
 
 ## Event Handlers
 
-Events use `@event: handler` syntax. Handlers are auto-handled (active on WASM, no-op on native).
+Events use `@event: handler` syntax. Handlers are auto-handled (active on WASM,
+no-op on native). In 0.4.x, standard intrinsic names select their exact
+catalogued payload type; see [the typed events reference](events.md) for the
+complete contract and native test fixtures.
 
 ### Mouse Events
 
@@ -251,6 +254,17 @@ button { @click: |_| { do_something(); }, "Run action" }
 // Function reference
 button { @click: handle_click, "Handle click" }
 ```
+
+For external handlers, use the catalogued payload type (`ClickEvent`,
+`InputEvent`, `ChangeEvent`, and so on) rather than the removed `DummyEvent` or
+an untyped placeholder. Target helpers such as `value()`, `checked()`,
+`selected_values()`, and `files()` return `Result<_, EventTargetError>` and
+operate on an owned `current_target` snapshot. Capture that snapshot before an
+`await`.
+
+Use `raw_event_handler` with `platform::Event` only for low-level browser
+integration. `@custom("event-name")` is the explicit raw custom-event path;
+component `@event` props retain the type declared by the component.
 
 Closures must have 0 or 1 parameter (compile error if more). Prefer named
 `use_callback` handles for nontrivial work, and clone non-`Copy` callbacks or
