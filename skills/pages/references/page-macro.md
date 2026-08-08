@@ -252,6 +252,11 @@ button { @click: |_| { do_something(); }, "Run action" }
 button { @click: handle_click, "Handle click" }
 ```
 
+For typed style definitions, keep `#[style_def] static ... = style! { ... };`
+outside the `page!` expression and use its generated class/variable helpers in
+the markup. Link the generated stylesheet once per document; see
+[the style DSL reference](style-dsl.md).
+
 Closures must have 0 or 1 parameter (compile error if more). Prefer named
 `use_callback` handles for nontrivial work, and clone non-`Copy` callbacks or
 actions at the attribute use site when the render closure also needs them:

@@ -62,6 +62,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - Keep Pages app `services/` modules focused on injectable keys, provider functions, and service structs/functions; put prompt builders, provider adapters, parsers, converters, repository/database internals, and narrow private helpers under app-local `server/` modules
 - Since 0.2.x, reactive expressions in `page!` are auto-wrapped — explicit `Page::reactive(...)` is no longer needed
 - Since 0.2.x, `use_effect`/`use_memo`/`use_callback` take explicit dependency arrays
+- Component-scoped styles use `#[style_def] static ... = style! { ... };`; link the generated `__reinhardt__/components.css` asset once per document because the macro does not inject a link. Plain `class:` and `style:` attributes remain valid.
 - Use `use_action` for async mutations, `use_resource` for async reads or derived text, and `use_callback` / `use_callback_with` for event handlers; keep `spawn_local` as an escape hatch for low-level browser integration only
 - In 0.3.x, use `use_resource(fetcher, deps)` for both mount-only and dependency-driven resources; replace `create_resource*`
 - In 0.3.x, replace `use_effect_event*` with `use_callback*` or `.get_untracked()` inside the effect
@@ -82,6 +83,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - DI patterns: `../dependency-injection/references/di-patterns.md`
 - Auth backends: `../authentication/references/auth-backends.md`
 - Macro overview: `../macros/references/attribute-macros.md`
+- Component-scoped style DSL: `references/style-dsl.md`
 - View patterns: `../api-development/references/view-patterns.md`
 
 ## Dynamic References

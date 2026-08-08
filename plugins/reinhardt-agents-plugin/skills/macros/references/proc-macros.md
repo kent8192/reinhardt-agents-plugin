@@ -127,6 +127,46 @@ let router = UnifiedRouter::new()
 
 ---
 
+## `style!` and `#[style_def]` (0.4.x)
+
+**Crate:** `reinhardt-pages`
+
+`style!` declares CSS-shaped component rules, while `#[style_def]` turns the
+definition into a generated static stylesheet and typed class/variable
+helpers. Keep the complete definition in a static item:
+
+```rust
+use reinhardt_pages::{page, style, style_def, CssColor};
+
+#[style_def]
+static STYLES: CardStyles = style! {
+    globals { border: Color; }
+    vars { accent: Color = red; }
+
+    .card {
+        border-color: globals.border;
+        color: vars.accent;
+        .label { color: vars.accent; }
+    }
+};
+
+let accent = CssColor::parse("blue")?;
+let view = page!({
+    article {
+        class: STYLES.card() + "legacy-card",
+        style: STYLES.vars().accent(accent),
+        "Card"
+    }
+});
+```
+
+Nested rules are required because Rust token streams do not preserve selector
+whitespace. Link the generated `__reinhardt__/components.css` asset once per
+document; the macro does not inject the link. Plain string `class:` and
+`style:` attributes remain supported for incremental adoption.
+
+---
+
 ## `page!`
 
 **Crate:** `reinhardt-pages/macros`
