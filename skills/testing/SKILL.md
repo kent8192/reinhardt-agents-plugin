@@ -57,6 +57,12 @@ Guide developers through writing high-quality tests using rstest, AAA pattern, r
 4. Verify shared `#[dto]` validation on both native and WASM surfaces when the
    request type crosses the client/server boundary.
 
+### Pages Macro Fixture Tests (0.4.x)
+
+Compile and render `page!` fixtures with direct HTML `type:` attributes on
+inputs and buttons. Do not use `r#type:` inside the macro DSL; the direct form
+is the regression contract from the 0.4.x page fixtures.
+
 ## Important Rules
 
 - **NEVER** use `#[test]` — always use `#[rstest]`
