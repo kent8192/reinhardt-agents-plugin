@@ -40,6 +40,7 @@ Specialized agent for reviewing reinhardt-web application code against project c
 
 - [ ] `reinhardt-query` used for all SQL construction (no raw SQL)
 - [ ] Proper relation design (ForeignKey, ManyToMany, OneToOne)
+- [ ] **(0.4.x)** Typed relation paths use `rel_*().into_typed()` for field traversal, select-related loading, and prefetch-related loading; related filters are not used in update/delete builders
 - [ ] Nullable fields use `Option<T>`
 - [ ] Primary keys defined with `#[field(primary_key = true)]`
 - [ ] UUID primary keys use v7 (auto-handled by `#[model]` — flag any manual `Uuid::new_v4()` calls)
