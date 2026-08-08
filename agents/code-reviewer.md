@@ -87,6 +87,7 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] Button actions operate on the displayed/current entity: route params, form values, loaded DTOs, selected rows/versions, and server return values, not fixture IDs, sample constants, or canned text
 - [ ] Async mutations use `use_action`, async reads or derived text use `use_resource`, and event handlers use `use_callback` / `use_callback_with`; `spawn_local` is limited to low-level browser integration
 - [ ] Non-`Copy` callbacks/actions passed into `page!` render closures are cloned at the attribute use site when needed
+- [ ] **(0.4.x)** Registration-style effects use `use_retained_effect` / `use_retained_layout_effect` when the guard is intentionally not owned by the component body
 - [ ] Internal button-triggered redirects use `reinhardt::pages::navigate(..., NavigationType::Push)` or the current router handle API, not `window.location.set_href`
 - [ ] **(0.4.x)** Catalog-backed Pages labels use feature-gated `I18nContext` with `t!` (or `tr` / `tn` / `tp` / `tnp`), not a per-label `#[server_fn]` and `use_resource` round trip
 - [ ] **(0.4.x)** Server-function translation remains limited to copy that depends on server-only policy, authorization, request data, or a remote source; it is registered and has a stable client fallback when used

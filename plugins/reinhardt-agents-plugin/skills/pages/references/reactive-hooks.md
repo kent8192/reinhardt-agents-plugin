@@ -109,6 +109,8 @@ set_count(5);
 |------|-----------|-------------|
 | `use_effect` | `use_effect(closure, deps)` | Side effect (async-safe) |
 | `use_layout_effect` | `use_layout_effect(closure, deps)` | Synchronous effect before paint |
+| `use_retained_effect` | `use_retained_effect(closure, deps)` | **(0.4.x)** Registration-style effect whose guard is retained for component lifetime |
+| `use_retained_layout_effect` | `use_retained_layout_effect(closure, deps)` | **(0.4.x)** Retained layout effect |
 
 ```rust
 use_effect(
@@ -126,6 +128,12 @@ use_effect(
 
 **When to use `use_layout_effect`**: DOM measurements, preventing visual flicker.
 **When to use `use_effect`** (preferred): Data fetching, subscriptions, logging.
+
+`use_effect` and `use_layout_effect` return an RAII guard. If registration-style
+code intentionally does not own that guard, use `use_retained_effect` or
+`use_retained_layout_effect`; the retained hook stores the guard in the mounted
+reactive node store until the component scope is disposed. Keep ordinary hooks
+when explicit guard ownership and early disposal are part of the design.
 
 ### Derived Value Hooks
 
