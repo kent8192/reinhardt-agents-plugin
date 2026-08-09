@@ -149,6 +149,43 @@ use reinhardt::pages::router::{guard, guard_or};
 let protected_route = guard(is_authenticated, "/login");
 ```
 
+### Route-Level Data Loaders (0.4.x)
+
+Use `#[loader]` for data required before a route mounts. The original function
+remains directly testable, while the generated marker binds it to a component
+or layout:
+
+```rust
+#[loader]
+async fn project_loader(Path(project_id): Path<i64>) -> Result<Project, String> {
+    fetch_project(project_id).await
+}
+
+#[component(
+    "/projects/{project_id}/",
+    name = "project-detail",
+    loader = project_loader
+)]
+fn project_detail(Loader(project): Loader<Project>) -> Page {
+    page!(|project: Project| { h1 { { project.name } } })(project)
+}
+```
+
+`Loader<T>` must match the loader result type. A loader may also receive
+`Query<T>` and one `CancellationToken`. Navigation matches and checks guards,
+prepares all matched layout/leaf loaders concurrently, rechecks guards, then
+commits only the latest navigation. A failed or superseded preparation leaves
+the current route mounted.
+
+Use `Link::prefetch(PrefetchMode::Hover)` or `Viewport` for optional prefetch.
+Loaders, navigation, prefetch, and `use_query` share the keyed query cache; do
+not issue the same request again from a mount effect.
+
+For SSR, use `SsrRenderer::render_route_to_string(&router, path)`. Successful
+loader values enter `SsrState` and hydrate without a duplicate request. Expose
+only a safe public loader error/status; internal causes, cancellations, and
+partial results must not be serialized.
+
 ### PathPattern
 
 Django-style URL patterns:

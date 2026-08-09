@@ -12,7 +12,7 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 
 - User uses or asks about any `#[attribute]` or `derive()` macro
 - User defines models, views, routes, or injectable services
-- User mentions: "macro", "#[model]", "#[user]", "#[inject]", "#[get]", "#[post]", "#[routes]", "#[component]", "#[settings]", "#[admin]", "#[app_config]", "#[hook]", "guard!", "installed_apps!", "path!", "#[derive(Schema)]", "#[derive(Model)]", "#[derive(Validate)]", "#[server_fn]", "#[wasm_server_api]", "#[permission_required]", "#[injectable]", "#[injectable_key]", "#[use_inject]"
+- User mentions: "macro", "#[model]", "#[user]", "#[inject]", "#[get]", "#[post]", "#[routes]", "#[component]", "#[loader]", "#[settings]", "#[admin]", "#[app_config]", "#[hook]", "guard!", "installed_apps!", "path!", "#[derive(Schema)]", "#[derive(Model)]", "#[derive(Validate)]", "#[server_fn]", "#[wasm_server_api]", "#[permission_required]", "#[injectable]", "#[injectable_key]", "#[use_inject]"
 
 ## Workflow
 
@@ -38,6 +38,7 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 3. Use `#[action]` for custom ViewSet actions
 4. Use `#[routes]` for URL pattern registration
 5. Use `#[component]` for 0.3 route-backed Pages components
+6. In 0.4.x, use `#[loader]` for route entry data
 
 > **0.2.x note:** `#[url_patterns]` is removed in 0.2.x — use `#[routes]` for all URL registration.
 

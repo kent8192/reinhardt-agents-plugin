@@ -628,6 +628,15 @@ from being emitted were fixed in #4293:
 No source-level changes are required to pick up the marker — rebuilding
 on rc.27+ with the `msw` feature enabled is sufficient.
 
+### `#[loader]` (0.4.x)
+
+**Crate:** `reinhardt-pages/macros`
+
+Mark an async function as route entry data while keeping the original function
+directly callable in tests. Bind its marker with `loader = function_name` on a
+route component or layout, and receive the value as `Loader<T>`. Loader inputs
+may include `Path<T>`, `Query<T>`, and one `CancellationToken`.
+
 ---
 
 ## gRPC & GraphQL

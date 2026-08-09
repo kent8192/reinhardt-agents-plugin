@@ -14,7 +14,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - User works with `page!`, `head!`, `form!` macros or `#[server_fn]`
 - User sets up reactive state with Signal, Effect, Memo, or hooks
 - User configures client-side routing, SSR, or hydration
-- User mentions: "page", "head", "form", "server_fn", "Signal", "useState", "useEffect", "watch", "i18n", "translation", "locale", "t!", "SSR", "hydration", "WASM", "frontend", "router", "ApiQuerySet", "Table", "prelude", "component"
+- User mentions: "page", "head", "form", "server_fn", "loader", "Signal", "useState", "useEffect", "watch", "i18n", "translation", "locale", "t!", "SSR", "hydration", "WASM", "frontend", "router", "ApiQuerySet", "Table", "prelude", "component"
 
 ## Workflow
 
@@ -75,6 +75,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - Test service-boundary domain rules directly when a service owns lifecycle, validation, state-transition, or orchestration policy
 - Use 0.3 Pages primitives directly where relevant: `#[wasm_server_api]`, `Portal` / `mount_portal`, `ActivityBoundary`, `ViewTransitionBoundary`, and `FieldArray`
 - Keep shared app code cfg-clean across native and `wasm32-unknown-unknown`; rely on documented inert stubs instead of broad call-site `#[cfg]` workarounds
+- In 0.4.x, declare route entry data with `#[loader]` and `Loader<T>` so navigation prepares before commit and SSR/hydration share the same keyed state; do not duplicate the request in component mount hooks
 
 ## Cross-Domain References
 
@@ -96,3 +97,4 @@ For the latest API definitions:
 6. Read `reinhardt/crates/reinhardt-pages/src/tables.rs` for table component
 7. Read `reinhardt/crates/reinhardt-pages/src/testing.rs` for test utilities
 8. Read `reinhardt/crates/reinhardt-pages/src/i18n.rs` for reactive Pages i18n and SSR/hydration contracts
+9. Read `reinhardt/crates/reinhardt-pages/docs/route_loaders.md` for route loader navigation, cancellation, SSR, and hydration contracts
