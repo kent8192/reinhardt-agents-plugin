@@ -114,7 +114,8 @@ cargo nextest run --workspace --all-features
 ## Model Fixture and Seed Commands (0.4.x)
 
 The project `manage` binary provides Django-compatible model data commands when
-the `reinhardt-db` feature is enabled and migrations are available:
+the facade `database` feature and a database backend are enabled and migrations
+are available:
 
 ```bash
 # Emit machine-readable FixtureRecord JSON to stdout

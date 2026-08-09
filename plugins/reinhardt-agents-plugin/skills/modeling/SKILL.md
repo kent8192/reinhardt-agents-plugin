@@ -62,7 +62,7 @@ Guide developers through model definition, database operations, and migration ma
 5. Apply: `cargo run --bin manage migrate`
 6. For custom operations (indexes, data migrations), write hand-written migration files
 
-### Model Fixture Commands
+### Model Fixture Commands (0.4.x)
 
 1. Use `manage dumpdata` for machine-readable model fixtures and
    `manage loaddata` for transactional loading with explicit primary keys
