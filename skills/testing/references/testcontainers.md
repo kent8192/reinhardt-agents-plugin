@@ -2,6 +2,10 @@
 
 ## Prerequisites
 
+The Docker prerequisites below apply only to `.postgres()` and other
+TestContainers-backed fixtures. `.sqlite()` and `.sqlite_memory()` do not
+require Docker.
+
 - **Docker Desktop** must be installed and running (NOT Podman)
 - `DOCKER_HOST` must point to the Docker socket (not Podman socket)
 - `.testcontainers.properties` in the project root forces Docker usage (already configured in reinhardt projects)
@@ -16,8 +20,8 @@ docker info | head -5
 
 Use `TestDatabase` when a test needs a complete model schema and a connection
 guard, rather than rebuilding tables by hand. The builder accepts exactly one
-schema source and owns the temporary backing resource until the guard is
-dropped:
+schema-source mode; model-derived mode may register multiple models. The guard
+owns the temporary backing resource until it is dropped:
 
 ```rust
 use reinhardt_db::backends::types::DatabaseType;
@@ -34,7 +38,7 @@ let conn = database.connection();
 assert_eq!(database.database_type(), DatabaseType::Sqlite);
 ```
 
-Choose one of these schema sources:
+Choose one of these schema-source modes:
 
 | Builder | Use |
 |---------|-----|
