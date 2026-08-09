@@ -14,7 +14,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - User works with `page!`, `head!`, `form!` macros or `#[server_fn]`
 - User sets up reactive state with Signal, Effect, Memo, or hooks
 - User configures client-side routing, SSR, or hydration
-- User mentions: "page", "head", "form", "server_fn", "Signal", "useState", "useEffect", "watch", "i18n", "translation", "locale", "t!", "SSR", "hydration", "WASM", "frontend", "router", "ApiQuerySet", "Table", "prelude", "component"
+- User mentions: "page", "head", "form", "server_fn", "HMR", "hot patch", "Signal", "useState", "useEffect", "watch", "i18n", "translation", "locale", "t!", "SSR", "hydration", "WASM", "frontend", "router", "ApiQuerySet", "Table", "prelude", "component"
 
 ## Workflow
 
@@ -75,6 +75,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - Test service-boundary domain rules directly when a service owns lifecycle, validation, state-transition, or orchestration policy
 - Use 0.3 Pages primitives directly where relevant: `#[wasm_server_api]`, `Portal` / `mount_portal`, `ActivityBoundary`, `ViewTransitionBoundary`, and `FieldArray`
 - Keep shared app code cfg-clean across native and `wasm32-unknown-unknown`; rely on documented inert stubs instead of broad call-site `#[cfg]` workarounds
+- With the 0.4.x `hmr` feature, rely on `runserver --with-pages` for conservative state-preserving literal template patches; dynamic expressions, handlers, bindings, control flow, components, or shared server-visible edits must take the normal rebuild path
 
 ## Cross-Domain References
 
