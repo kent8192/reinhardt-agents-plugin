@@ -107,8 +107,8 @@ set_count(5);
 
 | Hook | Signature | Description |
 |------|-----------|-------------|
-| `use_effect` | `use_effect(closure, deps)` | Side effect (async-safe) |
-| `use_layout_effect` | `use_layout_effect(closure, deps)` | Synchronous effect before paint |
+| `use_effect` | `use_effect(closure, dependency_mode)` | Side effect (async-safe) |
+| `use_layout_effect` | `use_layout_effect(closure, dependency_mode)` | Synchronous effect before paint |
 
 ```rust
 use_effect(
@@ -120,7 +120,7 @@ use_effect(
             None::<fn()>
         }
     },
-    (count.clone(),),
+    deps![count],
 );
 ```
 
@@ -210,7 +210,7 @@ let save_click = use_callback(
             });
         }
     },
-    (save_action.clone(), project_id.clone(), form.clone()),
+    deps![save_action, project_id, form],
 );
 ```
 
@@ -249,11 +249,11 @@ Async data loading with reactive dependencies.
                 async move { fetch_user(id).await }
             }
         },
-        (user_id.clone(),),
+        deps![user_id],
     );
 
     // Mount-only loading
-    let current_user = use_resource(fetch_current_user, ());
+    let current_user = use_resource(fetch_current_user, deps![]);
 
     // Check state
     match user.state().get() {
@@ -495,3 +495,23 @@ In 0.2.x, `{expr}`, `if`, and `for` inside `page!` are unconditionally wrapped i
 - `create_resource_with_deps(fetcher, deps)` is removed; use `use_resource(fetcher, deps)`.
 - `use_effect_event` and `use_effect_event_with` are removed; use `use_callback` / `use_callback_with` or read non-dependency values with `.get_untracked()` inside the effect.
 - Shared Pages modules should rely on documented inert native/WASM stubs instead of broad call-site `#[cfg]` workarounds.
+
+## Version Differences (0.4.x)
+
+Every dependency-aware hook requires a named dependency mode:
+
+- `deps![value, ...]` subscribes to an explicit list.
+- `deps![]` is the explicit mount-only form.
+- `deps_auto!()` tracks reads at runtime and is accepted only by `use_effect`,
+  `use_layout_effect`, and `use_memo`.
+
+```rust
+use_effect(sync_title, deps![title]);
+use_effect(initialize_once, deps![]);
+let summary = use_memo(compute_summary, deps_auto!());
+```
+
+Callbacks, resources, retained effect helpers, `use_head`, and
+`use_page_title` require `deps![...]`; their work runs after construction or is
+owned by a retained lifecycle store, so automatic construction-time tracking
+would be incomplete. Replace `()` with `deps![]` and tuples with `deps![...]`.

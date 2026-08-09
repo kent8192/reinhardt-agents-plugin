@@ -14,7 +14,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - User works with `page!`, `head!`, `form!` macros or `#[server_fn]`
 - User sets up reactive state with Signal, Effect, Memo, or hooks
 - User configures client-side routing, SSR, or hydration
-- User mentions: "page", "head", "form", "server_fn", "Signal", "useState", "useEffect", "watch", "i18n", "translation", "locale", "t!", "SSR", "hydration", "WASM", "frontend", "router", "ApiQuerySet", "Table", "prelude", "component"
+- User mentions: "page", "head", "form", "server_fn", "server_fnset", "loader", "bind:", "Signal", "useState", "useEffect", "watch", "i18n", "translation", "locale", "t!", "SSR", "hydration", "HMR", "WASM", "frontend", "router", "ApiQuerySet", "Table", "prelude", "component"
 
 ## Workflow
 
@@ -62,6 +62,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - Keep Pages app `services/` modules focused on injectable keys, provider functions, and service structs/functions; put prompt builders, provider adapters, parsers, converters, repository/database internals, and narrow private helpers under app-local `server/` modules
 - Since 0.2.x, reactive expressions in `page!` are auto-wrapped — explicit `Page::reactive(...)` is no longer needed
 - Since 0.2.x, `use_effect`/`use_memo`/`use_callback` take explicit dependency arrays
+- In 0.4.x, every dependency-aware hook requires a named mode: use `deps![...]` (`deps![]` for mount-only); use `deps_auto!()` only with effects, layout effects, and memos, never callbacks, resources, retained effects, or document-head hooks
 - Use `use_action` for async mutations, `use_resource` for async reads or derived text, and `use_callback` / `use_callback_with` for event handlers; keep `spawn_local` as an escape hatch for low-level browser integration only
 - In 0.3.x, use `use_resource(fetcher, deps)` for both mount-only and dependency-driven resources; replace `create_resource*`
 - In 0.3.x, replace `use_effect_event*` with `use_callback*` or `.get_untracked()` inside the effect
@@ -75,6 +76,11 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - Test service-boundary domain rules directly when a service owns lifecycle, validation, state-transition, or orchestration policy
 - Use 0.3 Pages primitives directly where relevant: `#[wasm_server_api]`, `Portal` / `mount_portal`, `ActivityBoundary`, `ViewTransitionBoundary`, and `FieldArray`
 - Keep shared app code cfg-clean across native and `wasm32-unknown-unknown`; rely on documented inert stubs instead of broad call-site `#[cfg]` workarounds
+- In 0.4.x, use `bind:` for signal-owned text, checkbox, radio, number, textarea, and select controls; keep uncontrolled controls event-owned, and use `number(value, error)` only when rejected numeric text must be surfaced
+- In 0.4.x, declare route entry data with `#[loader]` and `Loader<T>` so navigation prepares before commit and SSR/hydration share the same keyed state; do not duplicate the request in component mount hooks
+- In 0.4.x, attach structural `Head` values with `#head`, `Page::with_head`, or `RouteMetadata::with_head`; use `use_head` / `use_page_title` with explicit `deps![...]` for retained reactive contributions
+- In 0.4.x, group existing server functions with `#[server_fnset]` and register the set explicitly. For model-backed sets, require wire DTO mappings, a typed unique lookup, and an explicit policy; do not treat them as REST ViewSets
+- With the 0.4.x `hmr` feature, rely on `runserver --with-pages` for conservative state-preserving literal template patches; dynamic expressions, handlers, bindings, control flow, components, or shared server-visible edits must take the normal rebuild path
 
 ## Cross-Domain References
 
@@ -96,3 +102,6 @@ For the latest API definitions:
 6. Read `reinhardt/crates/reinhardt-pages/src/tables.rs` for table component
 7. Read `reinhardt/crates/reinhardt-pages/src/testing.rs` for test utilities
 8. Read `reinhardt/crates/reinhardt-pages/src/i18n.rs` for reactive Pages i18n and SSR/hydration contracts
+9. Read `reinhardt/crates/reinhardt-pages/docs/route_loaders.md` for route loader navigation, cancellation, SSR, and hydration contracts
+10. Read `reinhardt/crates/reinhardt-pages/docs/document_head_management.md` for document-head ownership and lifecycle rules
+11. Read `reinhardt/crates/reinhardt-pages/docs/server_fn_macro.md` for typed server function sets

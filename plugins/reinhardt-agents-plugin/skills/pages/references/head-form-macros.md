@@ -27,6 +27,7 @@ let html = my_head.to_html();
 | Element | Attributes | Example |
 |---------|-----------|---------|
 | `title` | Text content | `title { "Page Title" }` |
+| `base` | `href` | `base { href: "/app/" }` |
 | `meta` | `name`, `content`, `property`, `charset`, `http_equiv` | `meta { name: "description", content: "..." }` |
 | `link` | `rel`, `href`, `type`, `as_`, `integrity`, `crossorigin`, `media`, `sizes` | `link { rel: "stylesheet", href: "..." }` |
 | `script` | `src`, `type`, `defer`, `async_`, `integrity`, `crossorigin`, `nonce`, text content | `script { src: "...", defer }` |
@@ -40,6 +41,37 @@ Use `resolve_static()` for hashed static file URLs (collectstatic support):
 link { rel: "stylesheet", href: resolve_static("css/main.css") }
 // Resolves to: /static/css/main.abc123.css
 ```
+
+### Lifecycle-Managed Head (0.4.x)
+
+Attach structural head values with `#head`, `Page::with_head`, or
+`RouteMetadata::with_head`. Use retained hooks only for reactive contributions:
+
+```rust
+let metadata = RouteMetadata::new().with_head(head!(|| {
+    base { href: "/app/" }
+    title { "Workspace" }
+    meta { name: "description", content: "Workspace" }
+}));
+
+use_page_title(
+    {
+        let project = project.clone();
+        move || format!("{} - Workspace", project.get().name)
+    },
+    deps![project.clone()],
+);
+```
+
+`use_head` and `use_page_title` require explicit `deps![...]`; their
+registrations disappear with the owning reactive scope. Parent/layout
+contributions remain while a child is active, and dropping the child reveals
+the previous singleton `title` or `base` value.
+
+Buffered/streaming SSR, hydration, and browser mounting use the same ownership
+model. Browser reconciliation manages only `data-reinhardt-head` nodes, leaving
+third-party nodes alone. Make route-scoped scripts idempotent: removing their
+DOM node cannot undo side effects that already ran.
 
 ## form! Macro
 
@@ -435,7 +467,7 @@ let title = use_resource(
             }
         }
     },
-    (locale.clone(),),
+    deps![locale.clone()],
 );
 ```
 
@@ -538,6 +570,31 @@ async fn generate_scene_draft(
 | `endpoint` | String | Auto-generated | Custom endpoint path |
 | `codec` | String | `"json"` | Serialization: `"json"`, `"url"`, `"msgpack"` |
 | `use_inject` | bool | — | **Deprecated** — use inline `#[inject]` on parameters instead |
+
+### Typed Server Function Sets (0.4.x)
+
+Use `#[server_fnset]` to group existing server-function markers without
+changing their codecs, CSRF behavior, extractors, injection, or mock identity.
+Registration remains explicit:
+
+```rust
+#[server_fnset(name = "admin")]
+pub fn admin_fns() -> impl ServerFnSetRegistration {
+    ServerFnSet::new()
+        .server_fn(load_dashboard::marker)
+        .server_fn(export_data::marker)
+}
+
+let router = ServerRouter::new().server_fnset(admin_fns());
+```
+
+Enable `model-server-fnset` only when a model-backed typed POST RPC surface is
+appropriate. Each resource must define separate wire DTO mappings, a typed
+unique lookup, and an explicit policy (`AllowAllPolicy` is the deliberate
+public-access choice). The generated actions are `list`, `retrieve`, `create`,
+`update`, `partial_update`, and `destroy`; custom `#[action]` methods are
+explicit. Model sets are not REST ViewSets and do not generate REST/OpenAPI,
+cursor pagination, bulk actions, composite lookups, or model-to-DTO mapping.
 
 ### Error Handling
 
