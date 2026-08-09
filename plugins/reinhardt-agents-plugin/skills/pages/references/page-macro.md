@@ -480,15 +480,6 @@ input {
 }
 ```
 
-### 0.4.x: Development Template Hot Patches
-
-With the `hmr` feature and `runserver --with-pages`, compatible literal text
-and literal attribute edits can patch mounted templates without resetting
-reactive state or handlers. The boundary is conservative: edits to expressions,
-handlers, bindings, control flow, components, nested templates, callsite shape,
-or shared server-visible code use the normal rebuild and reload path. Do not
-write application logic that depends on a patch being accepted.
-
 ## Component Calls
 
 ```rust

@@ -12,7 +12,7 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 
 - User uses or asks about any `#[attribute]` or `derive()` macro
 - User defines models, views, routes, or injectable services
-- User mentions: "macro", "#[model]", "#[user]", "#[inject]", "#[get]", "#[post]", "#[routes]", "#[component]", "#[loader]", "#[settings]", "#[admin]", "#[app_config]", "#[hook]", "guard!", "installed_apps!", "path!", "#[derive(Schema)]", "#[derive(Model)]", "#[derive(ModelEnum)]", "#[derive(Validate)]", "#[server_fn]", "#[server_fnset]", "#[wasm_server_api]", "#[permission_required]", "#[injectable]", "#[injectable_key]", "#[use_inject]"
+- User mentions: "macro", "#[model]", "#[user]", "#[inject]", "#[get]", "#[post]", "#[routes]", "#[component]", "#[settings]", "#[admin]", "#[app_config]", "#[hook]", "guard!", "installed_apps!", "path!", "#[derive(Schema)]", "#[derive(Model)]", "#[derive(Validate)]", "#[server_fn]", "#[wasm_server_api]", "#[permission_required]", "#[injectable]", "#[injectable_key]", "#[use_inject]"
 
 ## Workflow
 
@@ -28,8 +28,6 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 2. Use `#[field(...)]` attributes on every scalar field, including unconstrained fields
 3. Use `#[rel(...)]` attributes for relationships
 4. Optionally use `#[user(...)]` for user model with auth traits
-5. In 0.4.x, use `#[derive(ModelEnum)]` plus explicit representation/value
-   attributes for finite database-backed domains
 
 > **0.3.x note:** `#[model]` still auto-generates `{Model}Info`; relation fields now use `RelationInfo<T>` / `ManyToManyInfo<Source, Target>` payloads.
 
@@ -40,8 +38,6 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 3. Use `#[action]` for custom ViewSet actions
 4. Use `#[routes]` for URL pattern registration
 5. Use `#[component]` for 0.3 route-backed Pages components
-6. In 0.4.x, use `#[loader]` for route entry data and `#[server_fnset]` for
-   explicitly registered typed server-function groups
 
 > **0.2.x note:** `#[url_patterns]` is removed in 0.2.x — use `#[routes]` for all URL registration.
 
@@ -82,8 +78,6 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 - `#[inject(cache = false)]` creates a fresh instance per injection (no caching)
 - `#[hook(on = runserver)]` requires a unit struct (no fields, no generics) implementing `RunserverHook`
 - `#[model]` uses UUID v7 (`Uuid::now_v7()`) for `Option<Uuid>` primary keys — better index performance
-- `ModelEnum` database values are schema contracts independent of Rust variant and serde names
-- `#[server_fnset]` groups markers but does not provide global discovery or turn model RPCs into REST ViewSets
 
 ## Cross-Domain References
 

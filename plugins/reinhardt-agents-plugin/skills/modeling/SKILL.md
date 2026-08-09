@@ -24,13 +24,11 @@ Guide developers through model definition, database operations, and migration ma
 2. Before writing any `#[model]`, inventory every ForeignKey, OneToOne, and ManyToMany relationship; choose its `#[rel(...)]` marker field, target, and deletion behavior
 3. Guide model struct definition with `#[model]` attribute
 4. Choose appropriate scalar field types and constraints
-5. For 0.4.x finite domain values, use `ModelEnum` with an explicit string or
-   i32 representation and stable per-variant database values
-6. For 0.4.x generated columns, use the typed `SchemaExpr` contract in
+5. For 0.4.x generated columns, use the typed `SchemaExpr` contract in
    `references/model-patterns.md` before choosing a raw SQL escape hatch
-7. Define the inventoried relationships with `#[rel(...)]`
-8. After editing, audit every `*_id` field in each `#[model]`: replace relationship-shaped scalar IDs with `#[rel(...)]` marker fields, or document why a retained scalar is intentionally denormalized or external and add a narrow inline `nosemgrep: reinhardt-no-scalar-fk-id -- <reason>` exception
-9. Implement `pub use` re-exports in the module entry file
+6. Define the inventoried relationships with `#[rel(...)]`
+7. After editing, audit every `*_id` field in each `#[model]`: replace relationship-shaped scalar IDs with `#[rel(...)]` marker fields, or document why a retained scalar is intentionally denormalized or external and add a narrow inline `nosemgrep: reinhardt-no-scalar-fk-id -- <reason>` exception
+8. Implement `pub use` re-exports in the module entry file
 
 ### ORM Operations (Django-style)
 
@@ -43,8 +41,7 @@ Guide developers through model definition, database operations, and migration ma
 
 1. Read `references/sqlalchemy-style-api.md` for `SelectQuery` and `Session`
 2. Use `select::<T>()` for complex multi-table JOINs with type safety
-3. Use `Session` for identity-map/unit-of-work tracking; use
-   `DatabaseConnection::atomic` for transaction boundaries
+3. Use `Session` for transaction-heavy workflows with identity map
 
 ### Low-Level Query Building
 
@@ -78,7 +75,6 @@ Guide developers through model definition, database operations, and migration ma
 - Migration names are auto-generated from detected changes (`--name` is optional)
 - Field types map to Rust types (String, i32, i64, bool, Option<T>, DateTime<Utc>)
 - **(0.4.x)** Use `Json<T>` for typed JSON model fields. `Option<Json<T>>::None` is SQL `NULL`, while `Some(Json::new(serde_json::Value::Null))` is a present JSON `null` value.
-- **(0.4.x)** Use `#[derive(ModelEnum)]` with `#[model_enum(repr = "string" | "i32")]` and explicit `#[model_enum(value = ...)]` values for finite model domains; query and update with enum values, not raw strings or integers
 - Put `#[field(...)]` on every scalar model field, even when no options are required
 - Use `#[rel(...)]` for model relationships; do not represent foreign keys as unmanaged scalar IDs unless the scalar is intentionally denormalized or external, and document that non-relationship purpose next to the field with a narrow `nosemgrep: reinhardt-no-scalar-fk-id -- <reason>` exception
 - ALL model struct fields that can be NULL must use `Option<T>`
@@ -97,8 +93,6 @@ Guide developers through model definition, database operations, and migration ma
 - In 0.3.x, generated `{Model}Info` relation fields expose relation-shaped payloads: `RelationInfo<T>` for one-to-one / foreign-key fields and `ManyToManyInfo<Source, Target>` for many-to-many fields
 - Review serializers, API DTOs, browser tests, and fixtures that expected flattened `*_id` scalar fields after regenerating 0.3.x model info
 - Use `QuerySet::update_fields([...])` for atomic conditional partial updates; empty assignments and predicate-less partial updates are rejected at the API boundary
-- **(0.4.x)** Use closure-scoped `DatabaseConnection::atomic(async |transaction| ...)` and pass its mutable executor to `*_with_conn` / `*_with_db`; nest with `transaction.atomic(...)`, not manual begin/commit/rollback APIs
-- **(0.4.x)** Treat `Session` as an identity-map/unit-of-work tracker: `flush` persists tracked changes, but atomicity belongs to `DatabaseConnection::atomic`; discard a session to abandon unflushed state
 - Regenerate and review migrations after relation metadata, field renames, or unique constraints change; 0.3.x migration generation is stricter about `RenameColumn` and replay drift
 
 ## Cross-Domain References

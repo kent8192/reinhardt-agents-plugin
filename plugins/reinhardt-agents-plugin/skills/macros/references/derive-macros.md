@@ -60,29 +60,6 @@ pub struct UserProfile {
 }
 ```
 
-### `#[derive(ModelEnum)]` (0.4.x)
-
-**Crate:** `reinhardt-core/macros`
-
-Define a typed model field backed by stable string or i32 database values:
-
-```rust
-#[derive(ModelEnum, Clone, Debug, PartialEq)]
-#[model_enum(repr = "string")]
-enum Status {
-    #[model_enum(value = "queued")]
-    Queued,
-    #[model_enum(value = "in_progress")]
-    Running,
-}
-```
-
-Only fieldless variants are supported. Every variant needs an explicit unique
-value matching the selected representation. Rust variant names, serde names,
-and database values are separate contracts. The model macro generates typed
-field codecs, filters, updates, and enum-domain migration check constraints;
-raw primitive filter/update values are rejected.
-
 ---
 
 ## Validation
