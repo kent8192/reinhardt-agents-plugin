@@ -33,6 +33,7 @@ Specialized agent for reviewing reinhardt-web application code against project c
 ### Dependencies
 
 - [ ] No `reinhardt-test = { workspace = true }` in functional crate `[dev-dependencies]`
+- [ ] **(0.4.x)** No framework-facing or public API exposes `anyhow::Error`; preserve Reinhardt-owned errors and named application variants (application binaries may still use `anyhow` internally)
 - [ ] Delion plugins depend on `reinhardt` facade, not `reinhardt-dentdelion` directly
 - [ ] No circular dependency chains
 
@@ -44,6 +45,9 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] Primary keys defined with `#[field(primary_key = true)]`
 - [ ] UUID primary keys use v7 (auto-handled by `#[model]` — flag any manual `Uuid::new_v4()` calls)
 - [ ] **(0.4.x)** Typed JSON model fields use `Json<T>` and preserve SQL `NULL` (`Option<Json<T>>::None`) versus a present JSON `null`
+- [ ] **(0.4.x)** Finite model domains use `ModelEnum` with explicit representation and stable values; typed filters/updates do not pass raw strings or integers
+- [ ] **(0.4.x)** Atomic ORM work stays inside `DatabaseConnection::atomic` / nested `transaction.atomic` callbacks and passes the mutable executor to every `*_with_conn` / `*_with_db` call; no removed manual transaction lifecycle API remains
+- [ ] **(0.4.x)** `Session` is used as a unit-of-work/identity map, not as a transaction boundary
 - [ ] Custom managers wired via `#[model(manager = ...)]` (rc.23+); veto hooks (`before_save` / `before_delete` / `before_bulk_update`) return early on policy violations rather than mutating state
 - [ ] **(0.2.x)** No usage of removed `HasCustomManager` trait or `custom_manager()` method — use `type Objects` associated type on `Model` instead
 - [ ] **(0.2.x)** `{Model}Info` companion struct considered for cross-layer DTOs; sensitive fields marked with `#[field(skip_info = true)]`
@@ -72,6 +76,7 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] One-call top-level free helpers under app `server/` modules are inlined or justified by a reusable domain boundary, genuinely complex behavior, or expected additional call sites
 - [ ] User-facing forms and write DTOs do not ask for raw FK primary keys such as `Project ID` when a representative `title`, `name`, or `slug` can be resolved server-side
 - [ ] Error responses are consistent
+- [ ] **(0.4.x)** Database response mapping matches portable `database_kind()` categories and sanitizes internal diagnostics; vendor codes are not primary control flow
 - [ ] Route names are unique across the application (duplicates cause startup failure)
 - [ ] Consider `url-resolver` feature for type-safe URL resolution **(0.1.x only — removed in 0.2.x)**
 - [ ] **(0.2.x)** No usage of removed `#[url_patterns]` macro — use `#[routes]` instead
@@ -87,6 +92,12 @@ Specialized agent for reviewing reinhardt-web application code against project c
 
 - [ ] Button actions operate on the displayed/current entity: route params, form values, loaded DTOs, selected rows/versions, and server return values, not fixture IDs, sample constants, or canned text
 - [ ] Async mutations use `use_action`, async reads or derived text use `use_resource`, and event handlers use `use_callback` / `use_callback_with`; `spawn_local` is limited to low-level browser integration
+- [ ] **(0.4.x)** Dependency-aware hooks use `deps![...]` (`deps![]` for mount-only); `deps_auto!()` appears only on effects, layout effects, and memos
+- [ ] **(0.4.x)** Signal-owned native controls use the type-correct `bind:` shape; number bindings expose `NumberParseError` only when rejected text needs UI, and uncontrolled controls retain one explicit source of truth
+- [ ] **(0.4.x)** Route entry data uses `#[loader]` / `Loader<T>` and is not redundantly fetched in mount hooks; SSR/hydration does not serialize internal loader causes or refetch hydrated state
+- [ ] **(0.4.x)** Structural head values use `#head`, `Page::with_head`, or `RouteMetadata::with_head`; reactive head hooks use explicit dependencies and route-scoped scripts tolerate remounting
+- [ ] **(0.4.x)** `#[server_fnset]` groups and explicitly registers existing markers; model sets declare wire DTO mappings, typed unique lookup, and policy, and are not presented as REST ViewSets
+- [ ] **(0.4.x)** HMR correctness does not depend on a hot patch: dynamic expressions, handlers, bindings, control flow, components, and shared code remain valid through the fallback rebuild path
 - [ ] Non-`Copy` callbacks/actions passed into `page!` render closures are cloned at the attribute use site when needed
 - [ ] Internal button-triggered redirects use `reinhardt::pages::navigate(..., NavigationType::Push)` or the current router handle API, not `window.location.set_href`
 - [ ] **(0.4.x)** Catalog-backed Pages labels use feature-gated `I18nContext` with `t!` (or `tr` / `tn` / `tp` / `tnp`), not a per-label `#[server_fn]` and `use_resource` round trip
