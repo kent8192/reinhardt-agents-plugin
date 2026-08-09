@@ -439,8 +439,22 @@ let title = use_resource(
 );
 ```
 
-In 0.1.x, pass the same fetcher and dependency tuple to
-`create_resource_with_deps(...)` instead of `use_resource(...)`.
+In 0.1.x, use the two-closure adapter: the first closure produces the
+dependency and the fetcher receives it.
+
+```rust
+let title = create_resource_with_deps(
+    {
+        let locale = locale.clone();
+        move || locale.get()
+    },
+    |locale| async move {
+        translate_writing_label(locale, "workspace.title".to_string())
+            .await
+            .unwrap_or_else(|_| "Workspace".to_string())
+    },
+);
+```
 
 Inject shared dependencies, but keep the endpoint's unique workflow visible in
 the `#[server_fn]` or a nearby private helper. Use DI for settings, provider
