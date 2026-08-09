@@ -113,7 +113,7 @@ set_count(5);
 | `use_retained_layout_effect` | `use_retained_layout_effect(closure, deps)` | **(0.4.x)** Retained layout effect |
 
 ```rust
-use_effect(
+let _effect_guard = use_effect(
     {
         let count = count.clone();
         move || {
