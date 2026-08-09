@@ -264,17 +264,28 @@ Dispatch an `EventFixture` through the queried element, then call
 `Screen::settle()` to drain handlers, nested tasks, and reactive rerenders:
 
 ```rust
-let screen = render(page!({
-    label { "Name" }
-    input { aria_label: "Name" }
-}));
+let screen = render(|| {
+    let name = Signal::new(String::new());
+    page!({
+        label { "Name" }
+        input {
+            aria_label: "Name",
+            @input: move |event: InputEvent| {
+                if let Ok(value) = event.value() {
+                    name.set(value);
+                }
+            }
+        }
+        p { { name.get() } }
+    })
+});
 
 screen
     .get_by_label("Name")
     .dispatch(EventFixture::input().value("Ada"))?;
-screen.settle();
+screen.settle().await;
 
-assert_eq!(screen.get_by_label("Name").value().as_deref(), Some("Ada"));
+assert_eq!(screen.get_by_text("Ada").tag_name(), "p");
 ```
 
 Use the convenience fixtures `click`, `submit`, `input`, `change`, `key_down`,

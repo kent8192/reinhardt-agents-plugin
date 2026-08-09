@@ -38,15 +38,23 @@ page!({
 Target helpers return `Result<_, EventTargetError>` because the event target may
 not be the expected element:
 
+Use only helpers compatible with the control that emitted the event:
+
 ```rust
-fn handle_form(event: InputEvent) -> Result<(), EventTargetError> {
-    let current_target = event.current_target();
-    let value = event.value()?;
-    let checked = event.checked()?;
-    let selected = event.selected_values()?;
-    let files = event.files()?;
-    let _snapshot = current_target;
-    submit_snapshot(value, checked, selected, files)
+fn handle_text(event: InputEvent) -> Result<(), EventTargetError> {
+    submit_text(event.value()?)
+}
+
+fn handle_checkbox(event: ChangeEvent) -> Result<(), EventTargetError> {
+    submit_checked(event.checked()?)
+}
+
+fn handle_select(event: ChangeEvent) -> Result<(), EventTargetError> {
+    submit_selection(event.selected_values()?)
+}
+
+fn handle_files(event: ChangeEvent) -> Result<(), EventTargetError> {
+    submit_files(event.files()?)
 }
 ```
 
