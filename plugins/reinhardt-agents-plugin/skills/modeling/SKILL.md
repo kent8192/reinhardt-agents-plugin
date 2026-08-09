@@ -77,6 +77,7 @@ Guide developers through model definition, database operations, and migration ma
 - **(0.4.x)** Use `Json<T>` for typed JSON model fields. `Option<Json<T>>::None` is SQL `NULL`, while `Some(Json::new(serde_json::Value::Null))` is a present JSON `null` value.
 - Put `#[field(...)]` on every scalar model field, even when no options are required
 - Use `#[rel(...)]` for model relationships; do not represent foreign keys as unmanaged scalar IDs unless the scalar is intentionally denormalized or external, and document that non-relationship purpose next to the field with a narrow `nosemgrep: reinhardt-no-scalar-fk-id -- <reason>` exception
+- **(0.4.x)** Generated `*_id()` accessors return the related primary key by value on native and WASM; do not dereference the accessor or add target-specific copies.
 - ALL model struct fields that can be NULL must use `Option<T>`
 - **(0.4.x)** Prefer `generated = SchemaExpr::...` for generated columns. Use
   `generated_sql = "..."` only for trusted backend-specific expressions that
