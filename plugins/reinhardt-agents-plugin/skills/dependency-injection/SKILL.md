@@ -26,8 +26,9 @@ Guide developers through DI configuration using reinhardt-di, including service 
 4. Use direct `#[inject] dependency: T` / `Depends<T>` for self-keyed values and
    `KeyedDepends<K, T>` for explicit keyed output in handlers or `#[server_fn]`
    functions
-5. Read the 0.3 compatibility section in `references/di-patterns.md` only when
-   migrating older `FactoryOutput<K, T>` / `Depends<K, T>` code
+5. Select provider guidance by the project's target version: use the 0.3
+   `FactoryOutput<K, T>` / `Depends<K, T>` section for all 0.3.x work, and use
+   the 0.4 contract for 0.4.x work; compare both only during an upgrade
 
 ### Integrating with Database/Auth
 

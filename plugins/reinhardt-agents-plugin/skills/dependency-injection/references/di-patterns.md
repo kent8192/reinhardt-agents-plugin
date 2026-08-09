@@ -136,6 +136,8 @@ pub async fn generate_novel(
 - `#[injectable_factory]` is retained only as a deprecated 0.2 compatibility
   alias; do not use it for new 0.3.x code
 
+## Current and Cross-Version Patterns
+
 ### Durable Queue Integration (0.4.x)
 
 For a queue used by more than one server function, enable `tasks-durable` and
