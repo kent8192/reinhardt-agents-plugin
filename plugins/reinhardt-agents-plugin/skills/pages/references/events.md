@@ -85,7 +85,7 @@ screen
     .get_by_label("Title")
     .dispatch(EventFixture::input().value("A new title"))?;
 screen.get_by_role(Role::Button, "Save").dispatch(EventFixture::click())?;
-screen.settle();
+screen.settle().await;
 
 assert_eq!(screen.text("status"), "Saved");
 ```

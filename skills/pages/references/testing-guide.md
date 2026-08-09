@@ -266,13 +266,14 @@ Dispatch an `EventFixture` through the queried element, then call
 ```rust
 let screen = render(|| {
     let name = Signal::new(String::new());
+    let handler_name = name.clone();
     page!({
         label { "Name" }
         input {
             aria_label: "Name",
             @input: move |event: InputEvent| {
                 if let Ok(value) = event.value() {
-                    name.set(value);
+                    handler_name.set(value);
                 }
             }
         }
