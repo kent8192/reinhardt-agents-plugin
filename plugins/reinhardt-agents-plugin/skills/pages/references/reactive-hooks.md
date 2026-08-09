@@ -2,6 +2,10 @@
 
 ## Core Primitives
 
+The 0.4.x examples in this section run inside a component or launcher-managed
+`ReactiveScope`. Low-level callers must establish an active scope before
+constructing reactive nodes.
+
 ### Signal
 
 A reactive value with automatic dependency tracking.
@@ -113,14 +117,14 @@ set_count(5);
 ```rust
 use_effect(
     {
-        let count = count.clone();
+        let count = count;
         move || {
             // Runs when dependencies change
             log!("Count is: {}", count.get());
             None::<fn()>
         }
     },
-    (count.clone(),),
+    (count,),
 );
 ```
 
@@ -210,8 +214,8 @@ let save_action = use_action(|input: SaveSettingsRequest| async move {
 
 let save_click = use_callback(
     {
-        let save_action = save_action.clone();
-        let project_id = project_id.clone();
+        let save_action = save_action;
+        let project_id = project_id;
         let form = form.clone();
         move |_| {
             save_action.dispatch(SaveSettingsRequest {
@@ -222,7 +226,7 @@ let save_click = use_callback(
             });
         }
     },
-    (save_action.clone(), project_id.clone(), form.clone()),
+    (save_action, project_id, form.clone()),
 );
 ```
 
@@ -255,13 +259,13 @@ Async data loading with reactive dependencies.
     let user_id = Signal::new(1);
     let user = use_resource(
         {
-            let user_id = user_id.clone();
+            let user_id = user_id;
             move || {
                 let id = user_id.get();
                 async move { fetch_user(id).await }
             }
         },
-        (user_id.clone(),),
+        (user_id,),
     );
 
     // Mount-only loading
@@ -342,12 +346,11 @@ Use `Effect` to reactively re-render when Signals change:
 use reinhardt::pages::reactive::Effect;
 
 let path_signal = router::with_router(|r| r.current_path().clone());
-let effect = Effect::new(move || {
+Effect::new(move || {
     let path = path_signal.get();  // Subscribe to path changes
     let page = router::with_router(|r| r.render_current());
     app_el.set_inner_html(&page.render_to_string());
-});
-std::mem::forget(effect);  // Keep alive for page lifetime
+}); // Remains active until the current ReactiveScope is disposed.
 ```
 
 ## watch Blocks vs Hooks
@@ -400,7 +403,7 @@ page!({
 ### watch Best Practices
 
 - **Pass Signals directly** to `page!` — don't extract values before the macro
-- **Clone Signals freely** — `Signal::clone()` is cheap (Rc-based)
+- **Copy reactive handles in 0.4.x** — clone only non-reactive captured values
 - **One expression per watch** — each block must contain exactly one `if`, `match`, or `for`
 - **Don't nest watch blocks** — use multiple sibling watch blocks instead
 
@@ -409,8 +412,7 @@ page!({
 - **Fine-grained reactivity**: Only DOM nodes depending on changed Signals update (not entire component trees)
 - **Pull-based model**: Signals track dependencies automatically via `.get()` calls
 - **Batching**: Multiple Signal changes batch into a single update cycle via micro-tasks
-- **Memory management**: All reactive nodes auto-cleanup when dropped
-- **`std::mem::forget`**: Use for Effects that should live for the entire page lifetime (e.g., routing)
+- **Memory management (0.4.x)**: Reactive nodes live until their owning `ReactiveScope` is disposed; copying or forgetting an arena handle does not extend that lifetime
 - **watch compiles to `Page::reactive()`**: The reactive closure is tracked by the runtime and re-evaluated on Signal changes
 
 ## Version Differences (0.2.x)
