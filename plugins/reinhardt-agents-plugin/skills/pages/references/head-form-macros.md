@@ -435,7 +435,7 @@ let title = use_resource(
             }
         }
     },
-    (locale.clone(),),
+    deps![locale.clone()],
 );
 ```
 
