@@ -566,12 +566,12 @@ use reinhardt::pages::{layout, page, Outlet, Page, Path};
 
 #[layout("/workspaces/{workspace_id}/", name = "workspace-shell")]
 fn workspace_shell(Path(workspace_id): Path<i64>, outlet: Outlet) -> Page {
-    page!(|workspace_id: i64, outlet: Outlet| {
+    page!({
         section {
             h1 { { format!("Workspace {workspace_id}") } }
             { outlet }
         }
-    })(workspace_id, outlet)
+    })
 }
 ```
 

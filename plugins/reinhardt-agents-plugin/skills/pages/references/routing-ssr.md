@@ -13,23 +13,23 @@ paths are relative to that layout scope:
 
 ```rust
 use reinhardt::pages::{component, layout, page, Outlet, Page, Path};
-use reinhardt::pages::router::ClientRouter;
+use reinhardt::urls::routers::ClientRouter;
 
 #[layout("/workspaces/{workspace_id}/", name = "workspace-shell")]
 fn workspace_shell(Path(workspace_id): Path<i64>, outlet: Outlet) -> Page {
-    page!(|workspace_id: i64, outlet: Outlet| {
+    page!({
         section {
             h1 { { format!("Workspace {workspace_id}") } }
             { outlet }
         }
-    })(workspace_id, outlet)
+    })
 }
 
 #[component("jobs", name = "workspace-jobs")]
 fn workspace_jobs(Path(workspace_id): Path<i64>) -> Page {
-    page!(|workspace_id: i64| {
+    page!({
         p { { format!("Jobs for {workspace_id}") } }
-    })(workspace_id)
+    })
 }
 
 let router = ClientRouter::new().routes(|routes| {
