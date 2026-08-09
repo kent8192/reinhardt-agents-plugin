@@ -53,20 +53,39 @@ pub async fn transfer_funds(
     Json(data): Json<TransferRequest>,
     #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
 ) -> ViewResult<Response> {
-    db.atomic(async |transaction| {
-        let mut source = Account::objects()
-            .filter_by(Account::field_id().eq(data.from_id))
-            .get_with_db(transaction)
-            .await?;
-        let mut destination = Account::objects()
-            .filter_by(Account::field_id().eq(data.to_id))
-            .get_with_db(transaction)
-            .await?;
+    if data.from_id == data.to_id {
+        return Err(AppError::Validation("source and destination must differ".into()));
+    }
 
-        source.balance -= data.amount;
-        destination.balance += data.amount;
-        Account::objects().update_with_conn(transaction, &source).await?;
-        Account::objects().update_with_conn(transaction, &destination).await?;
+    db.atomic(async |transaction| {
+        let debited = Account::objects()
+            .filter_by(Account::field_id().eq(data.from_id))
+            .filter_by(Account::field_balance().gte(data.amount))
+            .update_fields_with_conn(transaction, [FieldAssignment::new(
+                "balance",
+                UpdateValue::Expression(Expression::Subtract(
+                    Box::new(AnnotationValue::Field(F::new("balance"))),
+                    Box::new(AnnotationValue::Value(Value::Int(data.amount))),
+                )),
+            )])
+            .await?;
+        if debited != 1 {
+            return Err(AppError::Conflict("account missing or insufficient funds".into()));
+        }
+
+        let credited = Account::objects()
+            .filter_by(Account::field_id().eq(data.to_id))
+            .update_fields_with_conn(transaction, [FieldAssignment::new(
+                "balance",
+                UpdateValue::Expression(Expression::Add(
+                    Box::new(AnnotationValue::Field(F::new("balance"))),
+                    Box::new(AnnotationValue::Value(Value::Int(data.amount))),
+                )),
+            )])
+            .await?;
+        if credited != 1 {
+            return Err(AppError::NotFound("destination account not found".into()));
+        }
         Ok(())
     }).await?;
 
