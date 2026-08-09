@@ -111,6 +111,7 @@ set_count(5);
 | `use_layout_effect` | `use_layout_effect(closure, deps)` | Synchronous effect before paint |
 
 ```rust
+// 0.4.x
 use_effect(
     {
         let count = count.clone();
