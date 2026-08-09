@@ -371,9 +371,15 @@ surrounding display state, not as a second implementation of the form runtime.
 ```rust
 // AVOID: using Effect for conditional rendering
 let (show, _) = use_state(Signal::new(false));
-use_effect(move || {
-    if show.get() { /* manually update DOM */ }
-});
+use_effect(
+    {
+        let show = show.clone();
+        move || {
+            if show.get() { /* manually update DOM */ }
+        }
+    },
+    deps![show],
+);
 
 // PREFER (0.4.x): direct body with an automatically reactive branch
 page!({
