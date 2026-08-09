@@ -435,9 +435,12 @@ let title = use_resource(
             }
         }
     },
-    deps![locale.clone()],
+    (locale.clone(),), // 0.2.x–0.3.x
 );
 ```
+
+In 0.1.x, pass the same fetcher and dependency tuple to
+`create_resource_with_deps(...)` instead of `use_resource(...)`.
 
 Inject shared dependencies, but keep the endpoint's unique workflow visible in
 the `#[server_fn]` or a nearby private helper. Use DI for settings, provider

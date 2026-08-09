@@ -487,7 +487,7 @@ let open_project = use_callback(
             let _ = router.navigate(path, NavigationType::Push);
         }
     },
-    deps![router.clone(), selected_project_id.clone()],
+    (router.clone(), selected_project_id.clone()),
 );
 ```
 
