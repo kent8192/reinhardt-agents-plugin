@@ -276,6 +276,18 @@ Source: (#4078, #4114).
 
 ## Server-Side Rendering (SSR)
 
+### Synchronous SsrRenderer (0.1.x–0.3.x)
+
+Pre-0.4 renderers are synchronous:
+
+```rust
+let html = SsrRenderer::render(&my_component);
+let html_with_options = SsrRenderer::with_options(SsrOptions::default())
+    .render(&my_component);
+let mut renderer = SsrRenderer::with_options(SsrOptions::default());
+let page_html = renderer.render_page(&my_component);
+```
+
 ### Async SsrRenderer and SsrStream (0.4.x)
 
 SSR entry points are asynchronous in 0.4.x. The `render_page*` methods return
