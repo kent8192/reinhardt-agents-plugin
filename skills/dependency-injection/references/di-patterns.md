@@ -306,7 +306,7 @@ async fn create_write_db() -> KeyedFactoryOutput<WriteDb, DatabaseConnection> {
 async fn handler(
     #[inject] read_db: KeyedDepends<ReadDb, DatabaseConnection>,
     #[inject] write_db: KeyedDepends<WriteDb, DatabaseConnection>,
-) {
+) -> () {
     // ...
 }
 ```
