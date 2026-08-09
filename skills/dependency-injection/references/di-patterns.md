@@ -37,8 +37,8 @@ when the wrapper's explicit unwrap or ownership boundary is useful.
 use reinhardt::di::{Depends, injectable};
 
 #[injectable(scope = "request")]
-async fn request_settings(#[inject] base: AppSettings) -> AppSettings {
-    base.with_request_defaults()
+async fn request_settings() -> AppSettings {
+    AppSettings::default().with_request_defaults()
 }
 
 #[server_fn]
@@ -70,7 +70,7 @@ async fn primary_llm(
 pub async fn summarize(
     #[inject] provider: KeyedDepends<PrimaryLlm, LlmProvider>,
 ) -> Result<Summary, ServerFnError> {
-    provider.try_unwrap()?.summarize().await
+    provider.summarize().await
 }
 ```
 
@@ -299,6 +299,7 @@ async fn create_write_db() -> KeyedFactoryOutput<WriteDb, DatabaseConnection> {
     KeyedFactoryOutput::new(DatabaseConnection::connect(&write_url).await.unwrap())
 }
 
+#[use_inject]
 async fn handler(
     #[inject] read_db: KeyedDepends<ReadDb, DatabaseConnection>,
     #[inject] write_db: KeyedDepends<WriteDb, DatabaseConnection>,
@@ -1013,13 +1014,21 @@ ctx.clear_overrides();
 Inside `#[injectable]` execution, use `get_di_context` to access the DI context without requiring `#[inject]`:
 
 ```rust
-use reinhardt::di::{get_di_context, try_get_di_context, ContextLevel};
+use reinhardt::di::{
+    get_di_context, try_get_di_context, ContextLevel, KeyedFactoryOutput,
+    injectable_key,
+};
+
+#[injectable_key]
+struct RouterKey;
 
 #[injectable(scope = "transient")]
-async fn make_router(#[inject] config: AppConfig) -> Router {
+async fn make_router(
+    #[inject] _config: AppConfig,
+) -> KeyedFactoryOutput<RouterKey, Router> {
     // Access the DI context directly
     let di_ctx = get_di_context(ContextLevel::Current);
-    Router::new().with_di_context(di_ctx)
+    KeyedFactoryOutput::new(Router::new().with_di_context(di_ctx))
 }
 
 // Non-panicking variant — returns None outside DI resolution context
