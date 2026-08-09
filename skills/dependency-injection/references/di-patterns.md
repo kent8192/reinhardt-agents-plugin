@@ -596,7 +596,7 @@ pub struct RequestLogger {
 
 ---
 
-## `#[injectable]` for Legacy 0.3.x Functions
+## `#[injectable]` for 0.3.x Functions
 
 `#[injectable]` can also be applied to provider functions. In 0.3.x, provider
 functions are async and return `FactoryOutput<K, T>` so the key type becomes
@@ -788,11 +788,12 @@ When resolving a type `T`:
 
 ---
 
-## Legacy 0.3.x `Depends<K, T>` Wrapping
+## 0.3.x `Depends<K, T>` Wrapping
 
 `Depends<K, T>` resolves a keyed provider output from the registry. The provider
 must return `FactoryOutput<K, T>`, and `K` must implement `InjectableKey`.
-This section is retained for 0.3.x migration work. New 0.4.x code uses
+This is the normal wrapper contract for projects targeting 0.3.x. During an
+upgrade, compare it with the 0.4.x contract, which uses
 `Depends<T>` for self-keyed output and `KeyedDepends<K, T>` with
 `KeyedFactoryOutput<K, T>` for explicit keys.
 `Depends<K, T>` dereferences to `T` and only requires `T: Send + Sync + 'static`
@@ -919,16 +920,16 @@ pub struct OrderServiceKey;
 
 #[injectable(scope = "singleton")]
 async fn create_user_service(
-    #[inject] policy: Depends<AccountPolicyServiceKey, AccountPolicyService>,
-) -> FactoryOutput<UserServiceKey, UserService> {
-    FactoryOutput::new(UserService::from_policy(&*policy))
+    #[inject] policy: KeyedDepends<AccountPolicyServiceKey, AccountPolicyService>,
+) -> KeyedFactoryOutput<UserServiceKey, UserService> {
+    KeyedFactoryOutput::new(UserService::from_policy(&*policy))
 }
 
 #[injectable(scope = "singleton")]
 async fn create_order_service(
-    #[inject] policy: Depends<AccountPolicyServiceKey, AccountPolicyService>,
-) -> FactoryOutput<OrderServiceKey, OrderService> {
-    FactoryOutput::new(OrderService::from_policy(&*policy))
+    #[inject] policy: KeyedDepends<AccountPolicyServiceKey, AccountPolicyService>,
+) -> KeyedFactoryOutput<OrderServiceKey, OrderService> {
+    KeyedFactoryOutput::new(OrderService::from_policy(&*policy))
 }
 ```
 
@@ -943,7 +944,7 @@ Reinhardt DI provides a fluent API for overriding dependencies in tests using `c
 For functions registered with `#[injectable]` (function form), use the fluent override API:
 
 ```rust
-use reinhardt_di::{FactoryOutput, InjectionContext, SingletonScope, injectable_key};
+use reinhardt_di::{InjectionContext, KeyedFactoryOutput, SingletonScope, injectable_key};
 use std::sync::Arc;
 
 #[injectable_key]
@@ -952,8 +953,8 @@ pub struct DatabaseKey;
 #[injectable]
 async fn create_database(
     #[inject] config: AppConfig,
-) -> FactoryOutput<DatabaseKey, DatabaseConnection> {
-    FactoryOutput::new(DatabaseConnection::connect(&config.database_url).await)
+) -> KeyedFactoryOutput<DatabaseKey, DatabaseConnection> {
+    KeyedFactoryOutput::new(DatabaseConnection::connect(&config.database_url).await)
 }
 
 #[rstest]
@@ -984,9 +985,11 @@ async fn test_with_mock_database() {
 | `.has_override()` | Check if override is set |
 | `.get_override()` | Get current override value |
 
-### Build a `Depends<K, T>` Wrapper Directly
+### Build a `KeyedDepends<K, T>` Wrapper Directly
 
 ```rust
+use reinhardt_di::KeyedDepends;
+
 #[injectable_key]
 struct TestConfigKey;
 
@@ -994,7 +997,7 @@ struct TestConfigKey;
 fn test_with_depends() {
     // Arrange
     let mock_config = AppConfig { debug: true, max_retries: 0 };
-    let depends = Depends::<TestConfigKey, AppConfig>::from_value(mock_config);
+    let depends = KeyedDepends::<TestConfigKey, AppConfig>::from_value(mock_config);
 
     // Act & Assert
     assert_eq!(depends.max_retries, 0);
@@ -1085,15 +1088,16 @@ DiError::Authentication(String)              // Maps to HTTP 401
 
 ---
 
-## Legacy 0.3.x Provider Identity Patterns
+## 0.3.x Provider Identity Patterns
 
 In 0.3.x, provider identity should be explicit when a value type has more than
 one meaning. Prefer `#[injectable_key]` with `FactoryOutput<K, T>` for provider
 functions. Newtype wrappers are still useful when the wrapper type is part of
 your domain model or makes call sites clearer.
 
-Use the 0.4.x `KeyedFactoryOutput<K, T>` / `KeyedDepends<K, T>` spelling for
-new code; the examples in this section are historical migration references.
+For projects targeting 0.4.x, use the `KeyedFactoryOutput<K, T>` /
+`KeyedDepends<K, T>` spelling instead. The examples in this section are the
+normal 0.3.x forms and serve as migration references during an upgrade.
 
 **Use keys for multiple providers that produce the same value type:**
 
