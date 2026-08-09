@@ -25,7 +25,6 @@ Define a central application error type:
 
 ```rust
 use reinhardt::rest::prelude::*;
-use reinhardt::core::exception::DatabaseErrorKind;
 
 #[derive(Debug, thiserror::Error)]
 pub enum AppError {
@@ -56,21 +55,23 @@ impl ResponseError for AppError {
             Self::PermissionDenied(_) => StatusCode::FORBIDDEN,
             Self::Conflict(_) => StatusCode::CONFLICT,
             Self::Unauthorized(_) => StatusCode::UNAUTHORIZED,
-            Self::Framework(error) => match error.database_kind() {
-                Some(DatabaseErrorKind::UniqueViolation)
-                | Some(DatabaseErrorKind::ForeignKeyViolation) => StatusCode::CONFLICT,
-                Some(DatabaseErrorKind::NotNullViolation)
-                | Some(DatabaseErrorKind::CheckViolation) => StatusCode::BAD_REQUEST,
-                Some(DatabaseErrorKind::Connection)
-                | Some(DatabaseErrorKind::Timeout) => StatusCode::SERVICE_UNAVAILABLE,
-                Some(_) | None => StatusCode::INTERNAL_SERVER_ERROR,
-            },
+            Self::Framework(error) => StatusCode::from_u16(error.status_code())
+                .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR),
         }
     }
 
     fn error_response(&self) -> HttpResponse {
         let detail = match self {
-            Self::Framework(_) => "Internal server error".to_string(),
+            Self::Framework(_) => match self.status_code() {
+                StatusCode::BAD_REQUEST => "Invalid request".to_string(),
+                StatusCode::UNAUTHORIZED => "Authentication required".to_string(),
+                StatusCode::FORBIDDEN => "Permission denied".to_string(),
+                StatusCode::NOT_FOUND => "Resource not found".to_string(),
+                StatusCode::METHOD_NOT_ALLOWED => "Method not allowed".to_string(),
+                StatusCode::CONFLICT => "Request conflict".to_string(),
+                StatusCode::SERVICE_UNAVAILABLE => "Service unavailable".to_string(),
+                _ => "Internal server error".to_string(),
+            },
             other => other.to_string(),
         };
         HttpResponse::build(self.status_code())
