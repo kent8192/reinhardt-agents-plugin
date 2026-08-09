@@ -306,11 +306,43 @@ let users = User::objects()
 When you need explicit connection control (e.g., in transactions):
 
 ```rust
-let result = User::objects().create_with_conn(&conn, &user).await?;
-let result = User::objects().update_with_conn(&conn, &user).await?;
-User::objects().delete_with_conn(&conn, pk).await?;
-let count = User::objects().count_with_conn(&conn).await?;
+let mut connection = get_connection().await?;
+let result = User::objects()
+    .create_with_conn(&mut connection, &user)
+    .await?;
 ```
+
+### Closure-Scoped Atomic Transactions (0.4.x)
+
+`DatabaseConnection::atomic` owns the transaction lifecycle and lends one
+mutable executor to the callback. Every ORM operation in the atomic scope must
+use its `*_with_conn` or `*_with_db` form:
+
+```rust
+let user = connection.atomic(async |transaction| {
+    let user = User::objects()
+        .create_with_conn(transaction, &new_user)
+        .await?;
+
+    transaction.atomic(async |savepoint| {
+        AuditLog::objects()
+            .create_with_conn(savepoint, &audit_log)
+            .await
+    }).await?;
+
+    Ok(user)
+}).await?;
+```
+
+Nested `transaction.atomic(...)` uses a savepoint on the same executor.
+Callback failure rolls back; a cleanup failure takes precedence because the
+database state could not be restored. Do not use panics or task cancellation as
+rollback control flow, and do not expect MySQL DDL to roll back.
+
+The manual ORM lifecycle APIs (`begin`, `commit`, `rollback`, free `atomic` /
+`transaction` helpers, and `TransactionScope`) are removed in 0.4.x. Use
+`atomic_with_isolation` when the outer transaction needs an explicit isolation
+level.
 
 ### Manager Method Reference
 
