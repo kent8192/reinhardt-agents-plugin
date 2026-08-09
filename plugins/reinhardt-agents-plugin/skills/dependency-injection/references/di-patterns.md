@@ -92,7 +92,7 @@ Provider functions return `FactoryOutput<K, T>`, where `K` is the dependency
 identity and callers consume the value as `Depends<K, T>`.
 
 ```rust
-use reinhardt::di::{KeyedDepends, KeyedFactoryOutput, injectable, injectable_key};
+use reinhardt::di::{Depends, FactoryOutput, injectable, injectable_key};
 
 #[injectable_key]
 pub struct NovelGenerationServiceKey;
@@ -466,7 +466,7 @@ parsing/chunking, projection building, or nontrivial state transitions.
 ### Preferred: inject shared dependencies, keep the workflow visible
 
 ```rust
-use reinhardt::di::{Depends, FactoryOutput, injectable, injectable_key};
+use reinhardt::di::{KeyedDepends, KeyedFactoryOutput, injectable, injectable_key};
 use reinhardt::pages::prelude::*;
 
 #[injectable_key]
@@ -639,7 +639,7 @@ All injectable types **MUST** be explicitly registered. There is no auto-injecti
 | Method | When |
 |--------|------|
 | `#[injectable]` on struct | Struct with `#[inject]` / `#[no_inject]` field attributes |
-| `#[injectable]` on function | **(0.4.x)** Function that produces direct `T`, or `KeyedFactoryOutput<K, T>` for an explicit key |
+| `#[injectable]` on function | Provider function: direct `T` or `KeyedFactoryOutput<K, T>` in 0.4.x; `FactoryOutput<K, T>` in 0.3.x |
 | `impl Injectable` manually | Custom resolution logic |
 | `#[injectable_factory]` | Deprecated 0.2 compatibility alias for provider functions |
 
@@ -1020,7 +1020,7 @@ Inside `#[injectable]` execution, use `get_di_context` to access the DI context 
 ```rust
 use reinhardt::di::{
     get_di_context, try_get_di_context, ContextLevel, KeyedFactoryOutput,
-    injectable_key,
+    injectable, injectable_key,
 };
 
 #[injectable_key]
