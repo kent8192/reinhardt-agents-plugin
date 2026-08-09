@@ -17,7 +17,7 @@ Services raise domain-specific errors. The API layer maps these to HTTP response
 | `PermissionDenied(String)` | 403 Forbidden | `{"detail": "<message>"}` |
 | `Conflict(String)` | 409 Conflict | `{"detail": "<message>"}` |
 | `Unauthorized(String)` | 401 Unauthorized | `{"detail": "<message>"}` |
-| `InternalError(String)` | 500 Internal Server Error | `{"detail": "Internal server error"}` |
+| `Framework(reinhardt::Error)` | Category-dependent; otherwise 500 | Generic body for internal failures |
 
 ## Implementation Pattern
 
@@ -25,6 +25,7 @@ Define a central application error type:
 
 ```rust
 use reinhardt::rest::prelude::*;
+use reinhardt::core::exception::DatabaseErrorKind;
 
 #[derive(Debug, thiserror::Error)]
 pub enum AppError {
@@ -43,8 +44,8 @@ pub enum AppError {
     #[error("{0}")]
     Unauthorized(String),
 
-    #[error("Internal server error")]
-    InternalError(#[from] anyhow::Error),
+    #[error(transparent)]
+    Framework(#[from] reinhardt::Error),
 }
 
 impl ResponseError for AppError {
@@ -55,13 +56,21 @@ impl ResponseError for AppError {
             Self::PermissionDenied(_) => StatusCode::FORBIDDEN,
             Self::Conflict(_) => StatusCode::CONFLICT,
             Self::Unauthorized(_) => StatusCode::UNAUTHORIZED,
-            Self::InternalError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::Framework(error) => match error.database_kind() {
+                Some(DatabaseErrorKind::UniqueViolation)
+                | Some(DatabaseErrorKind::ForeignKeyViolation) => StatusCode::CONFLICT,
+                Some(DatabaseErrorKind::NotNullViolation)
+                | Some(DatabaseErrorKind::CheckViolation) => StatusCode::BAD_REQUEST,
+                Some(DatabaseErrorKind::Connection)
+                | Some(DatabaseErrorKind::Timeout) => StatusCode::SERVICE_UNAVAILABLE,
+                Some(_) | None => StatusCode::INTERNAL_SERVER_ERROR,
+            },
         }
     }
 
     fn error_response(&self) -> HttpResponse {
         let detail = match self {
-            Self::InternalError(_) => "Internal server error".to_string(),
+            Self::Framework(_) => "Internal server error".to_string(),
             other => other.to_string(),
         };
         HttpResponse::build(self.status_code())
@@ -72,10 +81,12 @@ impl ResponseError for AppError {
 
 ## Rules
 
-- **NEVER** return raw error messages from `InternalError` to clients — always use a generic message
+- **NEVER** expose raw framework or database diagnostics to clients — use a generic message for internal failures
 - **NEVER** construct HTTP responses inside service methods
 - **ALWAYS** define `AppError` once per project, not per app
 - Services use `AppError` variants; views return `Result<T, AppError>`
+- In 0.4.x, preserve repository-owned framework errors with a named `#[from] reinhardt::Error` variant; do not expose `anyhow::Error` in application/framework boundaries
+- Match portable `database_kind()` categories first. Treat optional vendor codes as diagnostics, not cross-database control flow
 - Conversion traits (`From<OrmError>`, `From<AuthError>`) centralize ORM/auth error mapping
 
 ## Testing Error Mapping
