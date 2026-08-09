@@ -33,6 +33,7 @@ Specialized agent for reviewing reinhardt-web application code against project c
 ### Dependencies
 
 - [ ] No `reinhardt-test = { workspace = true }` in functional crate `[dev-dependencies]`
+- [ ] **(0.4.x)** No framework-facing or public API exposes `anyhow::Error`; preserve Reinhardt-owned errors and named application variants (application binaries may still use `anyhow` internally)
 - [ ] Delion plugins depend on `reinhardt` facade, not `reinhardt-dentdelion` directly
 - [ ] No circular dependency chains
 
@@ -72,6 +73,7 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] One-call top-level free helpers under app `server/` modules are inlined or justified by a reusable domain boundary, genuinely complex behavior, or expected additional call sites
 - [ ] User-facing forms and write DTOs do not ask for raw FK primary keys such as `Project ID` when a representative `title`, `name`, or `slug` can be resolved server-side
 - [ ] Error responses are consistent
+- [ ] **(0.4.x)** Database response mapping matches portable `database_kind()` categories and sanitizes internal diagnostics; vendor codes are not primary control flow
 - [ ] Route names are unique across the application (duplicates cause startup failure)
 - [ ] Consider `url-resolver` feature for type-safe URL resolution **(0.1.x only — removed in 0.2.x)**
 - [ ] **(0.2.x)** No usage of removed `#[url_patterns]` macro — use `#[routes]` instead
