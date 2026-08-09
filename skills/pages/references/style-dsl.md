@@ -7,7 +7,7 @@ emitting one static stylesheet. Use the canonical envelope
 ## Definition and Use
 
 ```rust
-use reinhardt_pages::{CssColor, page, style, style_def};
+use reinhardt::pages::{CssColor, page, style, style_def};
 
 #[style_def]
 static STYLES: CardStyles = style! {

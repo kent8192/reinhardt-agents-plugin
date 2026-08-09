@@ -136,7 +136,7 @@ definition into a generated static stylesheet and typed class/variable
 helpers. Keep the complete definition in a static item:
 
 ```rust
-use reinhardt_pages::{page, style, style_def, CssColor};
+use reinhardt::pages::{page, style, style_def, CssColor};
 
 #[style_def]
 static STYLES: CardStyles = style! {
