@@ -92,7 +92,7 @@ Provider functions return `FactoryOutput<K, T>`, where `K` is the dependency
 identity and callers consume the value as `Depends<K, T>`.
 
 ```rust
-use reinhardt::di::{Depends, FactoryOutput, injectable, injectable_key};
+use reinhardt::di::{KeyedDepends, KeyedFactoryOutput, injectable, injectable_key};
 
 #[injectable_key]
 pub struct NovelGenerationServiceKey;
@@ -277,6 +277,7 @@ If you need two providers for the same underlying value type, use
 
 ```rust
 use reinhardt::di::{KeyedDepends, KeyedFactoryOutput, injectable, injectable_key};
+use reinhardt_core::use_inject;
 
 // BAD: both providers identify as DatabaseConnection.
 #[injectable(scope = "singleton")]
@@ -474,16 +475,16 @@ pub struct AiProviderRegistryKey;
 #[injectable(scope = "singleton")]
 async fn create_ai_provider_registry(
     #[inject] settings: AiSettings,
-) -> FactoryOutput<AiProviderRegistryKey, ProviderRegistry> {
-    FactoryOutput::new(ProviderRegistry::from_settings(&settings))
+) -> KeyedFactoryOutput<AiProviderRegistryKey, ProviderRegistry> {
+    KeyedFactoryOutput::new(ProviderRegistry::from_settings(&settings))
 }
 
 #[server_fn]
 pub async fn generate_chapter(
     project_id: Uuid,
     input: GenerateChapterRequest,
-    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
-    #[inject] providers: Depends<AiProviderRegistryKey, ProviderRegistry>,
+    #[inject] db: KeyedDepends<PrimaryDatabase, DatabaseConnection>,
+    #[inject] providers: KeyedDepends<AiProviderRegistryKey, ProviderRegistry>,
 ) -> Result<ChapterResponse, ServerFnError> {
     input.validate()?;
 
@@ -526,9 +527,9 @@ body is replaced by the WASM client stub.
 #[injectable(scope = "request")]
 pub struct ManuscriptService {
     #[inject]
-    db: Depends<PrimaryDatabase, DatabaseConnection>,
+    db: KeyedDepends<PrimaryDatabase, DatabaseConnection>,
     #[inject]
-    providers: Depends<AiProviderRegistryKey, ProviderRegistry>,
+    providers: KeyedDepends<AiProviderRegistryKey, ProviderRegistry>,
 }
 
 impl ManuscriptService {

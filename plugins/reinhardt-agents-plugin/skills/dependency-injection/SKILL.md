@@ -42,10 +42,10 @@ Guide developers through DI configuration using reinhardt-di, including service 
 - Custom injection logic requires `#[async_trait] impl Injectable` (method is `inject`, not `resolve`)
 - Prefer `#[injectable]` for registering provider functions and injectable structs (async, explicit scope, auto-registered)
 - `#[injectable_factory]` is a deprecated 0.2 compatibility alias in 0.3.x — do not use it in new code
-- **(0.3.x)** Use `#[injectable_key]` plus `FactoryOutput<K, T>` for legacy provider functions; the key type is the provider identity
-- **(0.3.x)** Consume legacy keyed provider outputs with `Depends<K, T>`; remove old `DependsResult` / `DependsOption` sugar aliases and deleted `Injected<T>` wrappers
+- **(0.3.x)** Use `#[injectable_key]` plus `FactoryOutput<K, T>` for provider functions; the key type is the provider identity
+- **(0.3.x)** Consume keyed provider outputs with `Depends<K, T>`; remove old `DependsResult` / `DependsOption` sugar aliases and deleted `Injected<T>` wrappers
 - **(0.4.x)** Return direct `T` from a self-keyed provider and inject it as direct `T` or `Depends<T>` when the wrapper is useful. Explicit keys use `KeyedFactoryOutput<K, T>` and `KeyedDepends<K, T>`.
-- **(0.4.x)** `FactoryOutput<K, T>` is a compatibility alias, not the preferred explicit-key spelling; do not introduce new `Depends<K, T>` uses outside a 0.3 migration.
+- **(0.4.x)** `FactoryOutput<K, T>` is a compatibility alias, not the preferred explicit-key spelling; reserve `Depends<K, T>` for projects that target 0.3.x.
 - Treat DI as common dependency injection for readability and swappability, not as an abstraction layer for every use case
 - DI-ify dependencies reused across multiple endpoints: settings, provider factories/registries, shared DB accessors, job queues, event publishers, storage adapters, and external provider adapters
 - For 0.4 durable jobs, enable `tasks-durable` and `di`; treat `SharedDurableQueue` and `DurableQueueKey` as framework-managed, not app `#[injectable]` provider output. Use an app-owned wrapper/key for app-level DI until the framework exposes a durable-queue registration. For explicit application keys, use `KeyedFactoryOutput<K, T>` and `KeyedDepends<K, T>`; `FactoryOutput<K, T>` and `Depends<K, T>` are pre-0.4 forms.
