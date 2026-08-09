@@ -233,10 +233,13 @@ If the result affects app state, prefer `Action` or `Resource` instead.
 |------|-------------|
 | `use_debug_value` | Custom label in dev tools (requires `debug-hooks` feature) |
 
-## Resource (WASM and native SSR)
+## Resource (WASM and native SSR, 0.4.x)
 
 Async data loading with reactive dependencies. The same hook can be used in
 shared Pages code on browser WASM and during native SSR:
+
+For 0.1.x through 0.3.x, keep `use_resource` behind `#[cfg(wasm)]`; native SSR
+resource execution is a 0.4.x capability.
 
 ```rust
 let user_id = Signal::new(1);
