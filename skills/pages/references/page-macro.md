@@ -201,10 +201,12 @@ button { disabled: true, "Submit" }
 
 ## Event Handlers
 
-Events use `@event: handler` syntax. Handlers are auto-handled (active on WASM,
-no-op on native). In 0.4.x, standard intrinsic names select their exact
-catalogued payload type; see [the typed events reference](events.md) for the
-complete contract and native test fixtures.
+Events use `@event: handler` syntax. On WASM, handlers attach to browser events.
+In 0.4.x native component tests, `EventFixture::dispatch` invokes intrinsic
+handlers and `Screen::settle()` drains their work. Standard intrinsic names
+select their exact catalogued payload type; see
+[the typed events reference](events.md) for the complete contract and native
+test fixtures.
 
 ### Mouse Events
 
