@@ -1,6 +1,6 @@
 ---
 name: pages
-description: Use when building WASM frontend pages with reinhardt-pages - covers page!/head!/form! macros, reactive hooks (Signal/Effect/useState), i18n, routing, SSR/hydration, server functions, and API client
+description: Use when building WASM frontend pages with reinhardt-pages - covers page!/head!/form! macros, reactive hooks (Signal/Effect/useState), query caching, i18n, routing, SSR/hydration, server functions, and API client
 versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.x"]
 ---
 
@@ -14,7 +14,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - User works with `page!`, `head!`, `form!` macros or `#[server_fn]`
 - User sets up reactive state with Signal, Effect, Memo, or hooks
 - User configures client-side routing, SSR, or hydration
-- User mentions: "page", "head", "form", "server_fn", "Signal", "useState", "useEffect", "watch", "i18n", "translation", "locale", "t!", "SSR", "hydration", "WASM", "frontend", "router", "ApiQuerySet", "Table", "prelude", "component"
+- User mentions: "page", "head", "form", "server_fn", "Signal", "useState", "useEffect", "use_query", "use_mutation", "QueryKey", "cache", "invalidation", "watch", "i18n", "translation", "locale", "t!", "SSR", "hydration", "WASM", "frontend", "router", "ApiQuerySet", "Table", "prelude", "component"
 
 ## Workflow
 
@@ -35,6 +35,11 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 2. **Add Server Function** — read `references/head-form-macros.md` (`#[server_fn]` section)
 3. **Embed in Page** — read `references/page-macro.md`
 4. **Test** — read `references/testing-guide.md`
+
+### Using the Query Cache (0.4.x)
+
+1. **Choose Stable Keys and Policies** — read `references/query-cache.md`
+2. **Test Cache Behavior** — read the query-cache section in `references/testing-guide.md`
 
 ## Important Rules
 
@@ -62,9 +67,9 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - Keep Pages app `services/` modules focused on injectable keys, provider functions, and service structs/functions; put prompt builders, provider adapters, parsers, converters, repository/database internals, and narrow private helpers under app-local `server/` modules
 - Since 0.2.x, reactive expressions in `page!` are auto-wrapped — explicit `Page::reactive(...)` is no longer needed
 - Since 0.2.x, `use_effect`/`use_memo`/`use_callback` take explicit dependency arrays
-- Use `use_action` for async mutations, `use_resource` for async reads or derived text, and `use_callback` / `use_callback_with` for event handlers; keep `spawn_local` as an escape hatch for low-level browser integration only
-- Use `use_query` and a stable `QueryKey` for app-wide keyed reads that should deduplicate, cache, poll, or be invalidated by `use_mutation(...).invalidates(query_key)`. `use_resource` remains the local component-scoped read primitive.
-- `#[server_fn]` generates a marker-module `key(...)` helper for canonical JSON arguments; use it for query identity instead of embedding raw arguments in hydration IDs. Request-extractor or `#[inject]` server functions skip native SSR prefetch.
+- Use `use_action` for component-local async mutations, `use_resource` for component-local async reads or derived text, and `use_callback` / `use_callback_with` for event handlers; keep `spawn_local` as an escape hatch for low-level browser integration only
+- **(0.4.x)** Use `use_query` and a stable `QueryKey` for app-wide keyed reads that should deduplicate, cache, poll, or be invalidated by `use_mutation(...).invalidates(query_key)`. `use_resource` remains the local component-scoped read primitive.
+- **(0.4.x)** `#[server_fn]` generates a marker-module `key(...)` helper for canonical JSON arguments; use it for query identity instead of embedding raw arguments in hydration IDs. Request-extractor or `#[inject]` server functions skip native SSR prefetch.
 - In 0.3.x, use `use_resource(fetcher, deps)` for both mount-only and dependency-driven resources; replace `create_resource*`
 - In 0.3.x, replace `use_effect_event*` with `use_callback*` or `.get_untracked()` inside the effect
 - Route internal button-triggered redirects through `reinhardt::pages::navigate(..., NavigationType::Push)` or the current router handle API; use `window.location.set_href` only for external URLs or hard-navigation fallbacks
