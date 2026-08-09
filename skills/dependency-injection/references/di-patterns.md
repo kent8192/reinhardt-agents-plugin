@@ -75,15 +75,17 @@ pub async fn summarize(
 
 The 0.4 names are intentional: `KeyedFactoryOutput<K, T>` pairs with
 `KeyedDepends<K, T>`, while `Depends<T>` is the self-keyed wrapper.
-`FactoryOutput<K, T>` remains a deprecated compatibility alias; do not add new
-`Depends<K, T>` uses except in a 0.3 migration.
+In 0.4.x, `FactoryOutput<K, T>` is a deprecated compatibility alias and new
+code uses the `Keyed*` wrappers. Projects targeting 0.3.x use the native 0.3
+contract documented below.
 
-## Provider Function Compatibility
+## Provider Contract (0.3.x)
 
-### Legacy 0.3.x Approach: `#[injectable]` + Keyed Providers
+### `#[injectable]` with Keyed Providers
 
-The following section documents the pre-0.4 spelling for migration work. New
-0.4 code should use the contract above.
+The following section is the normal provider contract for projects targeting
+0.3.x. During a 0.3-to-0.4 migration, compare it with the current contract
+above.
 
 In 0.3.x, `#[injectable]` is the recommended macro for provider functions.
 Provider functions return `FactoryOutput<K, T>`, where `K` is the dependency
@@ -124,7 +126,7 @@ pub async fn generate_novel(
 }
 ```
 
-### Rules for Legacy 0.3.x Provider Functions
+### Rules for 0.3.x Provider Functions
 
 - Function **MUST** be async
 - Function **MUST** have an explicit `FactoryOutput<K, T>` return type
@@ -208,16 +210,16 @@ settings, storage, queues, providers, or another app service, prefer an
 explicit keyed service dependency:
 
 ```rust
-use reinhardt::di::{Depends, FactoryOutput, injectable, injectable_key};
+use reinhardt::di::{KeyedDepends, KeyedFactoryOutput, injectable, injectable_key};
 use reinhardt::pages::prelude::*;
 
 #[injectable_key]
 pub struct WritingJobServiceKey;
 
 pub struct WritingJobService {
-    db: Depends<PrimaryDatabase, DatabaseConnection>,
-    queue: Depends<WritingQueueKey, WritingQueue>,
-    storage: Depends<SourceStorageKey, SourceStorage>,
+    db: KeyedDepends<PrimaryDatabase, DatabaseConnection>,
+    queue: KeyedDepends<WritingQueueKey, WritingQueue>,
+    storage: KeyedDepends<SourceStorageKey, SourceStorage>,
 }
 
 impl WritingJobService {
@@ -239,18 +241,18 @@ impl WritingJobService {
 
 #[injectable(scope = "request")]
 async fn writing_job_service(
-    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
-    #[inject] queue: Depends<WritingQueueKey, WritingQueue>,
-    #[inject] storage: Depends<SourceStorageKey, SourceStorage>,
-) -> FactoryOutput<WritingJobServiceKey, WritingJobService> {
-    FactoryOutput::new(WritingJobService { db, queue, storage })
+    #[inject] db: KeyedDepends<PrimaryDatabase, DatabaseConnection>,
+    #[inject] queue: KeyedDepends<WritingQueueKey, WritingQueue>,
+    #[inject] storage: KeyedDepends<SourceStorageKey, SourceStorage>,
+) -> KeyedFactoryOutput<WritingJobServiceKey, WritingJobService> {
+    KeyedFactoryOutput::new(WritingJobService { db, queue, storage })
 }
 
 #[server_fn]
 pub async fn start_generation(
     project_id: Uuid,
     input: StartGenerationRequest,
-    #[inject] jobs: Depends<WritingJobServiceKey, WritingJobService>,
+    #[inject] jobs: KeyedDepends<WritingJobServiceKey, WritingJobService>,
 ) -> Result<WritingJobInfo, ServerFnError> {
     jobs.start_generation(project_id, input)
         .await
