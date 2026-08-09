@@ -77,7 +77,7 @@ use reinhardt::pages::prelude::*;
 
 // Provide context
 let theme = Signal::new("dark".to_string());
-provide_context("theme", theme.clone());
+provide_context("theme", theme);
 
 // Consume context (anywhere in the subtree)
 let theme: Signal<String> = get_context("theme").unwrap();
@@ -338,20 +338,23 @@ auth_state().update(AuthData {
 });
 ```
 
-## Effect-Based Reactive Rendering
+## Effect-Based Reactive Rendering (0.4.x)
 
 Use `Effect` to reactively re-render when Signals change:
 
 ```rust
 use reinhardt::pages::reactive::Effect;
 
-let path_signal = router::with_router(|r| r.current_path().clone());
+let path_signal = router::with_router(|r| *r.current_path());
 Effect::new(move || {
     let path = path_signal.get();  // Subscribe to path changes
     let page = router::with_router(|r| r.render_current());
     app_el.set_inner_html(&page.render_to_string());
 }); // Remains active until the current ReactiveScope is disposed.
 ```
+
+For 0.1.x through 0.3.x, retain the returned handle for the required lifetime;
+the older runtime uses handle ownership rather than scope-owned arena lifetime.
 
 ## watch Blocks vs Hooks
 

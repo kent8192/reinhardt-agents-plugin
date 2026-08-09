@@ -165,9 +165,11 @@ if let Some((params, _)) = pattern.matches("/users/42/posts/7/") {
 }
 ```
 
-## WASM Entry Point (Recommended Pattern)
+## Legacy WASM Entry Point (0.1.x–0.3.x)
 
-The recommended SPA setup pattern combines router initialization, link interception, and reactive rendering:
+This hand-rolled pattern is retained for older applications. In 0.4.x, use the
+`ClientLauncher` pattern below so the launcher owns reactive scope setup and
+navigation subscriptions.
 
 ```rust
 use wasm_bindgen::prelude::*;
