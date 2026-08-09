@@ -53,23 +53,22 @@ pub async fn transfer_funds(
     Json(data): Json<TransferRequest>,
     #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
 ) -> ViewResult<Response> {
+    db.atomic(async |transaction| {
+        let mut source = Account::objects()
+            .filter_by(Account::field_id().eq(data.from_id))
+            .get_with_db(transaction)
+            .await?;
+        let mut destination = Account::objects()
+            .filter_by(Account::field_id().eq(data.to_id))
+            .get_with_db(transaction)
+            .await?;
 
-    // Begin a transaction
-    let tx = db.begin().await?;
-
-    Account::objects()
-        .filter(Account::id.eq(data.from_id))
-        .update(Account::balance.sub(data.amount))
-        .execute(&tx)
-        .await?;
-
-    Account::objects()
-        .filter(Account::id.eq(data.to_id))
-        .update(Account::balance.add(data.amount))
-        .execute(&tx)
-        .await?;
-
-    tx.commit().await?;
+        source.balance -= data.amount;
+        destination.balance += data.amount;
+        Account::objects().update_with_conn(transaction, &source).await?;
+        Account::objects().update_with_conn(transaction, &destination).await?;
+        Ok(())
+    }).await?;
 
     Ok(Response::new(StatusCode::OK)
         .with_header("Content-Type", "application/json")
@@ -205,10 +204,10 @@ pub async fn create_order(
         .await?
         .ok_or_else(|| AppError::Validation("Cart is empty".into()))?;
 
-    // Create order in a transaction
-    let tx = db.begin().await?;
-    let order = Order::create_from_cart(&cart, state.user_id(), &tx).await?;
-    tx.commit().await?;
+    let order = db.atomic(async |transaction| {
+        let order = Order::from_cart(&cart, state.user_id());
+        Order::objects().create_with_conn(transaction, &order).await
+    }).await?;
 
     // Clear cart from session
     session.remove("cart").await?;
@@ -293,22 +292,17 @@ impl UserRegistrationService {
             return Err(ApiError::conflict("Email already registered"));
         }
 
-        let tx = self.db.begin().await?;
-        let user = User::objects()
-            .create(|u| {
-                u.username = username.to_string();
-                u.email = email.to_string();
-            })
-            .execute(&tx)
-            .await?;
-        AuditLog::objects()
-            .create(|entry| {
-                entry.user_id = user.id;
-                entry.action = "user_registered".to_string();
-            })
-            .execute(&tx)
-            .await?;
-        tx.commit().await?;
+        let user = self.db.atomic(async |transaction| {
+            let candidate = User::pending(username, email);
+            let user = User::objects()
+                .create_with_conn(transaction, &candidate)
+                .await?;
+            let audit = AuditLog::registered(&user);
+            AuditLog::objects()
+                .create_with_conn(transaction, &audit)
+                .await?;
+            Ok(user)
+        }).await?;
 
         self.email.send_welcome(&user).await?;
         Ok(user)
