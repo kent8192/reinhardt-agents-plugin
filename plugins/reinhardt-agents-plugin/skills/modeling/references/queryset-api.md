@@ -216,7 +216,7 @@ checked at compile time:
 
 ```rust
 let posts = Post::objects()
-    .filter(
+    .filter_by(
         Post::rel_author()
             .into_typed()
             .field_email()
