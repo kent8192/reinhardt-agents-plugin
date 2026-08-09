@@ -53,7 +53,7 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] No circular dependency risk
 - [ ] `#[inject]` used correctly in handlers
 - [ ] **(0.4.x)** Self-keyed providers return direct `T` and consumers use `T` or `Depends<T>`; explicit duplicate identities use `KeyedFactoryOutput<K, T>` + `KeyedDepends<K, T>`
-- [ ] **(0.3.x migration only)** `#[injectable_key]` + `FactoryOutput<K, T>` / `Depends<K, T>` is retained only when reviewing legacy code
+- [ ] **(0.3.x)** `#[injectable_key]` + `FactoryOutput<K, T>` / `Depends<K, T>` is the native keyed provider API; use migration wording only during a 0.3-to-0.4 upgrade
 - [ ] No `#[injectable]` or `#[injectable_factory]` for framework-managed types (`reinhardt::*`) — use application-owned wrapper/key types
 - [ ] Prefer `try_unwrap()` over `into_inner()` for non-Clone values wrapped in `Depends<T>` or `KeyedDepends<K, T>`
 - [ ] **(0.4.x)** No new `Depends<K, T>` or `FactoryOutput<K, T>` spelling when the current `Keyed*` wrappers are required; no `DependsResult` / `DependsOption` sugar aliases

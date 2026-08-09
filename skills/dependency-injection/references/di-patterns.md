@@ -45,7 +45,6 @@ async fn request_settings() -> AppSettings {
 pub async fn dashboard(
     #[inject] settings: Depends<AppSettings>,
 ) -> Result<Dashboard, ServerFnError> {
-    let settings = settings.try_unwrap()?;
     render_dashboard(&settings).await
 }
 ```
@@ -59,7 +58,7 @@ use reinhardt::di::{KeyedDepends, KeyedFactoryOutput, injectable, injectable_key
 #[injectable_key]
 pub struct PrimaryLlm;
 
-#[injectable(scope = "singleton")]
+#[injectable(scope = "request")]
 async fn primary_llm(
     #[inject] settings: AppSettings,
 ) -> KeyedFactoryOutput<PrimaryLlm, LlmProvider> {
