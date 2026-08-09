@@ -24,8 +24,8 @@ schema-source mode; model-derived mode may register multiple models. The guard
 owns the temporary backing resource until it is dropped:
 
 ```rust
-use reinhardt_db::backends::types::DatabaseType;
-use reinhardt_testkit::fixtures::TestDatabase;
+use reinhardt::db::backends::types::DatabaseType;
+use reinhardt::test::fixtures::TestDatabase;
 
 let database = TestDatabase::builder()
     .sqlite()
