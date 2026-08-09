@@ -203,10 +203,10 @@ HTML attribute names use the `page!` DSL spelling. Write the HTML `type`
 attribute directly, including when the name is also a Rust keyword:
 
 ```rust
-page!(|| {
+page!({
     input { type: "email", name: "email" }
     button { type: "submit", "Save" }
-})()
+})
 ```
 
 Do not write `r#type:` inside `page!`; the page macro accepts `type:` directly.
