@@ -37,14 +37,16 @@ Guide developers through writing high-quality tests using rstest, AAA pattern, r
 1. Read `references/testcontainers.md` for container setup
 2. Prefer `TestDatabase` for model-derived or migration-derived schemas; choose
    `.sqlite()`, `.sqlite_memory()`, or `.postgres()` deliberately
-3. Select exactly one schema source: `.model::<M>()`, `.migrations::<Provider>()`,
-   or `.migrations_from_dir(path)`
+3. Select exactly one schema-source mode: model-derived mode may chain multiple
+   `.model::<M>()` calls, while migration-derived mode uses either
+   `.migrations::<Provider>()` or `.migrations_from_dir(path)`
 4. Use `.with_orm_global()` / `.with_di_context()` only when the test needs
    those process/context integrations; SQLite memory cannot initialize the ORM
    global or DI context
 5. Use rstest fixtures for PostgreSQL/MySQL/Redis containers when a real service
    is required
-6. Ensure Docker Desktop is running
+6. Ensure Docker Desktop is running only for `.postgres()` or other
+   TestContainers-backed services
 7. Use `#[serial(db)]` if tests share global database state
 
 ### 0.3 Migration Regression Tests
