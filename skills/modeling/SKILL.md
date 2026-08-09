@@ -34,7 +34,9 @@ Guide developers through model definition, database operations, and migration ma
 
 1. Read `references/queryset-api.md` for the `Model::objects()` API
 2. Use `Model::objects()` for application-level CRUD (recommended)
-3. Chain methods: `filter()`, `order_by()`, `limit()`, typed `select_related()` / `prefetch_related()`, etc.
+3. Chain methods such as `filter()`, `order_by()`, and `limit()`; in 0.4.x use
+   typed `select_related()` / `prefetch_related()`, while 0.1.x through 0.3.x
+   use their string-path forms.
 4. Execute with `.all().await`, `.get().await`, `.count().await`, `.exists().await`
 5. **(0.4.x)** For model-to-model traversal, use the generated `rel_*` accessor and call
    `.into_typed()` before typed field filters or nested relation traversal; keep
