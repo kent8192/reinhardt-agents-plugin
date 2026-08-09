@@ -121,6 +121,18 @@ pub source_system_record_id: String, // nosemgrep: reinhardt-no-scalar-fk-id -- 
 Never use the suppression for a Reinhardt relationship; replace that scalar with
 the appropriate `#[rel(...)]` field instead.
 
+### Generated Foreign-Key ID Accessors (0.4.x)
+
+ForeignKey and OneToOne fields generate a consistent `*_id()` method on native
+and WASM targets. It returns the related primary key by value:
+
+```rust
+let question_id = choice.question_id();
+```
+
+Do not write `*choice.question_id()` or maintain separate target-specific
+accessor code. This is a source-compatible migration point for shared modules.
+
 ## Typed Generated Columns (0.4.x)
 
 **Source:** [original PR #5586](https://github.com/kent8192/reinhardt-web/pull/5586)
