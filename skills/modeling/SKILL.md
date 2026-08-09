@@ -36,9 +36,9 @@ Guide developers through model definition, database operations, and migration ma
 2. Use `Model::objects()` for application-level CRUD (recommended)
 3. Chain methods: `filter()`, `order_by()`, `limit()`, typed `select_related()` / `prefetch_related()`, etc.
 4. Execute with `.all().await`, `.get().await`, `.count().await`, `.exists().await`
-5. For model-to-model traversal, use the generated `rel_*` accessor and call
+5. **(0.4.x)** For model-to-model traversal, use the generated `rel_*` accessor and call
    `.into_typed()` before typed field filters or nested relation traversal; keep
-   string relation paths only for compatibility code.
+   string relation paths for 0.1.x through 0.3.x and other compatibility code.
 
 ### SQLAlchemy-Style Operations
 
