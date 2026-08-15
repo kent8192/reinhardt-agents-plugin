@@ -14,13 +14,9 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - User works with `page!`, `head!`, `form!` macros or `#[server_fn]`
 - User sets up reactive state with Signal, Effect, Memo, or hooks
 - User configures client-side routing, SSR, or hydration
-<<<<<<< HEAD
-- User mentions: "page", "head", "form", "server_fn", "server_fnset", "Signal", "useState", "useEffect", "watch", "i18n", "translation", "locale", "t!", "SSR", "hydration", "WASM", "frontend", "router", "ApiQuerySet", "Table", "prelude", "component"
-=======
 - User builds nested layout routes with `#[layout]` and `Outlet`
 - User uses async SSR, `SsrStream`, or native resource hydration
-- User mentions: "page", "head", "form", "server_fn", "bind:", "Signal", "useState", "useEffect", "watch", "EventFixture", "i18n", "translation", "locale", "t!", "SSR", "hydration", "SsrStream", "resource_timeout", "WASM", "frontend", "router", "ClientRouter", "Outlet", "ApiQuerySet", "Table", "prelude", "component", "layout"
->>>>>>> origin/main
+- User mentions: "page", "head", "form", "server_fn", "server_fnset", "bind:", "Signal", "useState", "useEffect", "watch", "EventFixture", "i18n", "translation", "locale", "t!", "SSR", "hydration", "SsrStream", "resource_timeout", "WASM", "frontend", "router", "ClientRouter", "Outlet", "ApiQuerySet", "Table", "prelude", "component", "layout"
 
 ## Workflow
 
@@ -86,11 +82,8 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - Test service-boundary domain rules directly when a service owns lifecycle, validation, state-transition, or orchestration policy
 - Use 0.3 Pages primitives directly where relevant: `#[wasm_server_api]`, `Portal` / `mount_portal`, `ActivityBoundary`, `ViewTransitionBoundary`, and `FieldArray`
 - Keep shared app code cfg-clean across native and `wasm32-unknown-unknown`; rely on documented inert stubs instead of broad call-site `#[cfg]` workarounds
-<<<<<<< HEAD
 - In 0.4.x, group existing server functions with `#[server_fnset]` and register the set explicitly. For model-backed sets, require wire DTO mappings, a typed unique lookup, and an explicit policy; do not treat them as REST ViewSets
-=======
 - In 0.4.x, use `bind:` for signal-owned text, checkbox, radio, number, textarea, and select controls; keep uncontrolled controls event-owned, and use `number(value, error)` only when rejected numeric text must be surfaced
->>>>>>> origin/main
 
 ## Cross-Domain References
 
@@ -107,18 +100,10 @@ For the latest API definitions:
 1. Read `reinhardt/crates/reinhardt-pages/macros/src/lib.rs` for macro definitions (page!, head!, form!, #[component], #[layout], #[server_fn])
 2. Read `reinhardt/crates/reinhardt-pages/src/prelude.rs` for exported types
 3. Read `reinhardt/crates/reinhardt-pages/src/reactive.rs` for reactive system
-<<<<<<< HEAD
-4. Read `reinhardt/crates/reinhardt-pages/src/router.rs` for routing
-5. Read `reinhardt/crates/reinhardt-pages/src/api.rs` for API client
-6. Read `reinhardt/crates/reinhardt-pages/src/tables.rs` for table component
-7. Read `reinhardt/crates/reinhardt-pages/src/testing.rs` for test utilities
-8. Read `reinhardt/crates/reinhardt-pages/src/i18n.rs` for reactive Pages i18n and SSR/hydration contracts
-9. Read `reinhardt/crates/reinhardt-pages/docs/server_fn_macro.md` for typed server function sets
-=======
 4. Read `reinhardt/crates/reinhardt-pages/src/router.rs` for routing, nested layout trees, and `Outlet`
 5. Read `reinhardt/crates/reinhardt-pages/src/ssr/renderer.rs` for async SSR, `SsrStream`, resource resolution, and hydration state
 6. Read `reinhardt/crates/reinhardt-pages/src/api.rs` for API client
 7. Read `reinhardt/crates/reinhardt-pages/src/tables.rs` for table component
 8. Read `reinhardt/crates/reinhardt-pages/src/testing.rs` for test utilities
 9. Read `reinhardt/crates/reinhardt-pages/src/i18n.rs` for reactive Pages i18n and SSR/hydration contracts
->>>>>>> origin/main
+10. Read `reinhardt/crates/reinhardt-pages/docs/server_fn_macro.md` for typed server function sets
