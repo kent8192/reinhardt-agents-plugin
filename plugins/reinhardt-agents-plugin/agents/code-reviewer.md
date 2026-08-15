@@ -112,6 +112,7 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] Assertions are strict (`assert_eq!` preferred)
 - [ ] Fixtures used for shared setup
 - [ ] `#[serial]` used for global state tests
+- [ ] **(0.4.x)** Model/database tests prefer `TestDatabase` with exactly one schema-source mode, allow multiple `.model::<M>()` registrations in model-derived mode, and keep the guard alive through the test
 - [ ] DI override tests (`with_di_overrides!`, `register_override`) depend on the `testing` feature; keep `#[serial(di_registry)]` only for 0.1.x registry overrides or other global state because 0.2.x / 0.3.x use per-context registry isolation
 
 ### Documentation & Style
