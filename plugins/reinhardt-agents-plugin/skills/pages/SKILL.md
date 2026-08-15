@@ -14,13 +14,9 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - User works with `page!`, `head!`, `form!` macros or `#[server_fn]`
 - User sets up reactive state with Signal, Effect, Memo, or hooks
 - User configures client-side routing, SSR, or hydration
-<<<<<<< HEAD
-- User mentions: "page", "head", "form", "server_fn", "Signal", "useState", "useEffect", "watch", "EventFixture", "i18n", "translation", "locale", "t!", "SSR", "hydration", "WASM", "frontend", "router", "ApiQuerySet", "Table", "prelude", "component"
-=======
 - User builds nested layout routes with `#[layout]` and `Outlet`
 - User uses async SSR, `SsrStream`, or native resource hydration
-- User mentions: "page", "head", "form", "server_fn", "bind:", "Signal", "useState", "useEffect", "watch", "i18n", "translation", "locale", "t!", "SSR", "hydration", "SsrStream", "resource_timeout", "WASM", "frontend", "router", "ClientRouter", "Outlet", "ApiQuerySet", "Table", "prelude", "component", "layout"
->>>>>>> origin/main
+- User mentions: "page", "head", "form", "server_fn", "bind:", "Signal", "useState", "useEffect", "watch", "EventFixture", "i18n", "translation", "locale", "t!", "SSR", "hydration", "SsrStream", "resource_timeout", "WASM", "frontend", "router", "ClientRouter", "Outlet", "ApiQuerySet", "Table", "prelude", "component", "layout"
 
 ## Workflow
 

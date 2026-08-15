@@ -12,11 +12,7 @@ Guide developers through writing high-quality tests using rstest, AAA pattern, r
 
 - User wants to write tests for reinhardt code
 - User asks about testing strategies or patterns
-<<<<<<< HEAD
-- User mentions: "test", "fixture", "EventFixture", "Screen::settle", "TestContainers", "assert", "rstest", "integration test", "unit test", "ClientForm", "DTO form test", "form validation test"
-=======
-- User mentions: "test", "fixture", "TestDatabase", "TestContainers", "assert", "rstest", "integration test", "unit test", "ClientForm", "DTO form test", "form validation test"
->>>>>>> origin/main
+- User mentions: "test", "fixture", "EventFixture", "Screen::settle", "TestDatabase", "TestContainers", "assert", "rstest", "integration test", "unit test", "ClientForm", "DTO form test", "form validation test"
 
 ## Workflow
 
@@ -108,11 +104,8 @@ is the regression contract from the 0.4.x page fixtures.
 - Add focused regression tests for review-found bugs before broad happy-path expansion
 - In 0.3.x migrations, update stale fixtures that use `AuthUser`, `create_resource*`, `use_effect_event*`, raw `ServerRouter` registration, `DependsResult`, `DependsOption`, `pages.rs`, or `server_urls`
 - When generated `{Model}Info` relation fields change shape, update serializer/browser-test expectations intentionally rather than broadening assertions
-<<<<<<< HEAD
 - **(0.4.x)** Pages event tests use the exact intrinsic payload type, `EventFixture`, and `Screen::settle()` after async or reactive writes; use raw platform events only for explicit escape-hatch coverage
-=======
 - **(0.4.x)** Keep a `TestDatabase` guard alive for the whole test; it owns the temporary backing resource and restores any ORM global/DI context on drop
->>>>>>> origin/main
 
 ## Cross-Domain References
 
