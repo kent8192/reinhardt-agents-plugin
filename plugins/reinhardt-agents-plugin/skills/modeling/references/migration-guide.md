@@ -111,6 +111,37 @@ cargo nextest run --workspace --all-features
 
 > **Note:** There is no `showmigrations` command. Check migration state by reviewing the `migrations/` directory or inspecting the `reinhardt_migrations` table in the database.
 
+## Model Fixture and Seed Commands (0.4.x)
+
+The project `manage` binary provides Django-compatible model data commands when
+the facade `database` feature and a database backend are enabled and migrations
+are available:
+
+```bash
+# Emit machine-readable FixtureRecord JSON to stdout
+cargo run --bin manage dumpdata polls.Question polls.Choice
+
+# Load a fixture transactionally, preserving explicit primary keys
+cargo run --bin manage loaddata fixtures/polls.json
+
+# Run all registered idempotent seed hooks, or selected app labels
+cargo run --bin manage seed
+cargo run --bin manage seed polls
+```
+
+`FixtureRecord` uses `{ model, pk, fields }` with `model` in
+`app_label.ModelName` form. JSON `null` fields that need to remain distinct
+from omitted fields use the `_reinhardt_json_null_fields` extension. `loaddata`
+orders foreign keys, handles many-to-many arrays and binary values, and resets
+sequences after explicit-primary-key inserts. `seed` accepts only registered
+per-app hooks and is idempotent by contract; an unknown requested label is an
+error rather than an invitation to execute arbitrary code.
+
+For test code, use
+`reinhardt_test::fixtures::load_model_fixture_file(path)` after a test database
+schema has been built. Keep fixture files portable and assert that loading is
+transactional when a record violates a constraint.
+
 ## CLI Summary
 
 Reinhardt has **two CLI tools** with different purposes:

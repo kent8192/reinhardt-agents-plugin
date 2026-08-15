@@ -538,8 +538,8 @@ orchestration policy.
 pub async fn generate_scene(
     chapter_id: Uuid,
     input: GenerateSceneRequest,
-    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
-    #[inject] providers: Depends<AiProviderRegistryKey, ProviderRegistry>,
+    #[inject] db: KeyedDepends<PrimaryDatabase, DatabaseConnection>,
+    #[inject] providers: KeyedDepends<AiProviderRegistryKey, ProviderRegistry>,
 ) -> Result<SceneInfo, ServerFnError> {
     input.validate()?;
 
@@ -570,6 +570,31 @@ async fn generate_scene_draft(
 | `endpoint` | String | Auto-generated | Custom endpoint path |
 | `codec` | String | `"json"` | Serialization: `"json"`, `"url"`, `"msgpack"` |
 | `use_inject` | bool | — | **Deprecated** — use inline `#[inject]` on parameters instead |
+
+### Typed Server Function Sets (0.4.x)
+
+Use `#[server_fnset]` to group existing server-function markers without
+changing their codecs, CSRF behavior, extractors, injection, or mock identity.
+Registration remains explicit:
+
+```rust
+#[server_fnset(name = "admin")]
+pub fn admin_fns() -> impl ServerFnSetRegistration {
+    ServerFnSet::new()
+        .server_fn(load_dashboard::marker)
+        .server_fn(export_data::marker)
+}
+
+let router = ServerRouter::new().server_fnset(admin_fns());
+```
+
+Enable `model-server-fnset` only when a model-backed typed POST RPC surface is
+appropriate. Each resource must define separate wire DTO mappings, a typed
+unique lookup, and an explicit policy (`AllowAllPolicy` is the deliberate
+public-access choice). The generated actions are `list`, `retrieve`, `create`,
+`update`, `partial_update`, and `destroy`; custom `#[action]` methods are
+explicit. Model sets are not REST ViewSets and do not generate REST/OpenAPI,
+cursor pagination, bulk actions, composite lookups, or model-to-DTO mapping.
 
 ### Error Handling
 
