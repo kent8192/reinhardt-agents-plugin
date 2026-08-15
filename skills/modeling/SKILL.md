@@ -14,11 +14,7 @@ Guide developers through model definition, database operations, and migration ma
 - User works with QuerySet operations or ORM queries
 - User generates or applies migrations
 - User asks about SQLAlchemy-style queries or sessions
-<<<<<<< HEAD
-- User mentions: "model", "table", "migration", "QuerySet", "field", "relation", "ForeignKey", "ManyToMany", "database", "schema", "objects", "Manager", "Session", "select", "migrate", "makemigrations", "dumpdata", "loaddata", "seed"
-=======
-- User mentions: "model", "table", "migration", "QuerySet", "field", "relation", "ForeignKey", "ManyToMany", "Json<T>", "database", "schema", "objects", "Manager", "Session", "select", "migrate", "makemigrations"
->>>>>>> origin/main
+- User mentions: "model", "table", "migration", "QuerySet", "field", "relation", "ForeignKey", "ManyToMany", "Json<T>", "database", "schema", "objects", "Manager", "Session", "select", "migrate", "makemigrations", "dumpdata", "loaddata", "seed"
 
 ## Workflow
 
