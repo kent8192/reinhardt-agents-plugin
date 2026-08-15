@@ -1,6 +1,57 @@
 # Routing, SSR & Hydration Reference
 
-## Client-Side Router
+For 0.4.x applications, use `reinhardt_urls::routers::ClientRouter` and its
+`routes` builder for route trees. The older `reinhardt::pages::router::Router`
+examples below are retained as a migration reference for pre-0.4.x code.
+
+## Nested Layout Routes (0.4.x)
+
+`ClientRouter::routes` composes route-backed layouts and leaf components. A
+`#[layout]` function receives `Path` / `Query` extractors plus exactly one plain
+`Outlet`, and returns a `Page`. The layout path is absolute; child component
+paths are relative to that layout scope:
+
+```rust
+use reinhardt::pages::{component, layout, page, Outlet, Page, Path};
+use reinhardt::urls::routers::ClientRouter;
+
+#[layout("/workspaces/{workspace_id}/", name = "workspace-shell")]
+fn workspace_shell(Path(workspace_id): Path<i64>, outlet: Outlet) -> Page {
+    page!({
+        section {
+            h1 { { format!("Workspace {workspace_id}") } }
+            { outlet }
+        }
+    })
+}
+
+#[component("jobs", name = "workspace-jobs")]
+fn workspace_jobs(Path(workspace_id): Path<i64>) -> Page {
+    page!({
+        p { { format!("Jobs for {workspace_id}") } }
+    })
+}
+
+let router = ClientRouter::new().routes(|routes| {
+    routes.layout(workspace_shell, |children| {
+        children.component(workspace_jobs)
+    })
+});
+```
+
+Use `children.index(...)` for the layout's base URL and
+`children.layout(...)` for another nested shell. Child route patterns must not
+repeat the parent prefix, and every layout or leaf route name must be unique
+across the complete tree. Guards and metadata belong on the route tree so
+they apply consistently to inherited layout segments; reverse lookup uses the
+fully composed path.
+
+On browser WASM, `ClientLauncher` keeps a stable layout key while navigating
+between sibling children, so the shell remains mounted and only the `Outlet`
+subtree is replaced. Native and SSR rendering use an inline outlet and render
+the complete route tree for each request.
+
+## Legacy Client-Side Router (0.1.x–0.3.x)
 
 Django-style URL patterns with History API integration.
 
@@ -165,7 +216,7 @@ if let Some((params, _)) = pattern.matches("/users/42/posts/7/") {
 }
 ```
 
-## WASM Entry Point (Recommended Pattern)
+## Legacy WASM Entry Point (0.1.x–0.3.x)
 
 The recommended SPA setup pattern combines router initialization, link interception, and reactive rendering:
 
@@ -204,34 +255,44 @@ pub fn main() -> Result<(), JsValue> {
 }
 ```
 
-## ClientLauncher Lifecycle Hooks (rc.23+)
+## ClientLauncher Lifecycle Hooks (0.4.x)
 
-`ClientLauncher` is a declarative builder that replaces the hand-rolled WASM entry-point pattern (panic hook, router init, history listener, link interception, render Effect). Downstream apps reduce to a single chain:
+`ClientLauncher` is a declarative builder that mounts a `ClientRouter` route
+tree, installs the History API and link interception, and preserves common
+layout scopes during sibling navigation. Downstream apps reduce to a single
+chain:
 
 ```rust
 use reinhardt::pages::app::ClientLauncher;
+use reinhardt::pages::router::ClientRouter;
 
 #[wasm_bindgen(start)]
 pub fn main() -> Result<(), JsValue> {
-    ClientLauncher::new(init_router)
-        .mount("#app")
+    ClientLauncher::new("#app")
+        .router_client(|| {
+            ClientRouter::new().routes(|routes| {
+                routes.layout(workspace_shell, |children| {
+                    children.component(workspace_jobs)
+                })
+            })
+        })
         .intercept_links(true)
         .before_launch(|| {
             state::init_app_state();
         })
-        .after_launch(|| {
+        .after_launch(|_ctx| {
             log!("SPA ready");
         })
         .on_path("/dashboard", |ctx| {
-            // ctx: PathCtx — fires whenever current_path matches exactly
+            // PathCtx — fires whenever the pathname matches exactly.
             connect_dashboard_websocket();
         })
         .on_path_pattern("/users/{id}/", |ctx| {
-            // fires when the pattern matches and bound params change
-            let id = ctx.params.get("id").cloned().unwrap_or_default();
+            // Fires when the pattern matches and bound params change.
+            let id = ctx.params().get("id").cloned().unwrap_or_default();
             log!("entered user {id}");
         })
-        .launch();
+        .launch()?;
     Ok(())
 }
 ```
@@ -240,17 +301,26 @@ Builder surface:
 
 | Method | Purpose |
 |--------|---------|
-| `mount(selector)` | CSS selector of the DOM root |
+| `new(selector)` | CSS selector of the DOM root |
+| `router_client(factory)` | Register the current `ClientRouter` factory |
+| `register_routes_from_inventory()` | Build the client route table from `#[routes]` inventory |
 | `intercept_links(bool)` | Install document-level click handler for `<a href="/...">` (default `true`) |
-| `before_launch(FnOnce)` | Run after panic hook / scheduler, before Router init |
-| `after_launch(FnOnce)` | Run after first mount; navigations triggered here re-render |
+| `before_launch(FnOnce)` | Run after panic hook / scheduler, before router construction |
+| `after_launch(FnOnce)` | Run after first mount with a borrowed `LaunchCtx` |
 | `on_path(path, Fn)` | Subscribe to exact-path matches |
 | `on_path_pattern(pattern, Fn)` | Subscribe to pattern matches with param-diff detection |
-| `launch()` | Runs Phase A (setup) → Phase B (initial mount) → Phase C (persistent `Router::on_navigate` subscriptions) |
+| `launch()` | Runs setup, initial mount, and persistent navigation subscriptions |
 
-Source: PR (#3997). Internal architecture migrated from reactive `Effect` auto-tracking to explicit `Router::on_navigate` callbacks in (#4114).
+`ClientLauncher::new(...)` takes the CSS mount selector; the current 0.4.x
+bootstrap uses `router_client(...)` (or
+`register_routes_from_inventory()`). The legacy `Router` factory form is not a
+0.4.x bootstrap API.
 
-### SPA Link Interception (rc.23 → rc.29 fix)
+The 0.4.x layout-preserving route-tree behavior is covered by reinhardt-web
+PR #5592. The older `Router` lifecycle and link-interception details below are
+historical references from #3997, #4078, #4114, and #4344.
+
+### Legacy SPA Link Interception (rc.23 → rc.29)
 
 `.intercept_links(true)` installs a document-level click listener that walks the DOM from `event.target` up to the enclosing `<a>` and routes internal `href="/..."` links through `Router::push` instead of triggering a full page reload.
 
@@ -260,7 +330,7 @@ Source: PR (#3997). Internal architecture migrated from reactive `Effect` auto-t
 
 Source: (#3997, #4344).
 
-## SPA Navigation Improvements (rc.26+)
+## Legacy ClientLauncher Navigation Improvements (rc.26–0.3.x)
 
 rc.26 restored end-to-end SPA navigation in `ClientLauncher::launch()`: `Router::push` now reliably re-fires the launcher's render pipeline so each route mounts its own view instead of the boot-time view. The fix hoists `current_path` / `current_params` `Signal` clones out of the `with_router(|r| ...)` borrow before subscription, ensuring the launcher tracks both Signals as direct subscribers (#4078).
 

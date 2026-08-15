@@ -57,6 +57,20 @@ Guide developers through writing high-quality tests using rstest, AAA pattern, r
 4. Verify shared `#[dto]` validation on both native and WASM surfaces when the
    request type crosses the client/server boundary.
 
+### Pages Layout Route Tests (0.4.x)
+
+1. Build a native `ClientRouter::routes` fixture with a `#[layout]` shell and
+   `Outlet`; assert composed paths, inherited parameters, index routes, reverse
+   lookup, and unique layout/leaf names.
+2. Add browser-WASM navigation coverage for sibling children: the shared layout
+   must remain mounted while only the outlet subtree is remounted.
+
+### Pages Macro Fixture Tests (0.4.x)
+
+Compile and render `page!` fixtures with direct HTML `type:` attributes on
+inputs and buttons. Do not use `r#type:` inside the macro DSL; the direct form
+is the regression contract from the 0.4.x page fixtures.
+
 ### Pages Async SSR and Resource Tests (0.4.x)
 
 1. Use async native tests for `SsrRenderer`; cover streamed
