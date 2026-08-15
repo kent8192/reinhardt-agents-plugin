@@ -657,6 +657,23 @@ from being emitted were fixed in #4293:
 No source-level changes are required to pick up the marker — rebuilding
 on rc.27+ with the `msw` feature enabled is sufficient.
 
+### `#[server_fnset]` (0.4.x)
+
+**Crate:** `reinhardt-pages/macros`
+
+Name a typed chain of existing server-function markers:
+
+```rust
+#[server_fnset(name = "admin")]
+pub fn admin_fns() -> impl ServerFnSetRegistration {
+    ServerFnSet::new().server_fn(load_dashboard::marker)
+}
+```
+
+Register the result with `ServerRouter::server_fnset`. Set names must be one
+safe path segment. The macro preserves each member's codec, CSRF, extractors,
+injection, metadata, and mock identity; it does not perform global discovery.
+
 ---
 
 ## gRPC & GraphQL

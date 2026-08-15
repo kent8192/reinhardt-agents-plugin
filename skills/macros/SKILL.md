@@ -12,7 +12,7 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 
 - User uses or asks about any `#[attribute]` or `derive()` macro
 - User defines models, views, routes, or injectable services
-- User mentions: "macro", "#[model]", "#[user]", "#[inject]", "#[get]", "#[post]", "#[routes]", "#[component]", "#[layout]", "#[settings]", "#[admin]", "#[app_config]", "#[hook]", "guard!", "installed_apps!", "path!", "#[derive(Schema)]", "#[derive(Model)]", "#[derive(Validate)]", "#[server_fn]", "#[wasm_server_api]", "#[permission_required]", "#[injectable]", "#[injectable_key]", "#[use_inject]"
+- User mentions: "macro", "#[model]", "#[user]", "#[inject]", "#[get]", "#[post]", "#[routes]", "#[component]", "#[layout]", "#[settings]", "#[admin]", "#[app_config]", "#[hook]", "guard!", "installed_apps!", "path!", "#[derive(Schema)]", "#[derive(Model)]", "#[derive(Validate)]", "#[server_fn]", "#[server_fnset]", "#[wasm_server_api]", "#[permission_required]", "#[injectable]", "#[injectable_key]", "#[use_inject]"
 
 ## Workflow
 
@@ -40,6 +40,8 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 5. Use `#[component]` for route-backed Pages components
 6. Use `#[layout]` in 0.4.x for a route-backed Pages shell that accepts one
    plain `Outlet`; register its relative children with `ClientRouter::routes`
+7. In 0.4.x, use `#[server_fnset]` for explicitly registered typed
+   server-function groups
 
 > **0.2.x note:** `#[url_patterns]` is removed in 0.2.x — use `#[routes]` for all URL registration.
 
@@ -80,6 +82,7 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 - `#[inject(cache = false)]` creates a fresh instance per injection (no caching)
 - `#[hook(on = runserver)]` requires a unit struct (no fields, no generics) implementing `RunserverHook`
 - `#[model]` uses UUID v7 (`Uuid::now_v7()`) for `Option<Uuid>` primary keys — better index performance
+- `#[server_fnset]` groups markers but does not provide global discovery or turn model RPCs into REST ViewSets
 - In 0.4.x, `#[layout]` functions return `Page`, are synchronous and
   non-generic, accept `Path` / `Query` extractors plus exactly one plain
   `Outlet`, and use a globally unique `name = "..."` route name
