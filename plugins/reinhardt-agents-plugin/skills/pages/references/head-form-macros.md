@@ -27,6 +27,7 @@ let html = my_head.to_html();
 | Element | Attributes | Example |
 |---------|-----------|---------|
 | `title` | Text content | `title { "Page Title" }` |
+| `base` | `href` | `base { href: "/app/" }` |
 | `meta` | `name`, `content`, `property`, `charset`, `http_equiv` | `meta { name: "description", content: "..." }` |
 | `link` | `rel`, `href`, `type`, `as_`, `integrity`, `crossorigin`, `media`, `sizes` | `link { rel: "stylesheet", href: "..." }` |
 | `script` | `src`, `type`, `defer`, `async_`, `integrity`, `crossorigin`, `nonce`, text content | `script { src: "...", defer }` |
@@ -40,6 +41,37 @@ Use `resolve_static()` for hashed static file URLs (collectstatic support):
 link { rel: "stylesheet", href: resolve_static("css/main.css") }
 // Resolves to: /static/css/main.abc123.css
 ```
+
+### Lifecycle-Managed Head (0.4.x)
+
+Attach structural head values with `#head`, `Page::with_head`, or
+`RouteMetadata::with_head`. Use retained hooks only for reactive contributions:
+
+```rust
+let metadata = RouteMetadata::new().with_head(head!(|| {
+    base { href: "/app/" }
+    title { "Workspace" }
+    meta { name: "description", content: "Workspace" }
+}));
+
+use_page_title(
+    {
+        let project = project.clone();
+        move || format!("{} - Workspace", project.get().name)
+    },
+    deps![project.clone()],
+);
+```
+
+`use_head` and `use_page_title` require explicit `deps![...]`; their
+registrations disappear with the owning reactive scope. Parent/layout
+contributions remain while a child is active, and dropping the child reveals
+the previous singleton `title` or `base` value.
+
+Buffered/streaming SSR, hydration, and browser mounting use the same ownership
+model. Browser reconciliation manages only `data-reinhardt-head` nodes, leaving
+third-party nodes alone. Make route-scoped scripts idempotent: removing their
+DOM node cannot undo side effects that already ran.
 
 ## form! Macro
 

@@ -458,6 +458,12 @@ let mut renderer = SsrRenderer::new();
 let html = renderer.render_page_with_view_head_to_string(page).await;
 ```
 
+In 0.4.x, `Head` is lifecycle-managed across SSR, hydration, and SPA
+navigation. Route metadata may contribute with `RouteMetadata::with_head`;
+retained `use_head` / `use_page_title` hooks require `deps![...]`. Hydration
+adopts framework-marked nodes, and browser reconciliation touches only
+`data-reinhardt-head` nodes.
+
 ## Hydration
 
 Client-side activation of server-rendered HTML.
