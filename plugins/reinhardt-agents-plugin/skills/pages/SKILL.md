@@ -16,7 +16,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - User configures client-side routing, SSR, or hydration
 - User builds nested layout routes with `#[layout]` and `Outlet`
 - User uses async SSR, `SsrStream`, or native resource hydration
-- User mentions: "page", "head", "form", "server_fn", "bind:", "Signal", "useState", "useEffect", "watch", "i18n", "translation", "locale", "t!", "SSR", "hydration", "SsrStream", "resource_timeout", "WASM", "frontend", "router", "ClientRouter", "Outlet", "ApiQuerySet", "Table", "prelude", "component", "layout"
+- User mentions: "page", "head", "form", "server_fn", "bind:", "Signal", "useState", "useEffect", "watch", "EventFixture", "i18n", "translation", "locale", "t!", "SSR", "hydration", "SsrStream", "resource_timeout", "WASM", "frontend", "router", "ClientRouter", "Outlet", "ApiQuerySet", "Table", "prelude", "component", "layout"
 
 ## Workflow
 
@@ -47,6 +47,8 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - For user-facing relation inputs, show representative values such as `title`, `name`, or `slug`; do not ask users to type raw foreign-key primary keys unless the surface is internal/admin-only or no useful representative field exists
 - Configure `cfg_aliases` in `build.rs` for `wasm`/`native` and `server`/`client` aliases
 - Event handlers in `page!` are auto-handled across platforms (no manual `#[cfg(wasm)]` needed)
+- Standard intrinsic events infer exact 0.4.x payload types such as `ClickEvent`, `InputEvent`, and `ChangeEvent`. Use `raw_event_handler` with `platform::Event` only for low-level or custom events; component event props keep their declared type.
+- Target extraction helpers such as `value()`, `checked()`, `selected_values()`, and `files()` return `Result` and read an owned `current_target` snapshot that remains valid across `await`.
 - Use `watch {}` for reactive conditionals (not static `if` with extracted Signal values)
 - Use route reverse helpers for `href`, `action`, and `formaction` when named routes exist; avoid hardcoded paths
 - For catalog-backed Pages UI in 0.4.x, enable both facade features `pages` and `i18n`, then use `I18nContext` with `t!` (or `tr` / `tn` / `tp` / `tnp`) instead of per-label asynchronous translation resources

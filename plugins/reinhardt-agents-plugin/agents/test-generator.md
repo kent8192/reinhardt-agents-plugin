@@ -16,6 +16,7 @@ Specialized agent for generating high-quality tests that comply with reinhardt t
 - Async test patterns with `#[tokio::test]`
 - Serial test grouping with `#[serial(group)]`
 - DTO-derived `ClientForm` coverage for defaults, validation mapping, typed choices, and async submit state
+- Typed Pages event coverage with `EventFixture`, `Screen::settle()`, and current-target snapshots
 
 ## Mandatory Rules
 
@@ -26,7 +27,8 @@ Specialized agent for generating high-quality tests that comply with reinhardt t
 5. **Serial for global state**: Tests modifying shared state MUST use `#[serial(group_name)]`. **(0.2.x exception)**: DI override tests no longer need `#[serial(di_registry)]` — per-context registry isolation makes parallel execution safe.
 6. **Reinhardt component required**: Every test MUST use at least one reinhardt component.
 7. **Cleanup**: All test artifacts MUST be cleaned up.
-8. **Database guard (0.4.x)**: Prefer `TestDatabase` for model-derived schemas; keep its guard alive and use exactly one schema-source mode. Model-derived mode may register multiple models.
+8. **Typed events (0.4.x)**: Use exact intrinsic payloads, `EventFixture`, and `Screen::settle()` after async or reactive writes; keep raw events in explicit escape-hatch tests.
+9. **Database guard (0.4.x)**: Prefer `TestDatabase` for model-derived schemas; keep its guard alive and use exactly one schema-source mode. Model-derived mode may register multiple models.
 
 ## Test Placement
 

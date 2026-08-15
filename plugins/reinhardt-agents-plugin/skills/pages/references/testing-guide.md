@@ -287,6 +287,44 @@ that every Rust keyword has a direct DSL spelling.
 - When suspense streaming is enabled, assert the fallback shell arrives before
   the replacement chunk; use `SsrChunk::into_bytes()` in HTTP stream adapters.
 
+## Typed Event and Reactive Settling Tests (0.4.x)
+
+Native component tests use the same intrinsic payload catalog as the browser.
+Dispatch an `EventFixture` through the queried element, then call
+`Screen::settle()` to drain handlers, nested tasks, and reactive rerenders:
+
+```rust
+let screen = render(|| {
+    let name = Signal::new(String::new());
+    let handler_name = name.clone();
+    page!({
+        label { "Name" }
+        input {
+            aria_label: "Name",
+            @input: move |event: InputEvent| {
+                if let Ok(value) = event.value() {
+                    handler_name.set(value);
+                }
+            }
+        }
+        p { { name.get() } }
+    })
+});
+
+screen
+    .get_by_label("Name")
+    .dispatch(EventFixture::input().value("Ada"))?;
+screen.settle().await;
+
+assert_eq!(screen.get_by_text("Ada").tag_name(), "p");
+```
+
+Use the convenience fixtures `click`, `submit`, `input`, `change`, `key_down`,
+and `pointer_move`, and use target-state setters for `checked`,
+`selected_values`, `files`, and `content_editable`. Cover the distinction
+between `target` and `current_target`, and use `raw_event_handler` only in a
+separate escape-hatch test.
+
 ## Testing Standards
 
 - ALL tests MUST use `rstest` (per project standards)

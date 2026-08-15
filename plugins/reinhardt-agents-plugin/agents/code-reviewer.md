@@ -90,6 +90,7 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] Async mutations use `use_action`, async reads or derived text use `use_resource`, and event handlers use `use_callback` / `use_callback_with`; `spawn_local` is limited to low-level browser integration
 - [ ] **(0.4.x)** Signal-owned native controls use the type-correct `bind:` shape; number bindings expose `NumberParseError` only when rejected text needs UI, and uncontrolled controls retain one explicit source of truth
 - [ ] Non-`Copy` callbacks/actions passed into `page!` render closures are cloned at the attribute use site when needed
+- [ ] **(0.4.x)** Standard intrinsic handlers use the exact catalog payload and target extraction `Result`s; raw `platform::Event` is confined to `raw_event_handler` / `@custom(...)`, and component event props retain their declared type
 - [ ] Internal button-triggered redirects use `reinhardt::pages::navigate(..., NavigationType::Push)` or the current router handle API, not `window.location.set_href`
 - [ ] **(0.4.x)** Catalog-backed Pages labels use feature-gated `I18nContext` with `t!` (or `tr` / `tn` / `tp` / `tnp`), not a per-label `#[server_fn]` and `use_resource` round trip
 - [ ] **(0.4.x)** Server-function translation remains limited to copy that depends on server-only policy, authorization, request data, or a remote source; it is registered and has a stable client fallback when used
