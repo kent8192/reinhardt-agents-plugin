@@ -59,6 +59,20 @@ initialize either integration; use a file-backed SQLite database or Postgres
 for those tests. Keep the guard alive for every operation that uses its
 connection or context.
 
+## Model Fixture Files (0.4.x)
+
+After a test database schema is ready, load portable `FixtureRecord` JSON with
+the shared helper:
+
+```rust
+reinhardt_test::fixtures::load_model_fixture_file("fixtures/users.json")
+    .await?;
+```
+
+The helper uses the active test database and follows the same transactional,
+explicit-primary-key, relationship-ordering, and sequence-reset behavior as
+`manage loaddata`. Keep fixture loading inside the test's database lifecycle.
+
 ## Using `reinhardt-test` Fixtures (Recommended)
 
 The `reinhardt-test` crate provides pre-built TestContainers fixtures. Use these instead of manually constructing `GenericImage` containers.

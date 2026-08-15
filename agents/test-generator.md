@@ -29,6 +29,7 @@ Specialized agent for generating high-quality tests that comply with reinhardt t
 7. **Cleanup**: All test artifacts MUST be cleaned up.
 8. **Typed events (0.4.x)**: Use exact intrinsic payloads, `EventFixture`, and `Screen::settle()` after async or reactive writes; keep raw events in explicit escape-hatch tests.
 9. **Database guard (0.4.x)**: Prefer `TestDatabase` for model-derived schemas; keep its guard alive and use exactly one schema-source mode. Model-derived mode may register multiple models.
+10. **Fixture commands (0.4.x)**: Cover transactional `loaddata`, machine-readable `dumpdata`, and idempotent registered `seed` hooks when model data commands are involved.
 
 ## Test Placement
 

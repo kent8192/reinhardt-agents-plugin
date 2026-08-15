@@ -14,7 +14,7 @@ Guide developers through model definition, database operations, and migration ma
 - User works with QuerySet operations or ORM queries
 - User generates or applies migrations
 - User asks about SQLAlchemy-style queries or sessions
-- User mentions: "model", "table", "migration", "QuerySet", "field", "relation", "ForeignKey", "ManyToMany", "Json<T>", "database", "schema", "objects", "Manager", "Session", "select", "migrate", "makemigrations"
+- User mentions: "model", "table", "migration", "QuerySet", "field", "relation", "ForeignKey", "ManyToMany", "Json<T>", "database", "schema", "objects", "Manager", "Session", "select", "migrate", "makemigrations", "dumpdata", "loaddata", "seed"
 
 ## Workflow
 
@@ -61,6 +61,15 @@ Guide developers through model definition, database operations, and migration ma
    replacement operations, and backend-specific execution before applying
 5. Apply: `cargo run --bin manage migrate`
 6. For custom operations (indexes, data migrations), write hand-written migration files
+
+### Model Fixture Commands (0.4.x)
+
+1. Use `manage dumpdata` for machine-readable model fixtures and
+   `manage loaddata` for transactional loading with explicit primary keys
+2. Use `manage seed` only for registered, idempotent per-app seed hooks; an
+   unknown requested label must fail
+3. Read the fixture section of `references/migration-guide.md` before adding
+   fixture files or seed data
 
 ## Important Rules
 
