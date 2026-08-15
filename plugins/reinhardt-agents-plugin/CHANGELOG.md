@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Align Pages, macro, and code-review guidance with direct `page!({ ... })`
   bodies, implicit `Clone` captures, and strict closure factories from
   reinhardt-web #5574.
+- Document the direct `type:` spelling for HTML attributes in `page!` fixtures
+  from reinhardt-web #5606.
 
 ## [0.4.0] - 2026-07-22
 

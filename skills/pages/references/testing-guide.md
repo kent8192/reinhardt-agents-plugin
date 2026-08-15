@@ -257,6 +257,13 @@ Tests that mutate shared i18n state or catalogs must use `#[serial(i18n)]`.
 Keep the Arrange/Act/Assert structure and use strict assertions for both the
 pre-switch and post-switch rendered text.
 
+## 0.4.x `page!` Keyword Attribute Regression Tests
+
+Compile and render fixtures with `type:` on `input` and `button` elements.
+Keep the fixture spelling as `type:`, not Rust's raw identifier form
+`r#type:`; this verifies the HTML attribute DSL contract without implying
+that every Rust keyword has a direct DSL spelling.
+
 ## Testing Standards
 
 - ALL tests MUST use `rstest` (per project standards)

@@ -96,6 +96,7 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] **(0.4.x)** SSR localized Pages use `SsrOptions::new().i18n_context(context)` so translated output, `<html lang>`, and `pages.i18n` hydration state agree without a client catalog refetch
 - [ ] **(0.4.x)** Locale writes use `I18nContext::set_locale()` / `set_locale()` and reads use `locale()`; no code depends on the removed writable `locale_signal()` accessor
 - [ ] **(0.1.x through 0.3.x)** App-local i18n needed by Pages clients crosses the boundary through a registered `#[server_fn]` plus `use_resource` fallback, not duplicated client/server gettext code
+- [ ] **(0.4.x)** `page!` HTML `type` attributes use the direct `type:` spelling; do not use `r#type:` in the macro DSL fixtures
 - [ ] Component examples import services, routes, serializers, server functions, and shared components at module scope instead of repeating full `crate::...` paths inside `page!` or event handlers
 - [ ] Label-requiring `input` types, `select`, and `textarea` in `page!` have a non-hidden accessible label, non-empty `aria-label`, or `aria-labelledby` that resolves to a non-hidden element with accessible content; generated `form!` fields retain meaningful labels
 - [ ] `button` and interactive `a` elements have an accessible name (text, ARIA label, or non-empty child image `alt`); `input type="submit"` / `"reset"` retain their built-in names, and image submit inputs have a non-empty `alt` or valid ARIA name

@@ -51,6 +51,13 @@ well as page rendering:
 - Native tests use `runtime.submit_async(...)`; generated `form.submit(...)`
   is a WASM-client helper.
 
+## Pages Macro Fixture Coverage (0.4.x)
+
+When generating `page!` compile or render fixtures, write HTML `type`
+attributes directly as `type:` on inputs and buttons. Do not generate
+`r#type:` inside the macro DSL; this verifies the HTML attribute contract
+without implying that every Rust keyword has a direct DSL spelling.
+
 ## Output Format
 
 Return test code ready to be inserted into the appropriate file. Include:
