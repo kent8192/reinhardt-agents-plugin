@@ -257,6 +257,17 @@ Tests that mutate shared i18n state or catalogs must use `#[serial(i18n)]`.
 Keep the Arrange/Act/Assert structure and use strict assertions for both the
 pre-switch and post-switch rendered text.
 
+## 0.4.x Nested Layout Route Regression Tests
+
+- Build a native `ClientRouter::routes` fixture with a `#[layout]` shell and
+  `Outlet`, then assert the fully composed path, inherited `Path` parameters,
+  named-route reverse lookup, and the layout's `children.index(...)` route.
+- Cover relative child paths, nested `children.layout(...)` trees, duplicate
+  route names or path parameters, and route guards/metadata attached at the
+  correct tree level.
+- In browser-WASM tests, navigate between sibling children and assert that the
+  shared shell remains mounted while only the outlet subtree is remounted.
+
 ## 0.4.x `page!` Keyword Attribute Regression Tests
 
 Compile and render fixtures with `type:` on `input` and `button` elements.
