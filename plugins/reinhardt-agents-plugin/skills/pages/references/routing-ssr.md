@@ -346,22 +346,77 @@ Source: (#4078, #4114).
 
 ## Server-Side Rendering (SSR)
 
-### SsrRenderer
+### Synchronous SsrRenderer (0.1.x–0.3.x)
+
+Pre-0.4 renderers are synchronous:
 
 ```rust
-use reinhardt::pages::prelude::*;
-
-// Simple rendering
 let html = SsrRenderer::render(&my_component);
-
-// With options
-let html = SsrRenderer::with_options(SsrOptions::default())
+let html_with_options = SsrRenderer::with_options(SsrOptions::default())
     .render(&my_component);
-
-// Full page rendering (takes component only)
 let mut renderer = SsrRenderer::with_options(SsrOptions::default());
 let page_html = renderer.render_page(&my_component);
 ```
+
+### Async SsrRenderer and SsrStream (0.4.x)
+
+SSR entry points are asynchronous in 0.4.x. The `render_page*` methods return
+an `SsrStream` for progressive output, while the `*_to_string` helpers buffer
+the complete HTML:
+
+```rust
+use reinhardt::pages::prelude::*;
+use std::time::Duration;
+
+async fn render_app(app: impl Component) {
+    let mut stream_renderer = SsrRenderer::with_options(
+        SsrOptions::new()
+            .resource_timeout(Duration::from_secs(2))
+            .suspense_streaming(true),
+    );
+    let mut stream = stream_renderer.render_page(&app).await;
+    let html = stream.collect_string().await;
+
+    let mut buffered_renderer = SsrRenderer::new();
+    let full_html = buffered_renderer.render_page_to_string(&app).await;
+    let component_html = buffered_renderer.render(&app).await;
+
+    // `html`, `full_html`, and `component_html` can be returned to the HTTP
+    // layer; use `SsrChunk::into_bytes()` when forwarding stream chunks.
+}
+```
+
+Use `render_page(&component).await` when the HTTP layer can flush fallback and
+replacement chunks as they arrive. Use `render_page_to_string(&component).await`
+when middleware or caching requires one complete HTML string. The corresponding
+`render_page_into_page*` and `render_page_with_view_head*` helpers follow the
+same streamed/buffered split. Disable `suspense_streaming` when progressive
+output is not wanted; minified output also uses the buffered path.
+
+### Resource-Aware SSR and Suspense (0.4.x)
+
+`use_resource` is available in shared Pages code. In a native
+`SsrRenderer` context, a registered fetcher is awaited up to
+`SsrOptions::resource_timeout(...)`; the resulting `ResourceState::Success` or
+`ResourceState::Error` is serialized into hydration state. Outside SSR on a
+native target, the inert scheduler leaves the resource in `Loading`.
+
+```rust
+let user = use_resource(fetch_current_user, ());
+
+// For a conditionally rendered hook, make the hydration identity explicit.
+let report = use_resource_with_key(
+    "workspace-report",
+    fetch_workspace_report,
+    (workspace_id,),
+);
+```
+
+With suspense streaming enabled, the first stream contains the fallback shell
+and later chunks replace the suspense boundary after the resource resolves.
+Hydration reuses the serialized resource state instead of fetching the same
+data again. Use `use_resource_with_key` for conditional resource hooks whose
+implicit `rh-res-N` key would otherwise change between server and client.
 
 ### Reactive I18n with SSR (0.4.x)
 
@@ -399,7 +454,8 @@ let page = page!(
 );
 
 // SsrRenderer includes the head in the HTML output
-let html = SsrRenderer::render(&page);
+let mut renderer = SsrRenderer::new();
+let html = renderer.render_page_with_view_head_to_string(page).await;
 ```
 
 ## Hydration

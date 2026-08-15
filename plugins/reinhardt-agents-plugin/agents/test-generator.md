@@ -69,6 +69,17 @@ attributes directly as `type:` on inputs and buttons. Do not generate
 `r#type:` inside the macro DSL; this verifies the HTML attribute contract
 without implying that every Rust keyword has a direct DSL spelling.
 
+## Pages Async SSR and Resource Coverage (0.4.x)
+
+When generating native Pages SSR tests, await `SsrRenderer` entry points and
+cover both output modes:
+
+- Assert `render_page(...).await` stream collection and buffered
+  `render_page_to_string(...).await` output.
+- Register deterministic resource fetchers and cover timeout, `Success` /
+  `Error` hydration payloads, suspense fallback/replacement chunks, and stable
+  `use_resource_with_key` identities for conditional hooks.
+
 ## Output Format
 
 Return test code ready to be inserted into the appropriate file. Include:

@@ -71,6 +71,16 @@ Compile and render `page!` fixtures with direct HTML `type:` attributes on
 inputs and buttons. Do not use `r#type:` inside the macro DSL; the direct form
 is the regression contract from the 0.4.x page fixtures.
 
+### Pages Async SSR and Resource Tests (0.4.x)
+
+1. Use async native tests for `SsrRenderer`; cover streamed
+   `render_page(...).await` plus `SsrStream::collect_string()`, buffered
+   `render_page_to_string(...).await`, resource timeout, and serialized
+   `Success` / `Error` hydration state.
+2. For conditional resource hooks, use and assert a stable
+   `use_resource_with_key` hydration key and cover suspense fallback and
+   replacement chunks.
+
 ## Important Rules
 
 - **NEVER** use `#[test]` — always use `#[rstest]`
