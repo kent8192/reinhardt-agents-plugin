@@ -11,11 +11,12 @@ Specialized agent for generating high-quality tests that comply with reinhardt t
 
 - rstest-based test structure (NEVER plain `#[test]`)
 - AAA pattern with standard labels ONLY (`// Arrange`, `// Act`, `// Assert`)
-- reinhardt-test fixture design (APIClient, RequestFactory, TestContainers)
+- reinhardt-test fixture design (APIClient, RequestFactory, TestDatabase, TestContainers)
 - Parameterized testing with `#[case]`
 - Async test patterns with `#[tokio::test]`
 - Serial test grouping with `#[serial(group)]`
 - DTO-derived `ClientForm` coverage for defaults, validation mapping, typed choices, and async submit state
+- Typed Pages event coverage with `EventFixture`, `Screen::settle()`, and current-target snapshots
 
 ## Mandatory Rules
 
@@ -26,7 +27,12 @@ Specialized agent for generating high-quality tests that comply with reinhardt t
 5. **Serial for global state**: Tests modifying shared state MUST use `#[serial(group_name)]`. **(0.2.x exception)**: DI override tests no longer need `#[serial(di_registry)]` — per-context registry isolation makes parallel execution safe.
 6. **Reinhardt component required**: Every test MUST use at least one reinhardt component.
 7. **Cleanup**: All test artifacts MUST be cleaned up.
+<<<<<<< HEAD
 8. **Fixture commands (0.4.x)**: Cover transactional `loaddata`, machine-readable `dumpdata`, and idempotent registered `seed` hooks when model data commands are involved.
+=======
+8. **Typed events (0.4.x)**: Use exact intrinsic payloads, `EventFixture`, and `Screen::settle()` after async or reactive writes; keep raw events in explicit escape-hatch tests.
+9. **Database guard (0.4.x)**: Prefer `TestDatabase` for model-derived schemas; keep its guard alive and use exactly one schema-source mode. Model-derived mode may register multiple models.
+>>>>>>> origin/main
 
 ## Test Placement
 
@@ -51,6 +57,35 @@ well as page rendering:
   cancellation without leaving the runtime pending.
 - Native tests use `runtime.submit_async(...)`; generated `form.submit(...)`
   is a WASM-client helper.
+
+## Pages Layout Route Coverage (0.4.x)
+
+When generating Pages route tests, cover both the route tree and browser mount
+behavior:
+
+- Native `ClientRouter::routes` tests assert composed paths, inherited
+  parameters, `children.index(...)`, reverse lookup, and duplicate route-name
+  or path-parameter rejection.
+- Browser-WASM navigation tests assert sibling routes preserve the shared
+  `#[layout]` shell and remount only the `Outlet` subtree.
+
+## Pages Macro Fixture Coverage (0.4.x)
+
+When generating `page!` compile or render fixtures, write HTML `type`
+attributes directly as `type:` on inputs and buttons. Do not generate
+`r#type:` inside the macro DSL; this verifies the HTML attribute contract
+without implying that every Rust keyword has a direct DSL spelling.
+
+## Pages Async SSR and Resource Coverage (0.4.x)
+
+When generating native Pages SSR tests, await `SsrRenderer` entry points and
+cover both output modes:
+
+- Assert `render_page(...).await` stream collection and buffered
+  `render_page_to_string(...).await` output.
+- Register deterministic resource fetchers and cover timeout, `Success` /
+  `Error` hydration payloads, suspense fallback/replacement chunks, and stable
+  `use_resource_with_key` identities for conditional hooks.
 
 ## Output Format
 
