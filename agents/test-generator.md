@@ -62,6 +62,13 @@ behavior:
 - Browser-WASM navigation tests assert sibling routes preserve the shared
   `#[layout]` shell and remount only the `Outlet` subtree.
 
+## Pages Macro Fixture Coverage (0.4.x)
+
+When generating `page!` compile or render fixtures, write HTML `type`
+attributes directly as `type:` on inputs and buttons. Do not generate
+`r#type:` inside the macro DSL; this verifies the HTML attribute contract
+without implying that every Rust keyword has a direct DSL spelling.
+
 ## Output Format
 
 Return test code ready to be inserted into the appropriate file. Include:

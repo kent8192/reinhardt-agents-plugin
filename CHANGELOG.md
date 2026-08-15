@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reinhardt-web #5574.
 - Align Pages layout routing, launcher, macro, migration, testing, and review
   guidance with reinhardt-web #5592.
+- Document the direct `type:` spelling for HTML attributes in `page!` fixtures
+  from reinhardt-web #5606.
 
 ## [0.4.0] - 2026-07-22
 

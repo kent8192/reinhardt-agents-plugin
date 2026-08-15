@@ -15,7 +15,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - User sets up reactive state with Signal, Effect, Memo, or hooks
 - User configures client-side routing, SSR, or hydration
 - User builds nested layout routes with `#[layout]` and `Outlet`
-- User mentions: "page", "head", "form", "server_fn", "Signal", "useState", "useEffect", "watch", "i18n", "translation", "locale", "t!", "SSR", "hydration", "WASM", "frontend", "router", "ClientRouter", "Outlet", "ApiQuerySet", "Table", "prelude", "component", "layout"
+- User mentions: "page", "head", "form", "server_fn", "bind:", "Signal", "useState", "useEffect", "watch", "i18n", "translation", "locale", "t!", "SSR", "hydration", "WASM", "frontend", "router", "ClientRouter", "Outlet", "ApiQuerySet", "Table", "prelude", "component", "layout"
 
 ## Workflow
 
@@ -77,6 +77,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - Test service-boundary domain rules directly when a service owns lifecycle, validation, state-transition, or orchestration policy
 - Use 0.3 Pages primitives directly where relevant: `#[wasm_server_api]`, `Portal` / `mount_portal`, `ActivityBoundary`, `ViewTransitionBoundary`, and `FieldArray`
 - Keep shared app code cfg-clean across native and `wasm32-unknown-unknown`; rely on documented inert stubs instead of broad call-site `#[cfg]` workarounds
+- In 0.4.x, use `bind:` for signal-owned text, checkbox, radio, number, textarea, and select controls; keep uncontrolled controls event-owned, and use `number(value, error)` only when rejected numeric text must be surfaced
 
 ## Cross-Domain References
 

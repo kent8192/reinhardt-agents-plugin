@@ -268,6 +268,13 @@ pre-switch and post-switch rendered text.
 - In browser-WASM tests, navigate between sibling children and assert that the
   shared shell remains mounted while only the outlet subtree is remounted.
 
+## 0.4.x `page!` Keyword Attribute Regression Tests
+
+Compile and render fixtures with `type:` on `input` and `button` elements.
+Keep the fixture spelling as `type:`, not Rust's raw identifier form
+`r#type:`; this verifies the HTML attribute DSL contract without implying
+that every Rust keyword has a direct DSL spelling.
+
 ## Testing Standards
 
 - ALL tests MUST use `rstest` (per project standards)
