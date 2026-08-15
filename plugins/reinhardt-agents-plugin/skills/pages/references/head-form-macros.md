@@ -506,8 +506,8 @@ orchestration policy.
 pub async fn generate_scene(
     chapter_id: Uuid,
     input: GenerateSceneRequest,
-    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
-    #[inject] providers: Depends<AiProviderRegistryKey, ProviderRegistry>,
+    #[inject] db: KeyedDepends<PrimaryDatabase, DatabaseConnection>,
+    #[inject] providers: KeyedDepends<AiProviderRegistryKey, ProviderRegistry>,
 ) -> Result<SceneInfo, ServerFnError> {
     input.validate()?;
 
