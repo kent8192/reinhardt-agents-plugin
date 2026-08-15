@@ -50,7 +50,12 @@ pub struct Post {
 
 **UUID Generation:** For `Option<Uuid>` primary key fields, the `#[model]` macro generates `Uuid::now_v7()` (UUID v7, time-ordered) instead of `Uuid::new_v4()`. UUID v7 provides better B-tree index performance due to temporal ordering.
 
-**Generated:** `Model` trait implementation with `fn objects() -> Manager<Self>`, field accessors, table name derivation.
+**Generated:** `Model` trait implementation with `fn objects() -> Manager<Self>`, field accessors, table name derivation, relation metadata, and typed JSON field metadata for `Json<T>` columns. ForeignKey and OneToOne fields also expose `*_id()` accessors that return the related primary key by value on native and WASM.
+
+For structured JSON columns, use `Json<T>` as the field type. It preserves
+typed serialization and distinguishes `Option<Json<T>>::None` (SQL `NULL`)
+from a present JSON `null` value. See the modeling reference for backend
+storage mapping and hydration error context.
 
 ### `#[dto]` (0.4.0)
 

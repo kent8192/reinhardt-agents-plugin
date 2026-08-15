@@ -229,6 +229,51 @@ Events use `@event: handler` syntax. Handlers are auto-handled (active on WASM, 
 
 `@input`, `@change`, `@submit`, `@focus`, `@blur`
 
+## Controlled Form Elements (0.4.x)
+
+Use `bind:` when a signal owns the control value after hydration. Leave the
+directive off for an uncontrolled control whose value is read from an event or
+another explicit DOM integration.
+
+| Control | Bound signal |
+|---------|--------------|
+| Text input, radio, textarea, single select | `Signal<String>` |
+| Checkbox | `Signal<bool>` |
+| Number input | `Signal<T>` where `T: NumberValue` |
+| Multiple select | `Signal<Vec<String>>` |
+
+```rust
+use reinhardt::pages::prelude::*;
+
+let query = Signal::new(String::new());
+let amount = Signal::new(0_f64);
+let amount_error = Signal::new(None::<NumberParseError>);
+
+page!({
+    input { aria_label: "Search", bind: query }
+    input {
+        aria_label: "Amount",
+        type: "number",
+        bind: number(amount, amount_error),
+    }
+})
+```
+
+Hydration first adopts the live DOM value so browser restoration and edits made
+before hydration survive. Later signal writes update the DOM. Input updates the
+signal before an explicit handler for the same event runs. Text bindings defer
+writes during IME composition.
+
+Use direct `bind: amount` when invalid number text does not need separate UI.
+Use `number(amount, amount_error)` to preserve the last valid value while
+reporting `Empty`, `Incomplete`, `Invalid`, or `OutOfRange`. For an editor that
+must retain exact incomplete text on every browser, use a text input with
+`inputmode="decimal"` and explicit parsing.
+
+`bind:` is reserved on supported controls. Use a standards-compatible
+`data_bind` attribute, or `PageElement::new("input").attr("bind", value)` only
+when a literal nonstandard attribute is required.
+
 ### Touch Events
 
 `@touchstart`, `@touchend`, `@touchmove`, `@touchcancel`
