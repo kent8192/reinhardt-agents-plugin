@@ -54,10 +54,12 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] Appropriate scoping (request-scoped vs singleton)
 - [ ] No circular dependency risk
 - [ ] `#[inject]` used correctly in handlers
-- [ ] No duplicate provider identities; use `#[injectable_key]` + `FactoryOutput<K, T>` when multiple providers return the same value type
+- [ ] **(0.4.x)** Self-keyed providers return direct `T` and consumers use `T` or `Depends<T>`; explicit duplicate identities use `KeyedFactoryOutput<K, T>` + `KeyedDepends<K, T>`
+- [ ] **(0.3.x)** `#[injectable_key]` + `FactoryOutput<K, T>` / `Depends<K, T>` is the native keyed provider API; use migration wording only during a 0.3-to-0.4 upgrade
 - [ ] No `#[injectable]` or `#[injectable_factory]` for framework-managed types (`reinhardt::*`) — use application-owned wrapper/key types
-- [ ] Prefer `try_unwrap()` over `into_inner()` for non-Clone values wrapped in `Depends<K, T>`
-- [ ] **(0.3.x)** No new `#[injectable_factory]`, `DependsResult`, or `DependsOption` usage — use `#[injectable]`, `FactoryOutput<K, T>`, and `Depends<K, T>`
+- [ ] Use `try_unwrap()` only for a demonstrably uncached/transient dependency with sole ownership; access request- and singleton-scoped `Depends<T>` / `KeyedDepends<K, T>` through dereference behavior
+- [ ] **(0.4.x)** No new `Depends<K, T>` or `FactoryOutput<K, T>` spelling when the current `Keyed*` wrappers are required; no `DependsResult` / `DependsOption` sugar aliases
+- [ ] **(0.3.x)** No new `#[injectable_factory]`; legacy provider migration uses `#[injectable]`, `FactoryOutput<K, T>`, and `Depends<K, T>` only on that version line
 - [ ] DI contains common dependencies and shared capabilities only; endpoint-specific validation, DTO assembly, persistence ordering, generation, and edit flows stay in the endpoint or adjacent private helper
 - [ ] No thick service facades such as `OutlineService`, `ManuscriptService`, or `DocumentService` when they only hide one `server_fn` / HTTP endpoint workflow
 - [ ] No file-only extraction from `#[server_fn]` into `server/`, `service/`, or `services/`; extracted code has a narrower contract, shared consumer, or independently testable invariant

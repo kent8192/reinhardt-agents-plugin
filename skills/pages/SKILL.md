@@ -63,7 +63,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - URL attributes (`href`, `src`, `action`, `formaction`) block dangerous schemes (`javascript:`, `data:`, `vbscript:`)
 - ALL code comments must be in English
 - Use `reinhardt-query` for any SQL construction, NEVER raw SQL
-- `#[server_fn]` functions should inject shared keyed services for application business logic (`Depends<K, T>`) instead of constructing settings directly and calling free functions
+- In 0.4.x, `#[server_fn]` functions should inject shared self-keyed services as direct `T` / `Depends<T>`, or explicit application keys as `KeyedDepends<K, T>`; `Depends<K, T>` is a 0.3 migration spelling.
 - Prefer DI services over utility-function clusters for business operations that own domain policy, state transitions, validation policy, orchestration dependencies, lifecycle scoping, or test overrides
 - Reserve utility functions for pure codecs, DTO conversion, error mapping, provider-local wire conversion, and narrow private transformations that do not need request-scoped dependencies
 - Keep Pages app `services/` modules focused on injectable keys, provider functions, and service structs/functions; put prompt builders, provider adapters, parsers, converters, repository/database internals, and narrow private helpers under app-local `server/` modules
