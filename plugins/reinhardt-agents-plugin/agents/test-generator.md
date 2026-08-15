@@ -52,6 +52,35 @@ well as page rendering:
 - Native tests use `runtime.submit_async(...)`; generated `form.submit(...)`
   is a WASM-client helper.
 
+## Pages Layout Route Coverage (0.4.x)
+
+When generating Pages route tests, cover both the route tree and browser mount
+behavior:
+
+- Native `ClientRouter::routes` tests assert composed paths, inherited
+  parameters, `children.index(...)`, reverse lookup, and duplicate route-name
+  or path-parameter rejection.
+- Browser-WASM navigation tests assert sibling routes preserve the shared
+  `#[layout]` shell and remount only the `Outlet` subtree.
+
+## Pages Macro Fixture Coverage (0.4.x)
+
+When generating `page!` compile or render fixtures, write HTML `type`
+attributes directly as `type:` on inputs and buttons. Do not generate
+`r#type:` inside the macro DSL; this verifies the HTML attribute contract
+without implying that every Rust keyword has a direct DSL spelling.
+
+## Pages Async SSR and Resource Coverage (0.4.x)
+
+When generating native Pages SSR tests, await `SsrRenderer` entry points and
+cover both output modes:
+
+- Assert `render_page(...).await` stream collection and buffered
+  `render_page_to_string(...).await` output.
+- Register deterministic resource fetchers and cover timeout, `Success` /
+  `Error` hydration payloads, suspense fallback/replacement chunks, and stable
+  `use_resource_with_key` identities for conditional hooks.
+
 ## Output Format
 
 Return test code ready to be inserted into the appropriate file. Include:

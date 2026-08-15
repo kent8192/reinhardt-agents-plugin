@@ -50,7 +50,12 @@ pub struct Post {
 
 **UUID Generation:** For `Option<Uuid>` primary key fields, the `#[model]` macro generates `Uuid::now_v7()` (UUID v7, time-ordered) instead of `Uuid::new_v4()`. UUID v7 provides better B-tree index performance due to temporal ordering.
 
-**Generated:** `Model` trait implementation with `fn objects() -> Manager<Self>`, field accessors, table name derivation.
+**Generated:** `Model` trait implementation with `fn objects() -> Manager<Self>`, field accessors, table name derivation, relation metadata, and typed JSON field metadata for `Json<T>` columns. ForeignKey and OneToOne fields also expose `*_id()` accessors that return the related primary key by value on native and WASM.
+
+For structured JSON columns, use `Json<T>` as the field type. It preserves
+typed serialization and distinguishes `Option<Json<T>>::None` (SQL `NULL`)
+from a present JSON `null` value. See the modeling reference for backend
+storage mapping and hydration error context.
 
 ### `#[dto]` (0.4.0)
 
@@ -552,6 +557,35 @@ pub struct UpdateUserRequest {
 ---
 
 ## Frontend (Pages/WASM)
+
+### `#[layout]` (0.4.x)
+
+**Crate:** `reinhardt-pages/macros`
+
+Define a route-backed Pages shell for a nested `ClientRouter` tree. The
+function returns `Page`, accepts any needed `Path` / `Query` extractors, and
+has exactly one plain `Outlet` parameter:
+
+```rust
+use reinhardt::pages::{layout, page, Outlet, Page, Path};
+
+#[layout("/workspaces/{workspace_id}/", name = "workspace-shell")]
+fn workspace_shell(Path(workspace_id): Path<i64>, outlet: Outlet) -> Page {
+    page!({
+        section {
+            h1 { { format!("Workspace {workspace_id}") } }
+            { outlet }
+        }
+    })
+}
+```
+
+Register child `#[component]` functions with
+`ClientRouter::new().routes(...)`. The layout path is absolute, child paths
+are relative, and `children.index(...)` owns the layout base route. Layout and
+leaf route names share one namespace, so choose explicit unique names. See
+the [Pages routing reference](../../pages/references/routing-ssr.md) for
+outlet preservation in browser WASM.
 
 ### `#[server_fn]`
 
