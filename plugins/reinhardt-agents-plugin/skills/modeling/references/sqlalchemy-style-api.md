@@ -3,7 +3,7 @@
 Reinhardt provides an alternative SQLAlchemy-inspired API alongside the Django-style `Model::objects()` API. This includes:
 
 1. **`SelectQuery<T>`** — Fluent query builder (`select()`, `where_clause()`, `join()`)
-2. **`Session`** — Unit of work with identity map (`add()`, `flush()`, `commit()`)
+2. **`Session`** — Unit of work with identity map (`add()`, `flush()`)
 
 ## When to Use Which API
 
@@ -11,7 +11,7 @@ Reinhardt provides an alternative SQLAlchemy-inspired API alongside the Django-s
 |-----|-------|----------|
 | `Model::objects()` | Django | Standard CRUD, most application code |
 | `SelectQuery<T>` | SQLAlchemy | Complex joins, type-safe queries, multi-table operations |
-| `Session` | SQLAlchemy | Transaction-heavy workflows, identity map, batch operations |
+| `Session` | SQLAlchemy | Identity map and batched unit-of-work persistence |
 | `reinhardt-query` | Low-level | Migrations, schema DDL, raw SQL generation |
 
 ---
@@ -161,7 +161,9 @@ let query = select::<User>()
 
 ## Session (Unit of Work Pattern)
 
-`Session` provides SQLAlchemy-style session management with identity map, dirty tracking, and transaction support.
+`Session` provides SQLAlchemy-style identity-map and unit-of-work tracking. In
+0.4.x it does not own a transaction; use `DatabaseConnection::atomic` for
+multi-write atomicity.
 
 **Module:** `reinhardt_db::orm::session`
 
@@ -210,36 +212,28 @@ let user = User { id: Some(1), name: "Alice".to_string() };
 session.delete(user).await?;
 ```
 
-### Flushing and Committing
+### Flushing
 
 ```rust
 // Flush: execute all pending INSERT/UPDATE/DELETE operations
 session.flush().await?;
-
-// Commit: flush + commit transaction
-session.commit().await?;
-
-// Rollback: discard all pending changes
-session.rollback().await?;
 ```
 
-### Transaction Management
+To abandon unflushed tracked state, discard and recreate the `Session`.
+
+### Atomic Transactions (0.4.x)
 
 ```rust
-// Begin explicit transaction
-session.begin().await?;
-
-// ... perform operations ...
-session.add(user).await?;
-session.delete(old_user).await?;
-
-// Flush and commit
-session.flush().await?;
-session.commit().await?;
-
-// Or rollback on error
-// session.rollback().await?;
+let saved = connection.atomic(async |transaction| {
+    User::objects()
+        .create_with_conn(transaction, &new_user)
+        .await
+}).await?;
 ```
+
+All ORM work inside the callback must use the mutable transaction executor.
+`Session::{begin, commit, rollback}` were removed; `flush` alone is not a
+transaction boundary.
 
 ### Identity Map
 
@@ -261,9 +255,6 @@ The Session maintains an identity map that:
 | `.query::<T>()` | `session.query()` | Create query |
 | `.delete(obj)` | `session.delete()` | Mark for deletion |
 | `.flush()` | `session.flush()` | Execute pending ops |
-| `.commit()` | `session.commit()` | Flush + commit |
-| `.rollback()` | `session.rollback()` | Rollback transaction |
-| `.begin()` | `session.begin()` | Begin transaction |
 | `.close()` | `session.close()` | Close session |
 
 ### SessionError Types
@@ -272,8 +263,8 @@ The Session maintains an identity map that:
 |---------|-------------|
 | `DatabaseError(String)` | Database operation failed |
 | `ObjectNotFound(String)` | Object not in session |
-| `TransactionError(String)` | Transaction operation failed |
 | `SerializationError(String)` | JSON serialization/deserialization failed |
+| `FieldCodec(FieldCodecError)` | Model/database field conversion failed |
 | `InvalidState(String)` | Session in invalid state (e.g., closed) |
 | `FlushError(String)` | Flush operation failed |
 
@@ -298,10 +289,12 @@ The Session maintains an identity map that:
 
 ### Use `Session` (SQLAlchemy-style) when
 
-- Transaction-heavy workflows (multiple related operations)
 - Need identity map for object caching within a request
 - Batch operations that should be flushed together
 - Porting SQLAlchemy unit-of-work patterns
+
+Wrap explicit manager/query operations in `DatabaseConnection::atomic` when
+they must commit or roll back together.
 
 ### Use `reinhardt-query` (low-level) when
 

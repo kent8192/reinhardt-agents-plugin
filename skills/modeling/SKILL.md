@@ -49,7 +49,8 @@ Guide developers through model definition, database operations, and migration ma
 
 1. Read `references/sqlalchemy-style-api.md` for `SelectQuery` and `Session`
 2. Use `select::<T>()` for complex multi-table JOINs with type safety
-3. Use `Session` for transaction-heavy workflows with identity map
+3. Use `Session` for identity-map/unit-of-work tracking; use
+   `DatabaseConnection::atomic` for transaction boundaries
 
 ### Low-Level Query Building
 
@@ -114,6 +115,8 @@ Guide developers through model definition, database operations, and migration ma
 - In 0.3.x, generated `{Model}Info` relation fields expose relation-shaped payloads: `RelationInfo<T>` for one-to-one / foreign-key fields and `ManyToManyInfo<Source, Target>` for many-to-many fields
 - Review serializers, API DTOs, browser tests, and fixtures that expected flattened `*_id` scalar fields after regenerating 0.3.x model info
 - Use `QuerySet::update_fields([...])` for atomic conditional partial updates; empty assignments and predicate-less partial updates are rejected at the API boundary
+- **(0.4.x)** Use closure-scoped `DatabaseConnection::atomic(async |transaction| ...)` and pass its mutable executor to `*_with_conn` / `*_with_db`; nest with `transaction.atomic(...)`, not manual begin/commit/rollback APIs
+- **(0.4.x)** Treat `Session` as an identity-map/unit-of-work tracker: `flush` persists tracked changes, but atomicity belongs to `DatabaseConnection::atomic`; discard a session to abandon unflushed state
 - Regenerate and review migrations after relation metadata, field renames, or unique constraints change; 0.3.x migration generation is stricter about `RenameColumn` and replay drift
 
 ## Cross-Domain References
