@@ -93,6 +93,7 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] **(0.4.x)** Structural head values use `#head`, `Page::with_head`, or `RouteMetadata::with_head`; reactive head hooks use explicit dependencies and route-scoped scripts tolerate remounting
 - [ ] **(0.4.x)** `#[server_fnset]` groups and explicitly registers existing markers; model sets declare wire DTO mappings, typed unique lookup, and policy, and are not presented as REST ViewSets
 - [ ] **(0.4.x)** Signal-owned native controls use the type-correct `bind:` shape; number bindings expose `NumberParseError` only when rejected text needs UI, and uncontrolled controls retain one explicit source of truth
+- [ ] **(0.4.x)** HMR correctness does not depend on a hot patch: dynamic expressions, handlers, bindings, control flow, components, and shared code remain valid through the fallback rebuild path
 - [ ] Non-`Copy` callbacks/actions passed into `page!` render closures are cloned at the attribute use site when needed
 - [ ] **(0.4.x)** Standard intrinsic handlers use the exact catalog payload and target extraction `Result`s; raw `platform::Event` is confined to `raw_event_handler` / `@custom(...)`, and component event props retain their declared type
 - [ ] Internal button-triggered redirects use `reinhardt::pages::navigate(..., NavigationType::Push)` or the current router handle API, not `window.location.set_href`

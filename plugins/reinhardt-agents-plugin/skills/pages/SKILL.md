@@ -16,7 +16,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - User configures client-side routing, SSR, or hydration
 - User builds nested layout routes with `#[layout]` and `Outlet`
 - User uses async SSR, `SsrStream`, or native resource hydration
-- User mentions: "page", "head", "form", "server_fn", "server_fnset", "use_head", "use_page_title", "bind:", "Signal", "useState", "useEffect", "watch", "EventFixture", "i18n", "translation", "locale", "t!", "SSR", "hydration", "SsrStream", "resource_timeout", "WASM", "frontend", "router", "ClientRouter", "Outlet", "ApiQuerySet", "Table", "prelude", "component", "layout"
+- User mentions: "page", "head", "form", "server_fn", "server_fnset", "use_head", "use_page_title", "bind:", "HMR", "hot patch", "Signal", "useState", "useEffect", "watch", "EventFixture", "i18n", "translation", "locale", "t!", "SSR", "hydration", "SsrStream", "resource_timeout", "WASM", "frontend", "router", "ClientRouter", "Outlet", "ApiQuerySet", "Table", "prelude", "component", "layout"
 
 ## Workflow
 
@@ -85,6 +85,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - In 0.4.x, attach structural `Head` values with `#head`, `Page::with_head`, or `RouteMetadata::with_head`; use `use_head` / `use_page_title` with explicit `deps![...]` for retained reactive contributions
 - In 0.4.x, group existing server functions with `#[server_fnset]` and register the set explicitly. For model-backed sets, require wire DTO mappings, a typed unique lookup, and an explicit policy; do not treat them as REST ViewSets
 - In 0.4.x, use `bind:` for signal-owned text, checkbox, radio, number, textarea, and select controls; keep uncontrolled controls event-owned, and use `number(value, error)` only when rejected numeric text must be surfaced
+- With the 0.4.x `hmr` feature, rely on `runserver --with-pages` for conservative state-preserving literal template patches; dynamic expressions, handlers, bindings, control flow, components, or shared server-visible edits must take the normal rebuild path
 
 ## Cross-Domain References
 
