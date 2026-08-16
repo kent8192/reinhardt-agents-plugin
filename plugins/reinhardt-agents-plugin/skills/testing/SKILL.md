@@ -1,6 +1,6 @@
 ---
 name: testing
-description: Use when writing tests for reinhardt-web applications - provides rstest/AAA patterns, TestContainers setup, API testing utilities, and DTO-derived client-form coverage
+description: Use when writing tests for reinhardt-web applications - provides rstest/AAA patterns, TestContainers setup, API testing utilities, query-cache testing, and DTO-derived client-form coverage
 versions: ["0.4.0"]
 ---
 
@@ -12,7 +12,7 @@ Guide developers through writing high-quality tests using rstest, AAA pattern, r
 
 - User wants to write tests for reinhardt code
 - User asks about testing strategies or patterns
-- User mentions: "test", "fixture", "EventFixture", "Screen::settle", "TestDatabase", "TestContainers", "assert", "rstest", "integration test", "unit test", "ClientForm", "DTO form test", "form validation test"
+- User mentions: "test", "fixture", "EventFixture", "Screen::settle", "TestDatabase", "TestContainers", "assert", "rstest", "integration test", "unit test", "use_query", "QueryKey", "query cache", "invalidation", "ClientForm", "DTO form test", "form validation test"
 
 ## Workflow
 
@@ -79,6 +79,13 @@ Guide developers through writing high-quality tests using rstest, AAA pattern, r
 4. Verify shared `#[dto]` validation on both native and WASM surfaces when the
    request type crosses the client/server boundary.
 
+### Query Cache Tests (0.4.x)
+
+1. Read `../pages/references/query-cache.md` and the query-cache section in
+   `../pages/references/testing-guide.md`.
+2. Cover request deduplication, pending versus background fetching, retained
+   data during refetch, exact mutation invalidation, and stable generated keys.
+
 ### Pages Layout Route Tests (0.4.x)
 
 1. Build a native `ClientRouter::routes` fixture with a `#[layout]` shell and
@@ -123,6 +130,7 @@ is the regression contract from the 0.4.x page fixtures.
 
 - Model patterns: `../modeling/references/model-patterns.md`
 - API patterns: `../api-development/references/view-patterns.md`
+- Query cache: `../pages/references/query-cache.md`
 - 0.3 migration checklist: `../migration/references/0.3-upgrade.md`
 
 ## Dynamic References

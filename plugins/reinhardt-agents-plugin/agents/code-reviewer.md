@@ -90,7 +90,7 @@ Specialized agent for reviewing reinhardt-web application code against project c
 ### Pages Frontend
 
 - [ ] Button actions operate on the displayed/current entity: route params, form values, loaded DTOs, selected rows/versions, and server return values, not fixture IDs, sample constants, or canned text
-- [ ] Async mutations use `use_action`, async reads or derived text use `use_resource`, and event handlers use `use_callback` / `use_callback_with`; `spawn_local` is limited to low-level browser integration
+- [ ] Component-local async mutations use `use_action`, component-local async reads or derived text use `use_resource`, and event handlers use `use_callback` / `use_callback_with`; `spawn_local` is limited to low-level browser integration
 - [ ] **(0.4.x)** Structural head values use `#head`, `Page::with_head`, or `RouteMetadata::with_head`; reactive head hooks use explicit dependencies and route-scoped scripts tolerate remounting
 - [ ] **(0.4.x)** `#[server_fnset]` groups and explicitly registers existing markers; model sets declare wire DTO mappings, typed unique lookup, and policy, and are not presented as REST ViewSets
 - [ ] **(0.4.x)** Signal-owned native controls use the type-correct `bind:` shape; number bindings expose `NumberParseError` only when rejected text needs UI, and uncontrolled controls retain one explicit source of truth
@@ -99,6 +99,7 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] **(0.4.x)** Cleanup-free `use_effect` / `use_layout_effect` closures return `()`, while cleanup-capable closures return `Option<C>`
 - [ ] **(0.4.x)** Functional state changes use `SetStateExt::update` when the new value depends on current state rather than a separate read/clone
 - [ ] **(0.4.x)** Registration-style effects use `use_retained_effect` / `use_retained_layout_effect` when the guard is intentionally not owned by the component body
+- [ ] **(0.4.x)** Query cache reads use a complete stable `QueryKey`, generated server-function `key(...)` helpers when available, and exact mutation invalidation; distinguish initial pending from background fetching
 - [ ] **(0.4.x)** Standard intrinsic handlers use the exact catalog payload and target extraction `Result`s; raw `platform::Event` is confined to `raw_event_handler` / `@custom(...)`, and component event props retain their declared type
 - [ ] Internal button-triggered redirects use `reinhardt::pages::navigate(..., NavigationType::Push)` or the current router handle API, not `window.location.set_href`
 - [ ] **(0.4.x)** Catalog-backed Pages labels use feature-gated `I18nContext` with `t!` (or `tr` / `tn` / `tp` / `tnp`), not a per-label `#[server_fn]` and `use_resource` round trip

@@ -16,6 +16,7 @@ Specialized agent for generating high-quality tests that comply with reinhardt t
 - Async test patterns with `#[tokio::test]`
 - Serial test grouping with `#[serial(group)]`
 - DTO-derived `ClientForm` coverage for defaults, validation mapping, typed choices, and async submit state
+- Pages query-cache coverage for deduplication, refetch, invalidation, hydration, and stable keys
 - Typed Pages event coverage with `EventFixture`, `Screen::settle()`, and current-target snapshots
 
 ## Mandatory Rules
@@ -54,6 +55,13 @@ well as page rendering:
   cancellation without leaving the runtime pending.
 - Native tests use `runtime.submit_async(...)`; generated `form.submit(...)`
   is a WASM-client helper.
+
+## Query Cache Coverage (0.4.x)
+
+For `use_query` or `QueryKey` tests, read
+`../skills/pages/references/testing-guide.md` and cover deduplication, pending
+versus background fetching, retained data during refetch, exact invalidation,
+and stable generated server-function keys.
 
 ## Pages Layout Route Coverage (0.4.x)
 
