@@ -93,6 +93,7 @@ let theme: Signal<String> = get_context("theme").unwrap();
 | Hook | Signature | Description |
 |------|-----------|-------------|
 | `use_state` | `use_state(initial: T) -> (Signal<T>, SetState<T>)` | Local reactive state (takes value, not closure) |
+| `SetStateExt::update` | `set_state.update(closure)` | **(0.4.x)** Replace state from its current value without a separate read/clone |
 | `use_reducer` | `use_reducer(reducer, init) -> (Signal<S>, Dispatch<A>)` | State with reducer pattern |
 | `use_shared_state` | `use_shared_state(initial: T) -> (SharedSignal<T>, SharedSetState<T>)` | Shared state across components |
 | `use_optimistic` | `use_optimistic(initial: T) -> OptimisticState<T>` | Optimistic UI updates |
@@ -101,7 +102,12 @@ let theme: Signal<String> = get_context("theme").unwrap();
 // use_state takes a value directly (NOT a closure)
 let (count, set_count) = use_state(0);
 set_count(5);
+set_count.update(|current| current + 1);
 ```
+
+`SetStateExt::update` receives the current value and returns its replacement.
+Use it in callbacks where the new state depends on the current state instead of
+reading the signal separately; keep `set_count(value)` for direct replacement.
 
 ### Effect Hooks
 

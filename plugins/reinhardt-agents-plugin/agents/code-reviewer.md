@@ -96,6 +96,7 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] **(0.4.x)** HMR correctness does not depend on a hot patch: dynamic expressions, handlers, bindings, control flow, components, and shared code remain valid through the fallback rebuild path
 - [ ] Non-`Copy` callbacks/actions passed into `page!` render closures are cloned at the attribute use site when needed
 - [ ] **(0.4.x)** Cleanup-free `use_effect` / `use_layout_effect` closures return `()`, while cleanup-capable closures return `Option<C>`
+- [ ] **(0.4.x)** Functional state changes use `SetStateExt::update` when the new value depends on current state rather than a separate read/clone
 - [ ] **(0.4.x)** Standard intrinsic handlers use the exact catalog payload and target extraction `Result`s; raw `platform::Event` is confined to `raw_event_handler` / `@custom(...)`, and component event props retain their declared type
 - [ ] Internal button-triggered redirects use `reinhardt::pages::navigate(..., NavigationType::Push)` or the current router handle API, not `window.location.set_href`
 - [ ] **(0.4.x)** Catalog-backed Pages labels use feature-gated `I18nContext` with `t!` (or `tr` / `tn` / `tp` / `tnp`), not a per-label `#[server_fn]` and `use_resource` round trip
