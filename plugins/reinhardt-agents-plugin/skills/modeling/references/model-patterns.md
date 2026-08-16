@@ -151,6 +151,57 @@ pub source_system_record_id: String, // nosemgrep: reinhardt-no-scalar-fk-id -- 
 Never use the suppression for a Reinhardt relationship; replace that scalar with
 the appropriate `#[rel(...)]` field instead.
 
+## Native Model Enum Fields (0.4.x)
+
+Use `ModelEnum` for a finite database-backed domain. Choose one representation
+and assign every unit variant a stable database value:
+
+```rust
+use reinhardt::ModelEnum;
+use reinhardt::core::serde::{Deserialize, Serialize};
+use reinhardt::prelude::*;
+
+#[derive(ModelEnum, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[model_enum(repr = "string")]
+enum Status {
+    #[model_enum(value = "queued")]
+    Queued,
+    #[model_enum(value = "in_progress")]
+    Running,
+}
+
+#[model(app_label = "jobs", table_name = "jobs")]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+struct Job {
+    #[field(primary_key = true)]
+    id: Option<i64>,
+    #[field(max_length = 32)]
+    status: Status,
+}
+```
+
+Use `repr = "i32"` with integer `value` attributes for an integer-backed
+domain. Generated migrations add a portable check constraint. Keep Rust variant
+names, serde names, and database values conceptually separate; changing the
+database value is a schema/domain migration, not a Rust-only rename.
+
+Generated field references accept the enum type directly:
+
+```rust
+let queued = Job::objects()
+    .filter_by(Job::field_status().eq(Status::Queued))
+    .all()
+    .await?;
+
+Job::objects()
+    .filter_by(Job::field_id().eq(job_id))
+    .update_fields([Job::field_status().assign(Status::Running)])
+    .await?;
+```
+
+Passing a raw string or integer is a compile error. Unknown stored values fail
+hydration with field context. Nullable enum fields use `Option<Enum>` normally.
+
 ### Generated Foreign-Key ID Accessors (0.4.x)
 
 ForeignKey and OneToOne fields generate a consistent `*_id()` method on native

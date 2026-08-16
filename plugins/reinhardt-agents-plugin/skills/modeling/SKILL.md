@@ -25,11 +25,13 @@ Guide developers through model definition, database operations, and migration ma
 3. Before writing any `#[model]`, inventory every ForeignKey, OneToOne, and ManyToMany relationship; choose its `#[rel(...)]` marker field, target, and deletion behavior
 4. Guide model struct definition with `#[model]` attribute
 5. Choose appropriate scalar field types and constraints
-6. For 0.4.x generated columns, use the typed `SchemaExpr` contract in
+6. For 0.4.x finite domain values, use `ModelEnum` with an explicit string or
+   i32 representation and stable per-variant database values
+7. For 0.4.x generated columns, use the typed `SchemaExpr` contract in
    `references/model-patterns.md` before choosing a raw SQL escape hatch
-7. Define the inventoried relationships with `#[rel(...)]`
-8. After editing, audit every `*_id` field in each `#[model]`: replace relationship-shaped scalar IDs with `#[rel(...)]` marker fields, or document why a retained scalar is intentionally denormalized or external and add a narrow inline `nosemgrep: reinhardt-no-scalar-fk-id -- <reason>` exception
-9. Implement `pub use` re-exports in the module entry file
+8. Define the inventoried relationships with `#[rel(...)]`
+9. After editing, audit every `*_id` field in each `#[model]`: replace relationship-shaped scalar IDs with `#[rel(...)]` marker fields, or document why a retained scalar is intentionally denormalized or external and add a narrow inline `nosemgrep: reinhardt-no-scalar-fk-id -- <reason>` exception
+10. Implement `pub use` re-exports in the module entry file
 
 ### ORM Operations (Django-style)
 
@@ -91,6 +93,7 @@ Guide developers through model definition, database operations, and migration ma
 - Field types map to Rust types (String, i32, i64, bool, Option<T>, DateTime<Utc>)
 - **(0.4.x)** `#[model]` requires an explicit `app_label`. If `table_name` is omitted, the default is `<app_label>_<singular_acronym_aware_snake_case_model_name>`; do not rely on pluralization. Keep an explicit deployed `table_name` when adopting the convention.
 - **(0.4.x)** Use `Json<T>` for typed JSON model fields. `Option<Json<T>>::None` is SQL `NULL`, while `Some(Json::new(serde_json::Value::Null))` is a present JSON `null` value.
+- **(0.4.x)** Use `#[derive(ModelEnum)]` with `#[model_enum(repr = "string" | "i32")]` and explicit `#[model_enum(value = ...)]` values for finite model domains; query and update with enum values, not raw strings or integers
 - Put `#[field(...)]` on every scalar model field, even when no options are required
 - Use `#[rel(...)]` for model relationships; do not represent foreign keys as unmanaged scalar IDs unless the scalar is intentionally denormalized or external, and document that non-relationship purpose next to the field with a narrow `nosemgrep: reinhardt-no-scalar-fk-id -- <reason>` exception
 - **(0.4.x)** Typed relation paths compile-check relation names and nested fields. Use typed `select_related` for single-valued relations and typed `prefetch_related` for reverse one-to-many / many-to-many relations. Typed related filters are SELECT-only; use a subquery for writes.

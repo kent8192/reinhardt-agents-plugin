@@ -12,7 +12,7 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 
 - User uses or asks about any `#[attribute]` or `derive()` macro
 - User defines models, views, routes, or injectable services
-- User mentions: "macro", "#[model]", "#[user]", "#[inject]", "#[get]", "#[post]", "#[routes]", "#[component]", "#[layout]", "#[settings]", "#[admin]", "#[app_config]", "#[hook]", "guard!", "installed_apps!", "path!", "style!", "#[style_def]", "#[derive(Schema)]", "#[derive(Model)]", "#[derive(Validate)]", "#[server_fn]", "#[server_fnset]", "#[wasm_server_api]", "#[permission_required]", "#[injectable]", "#[injectable_key]", "#[use_inject]"
+- User mentions: "macro", "#[model]", "#[user]", "#[inject]", "#[get]", "#[post]", "#[routes]", "#[component]", "#[layout]", "#[settings]", "#[admin]", "#[app_config]", "#[hook]", "guard!", "installed_apps!", "path!", "style!", "#[style_def]", "#[derive(Schema)]", "#[derive(Model)]", "#[derive(ModelEnum)]", "#[derive(Validate)]", "#[server_fn]", "#[server_fnset]", "#[wasm_server_api]", "#[permission_required]", "#[injectable]", "#[injectable_key]", "#[use_inject]"
 
 ## Workflow
 
@@ -29,6 +29,8 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 3. Use `#[field(...)]` attributes on every scalar field, including unconstrained fields
 4. Use `#[rel(...)]` attributes for relationships
 5. Optionally use `#[user(...)]` for user model with auth traits
+6. In 0.4.x, use `#[derive(ModelEnum)]` plus explicit representation/value
+   attributes for finite database-backed domains
 
 > **0.3.x note:** `#[model]` still auto-generates `{Model}Info`; relation fields now use `RelationInfo<T>` / `ManyToManyInfo<Source, Target>` payloads.
 
@@ -91,6 +93,7 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 - `#[inject(cache = false)]` creates a fresh instance per injection (no caching)
 - `#[hook(on = runserver)]` requires a unit struct (no fields, no generics) implementing `RunserverHook`
 - `#[model]` uses UUID v7 (`Uuid::now_v7()`) for `Option<Uuid>` primary keys — better index performance
+- `ModelEnum` database values are schema contracts independent of Rust variant and serde names
 - `#[server_fnset]` groups markers but does not provide global discovery or turn model RPCs into REST ViewSets
 - In 0.4.x, `#[layout]` functions return `Page`, are synchronous and
   non-generic, accept `Path` / `Query` extractors plus exactly one plain
