@@ -12,7 +12,7 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 
 - User uses or asks about any `#[attribute]` or `derive()` macro
 - User defines models, views, routes, or injectable services
-- User mentions: "macro", "#[model]", "#[user]", "#[inject]", "#[get]", "#[post]", "#[routes]", "#[component]", "#[layout]", "#[settings]", "#[admin]", "#[app_config]", "#[hook]", "guard!", "installed_apps!", "path!", "style!", "#[style_def]", "#[derive(Schema)]", "#[derive(Model)]", "#[derive(ModelEnum)]", "#[derive(Validate)]", "#[server_fn]", "#[server_fnset]", "#[wasm_server_api]", "#[permission_required]", "#[injectable]", "#[injectable_key]", "#[use_inject]"
+- User mentions: "macro", "#[model]", "#[user]", "#[inject]", "#[get]", "#[post]", "#[routes]", "#[component]", "#[layout]", "#[loader]", "#[settings]", "#[admin]", "#[app_config]", "#[hook]", "guard!", "installed_apps!", "path!", "style!", "#[style_def]", "#[derive(Schema)]", "#[derive(Model)]", "#[derive(ModelEnum)]", "#[derive(Validate)]", "#[server_fn]", "#[server_fnset]", "#[wasm_server_api]", "#[permission_required]", "#[injectable]", "#[injectable_key]", "#[use_inject]"
 
 ## Workflow
 
@@ -45,6 +45,7 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
    plain `Outlet`; register its relative children with `ClientRouter::routes`
 7. In 0.4.x, use `#[server_fnset]` for explicitly registered typed
    server-function groups
+8. In 0.4.x, use `#[loader]` for route entry data
 
 > **0.2.x note:** `#[url_patterns]` is removed in 0.2.x — use `#[routes]` for all URL registration.
 

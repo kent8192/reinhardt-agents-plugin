@@ -16,7 +16,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - User configures client-side routing, SSR, or hydration
 - User builds nested layout routes with `#[layout]` and `Outlet`
 - User uses async SSR, `SsrStream`, or native resource hydration
-- User mentions: "page", "head", "form", "server_fn", "server_fnset", "deps!", "deps_auto!", "use_head", "use_page_title", "bind:", "HMR", "hot patch", "Signal", "useState", "useEffect", "use_query", "use_mutation", "QueryKey", "cache", "invalidation", "watch", "EventFixture", "i18n", "translation", "locale", "t!", "SSR", "hydration", "SsrStream", "resource_timeout", "WASM", "frontend", "router", "ClientRouter", "Outlet", "ApiQuerySet", "Table", "prelude", "component", "layout"
+- User mentions: "page", "head", "form", "server_fn", "server_fnset", "loader", "deps!", "deps_auto!", "use_head", "use_page_title", "bind:", "HMR", "hot patch", "Signal", "useState", "useEffect", "use_query", "use_mutation", "QueryKey", "cache", "invalidation", "watch", "EventFixture", "i18n", "translation", "locale", "t!", "SSR", "hydration", "SsrStream", "resource_timeout", "WASM", "frontend", "router", "ClientRouter", "Outlet", "ApiQuerySet", "Table", "prelude", "component", "layout"
 
 ## Workflow
 
@@ -99,6 +99,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - In 0.4.x, group existing server functions with `#[server_fnset]` and register the set explicitly. For model-backed sets, require wire DTO mappings, a typed unique lookup, and an explicit policy; do not treat them as REST ViewSets
 - In 0.4.x, use `bind:` for signal-owned text, checkbox, radio, number, textarea, and select controls; keep uncontrolled controls event-owned, and use `number(value, error)` only when rejected numeric text must be surfaced
 - With the 0.4.x `hmr` feature, rely on `runserver --with-pages` for conservative state-preserving literal template patches; dynamic expressions, handlers, bindings, control flow, components, or shared server-visible edits must take the normal rebuild path
+- In 0.4.x, declare route entry data with `#[loader]` and `Loader<T>` so navigation prepares before commit and SSR/hydration share the same keyed state; do not duplicate the request in component mount hooks
 
 ## Cross-Domain References
 
@@ -124,3 +125,4 @@ For the latest API definitions:
 9. Read `reinhardt/crates/reinhardt-pages/src/i18n.rs` for reactive Pages i18n and SSR/hydration contracts
 10. Read `reinhardt/crates/reinhardt-pages/docs/document_head_management.md` for document-head ownership and lifecycle rules
 11. Read `reinhardt/crates/reinhardt-pages/docs/server_fn_macro.md` for typed server function sets
+12. Read `reinhardt/crates/reinhardt-pages/docs/route_loaders.md` for route loader navigation, cancellation, SSR, and hydration contracts

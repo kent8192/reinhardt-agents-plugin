@@ -675,6 +675,15 @@ Register the result with `ServerRouter::server_fnset`. Set names must be one
 safe path segment. The macro preserves each member's codec, CSRF, extractors,
 injection, metadata, and mock identity; it does not perform global discovery.
 
+### `#[loader]` (0.4.x)
+
+**Crate:** `reinhardt-pages/macros`
+
+Mark an async function as route entry data while keeping the original function
+directly callable in tests. Bind its marker with `loader = function_name` on a
+route component or layout, and receive the value as `Loader<T>`. Loader inputs
+may include `Path<T>`, `Query<T>`, and one `CancellationToken`.
+
 ---
 
 ## gRPC & GraphQL
