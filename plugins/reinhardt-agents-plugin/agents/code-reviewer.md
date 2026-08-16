@@ -100,6 +100,7 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] **(0.4.x)** Functional state changes use `SetStateExt::update` when the new value depends on current state rather than a separate read/clone
 - [ ] **(0.4.x)** Registration-style effects use `use_retained_effect` / `use_retained_layout_effect` when the guard is intentionally not owned by the component body
 - [ ] **(0.4.x)** Query cache reads use a complete stable `QueryKey`, generated server-function `key(...)` helpers when available, and exact mutation invalidation; distinguish initial pending from background fetching
+- [ ] **(0.4.x)** Reactive handles (`Signal`, `Memo`, `Effect`, `Callback`, `Action`, `Resource`) are treated as `Copy` scope keys; low-level handles are created inside an active `ReactiveScope`, and non-reactive/reference-counted values are the ones cloned for ownership
 - [ ] **(0.4.x)** Standard intrinsic handlers use the exact catalog payload and target extraction `Result`s; raw `platform::Event` is confined to `raw_event_handler` / `@custom(...)`, and component event props retain their declared type
 - [ ] Internal button-triggered redirects use `reinhardt::pages::navigate(..., NavigationType::Push)` or the current router handle API, not `window.location.set_href`
 - [ ] **(0.4.x)** Catalog-backed Pages labels use feature-gated `I18nContext` with `t!` (or `tr` / `tn` / `tp` / `tnp`), not a per-label `#[server_fn]` and `use_resource` round trip

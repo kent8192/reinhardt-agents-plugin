@@ -122,14 +122,14 @@ reading the signal separately; keep `set_count(value)` for direct replacement.
 // 0.4.x
 let _effect_guard = use_effect(
     {
-        let count = count.clone();
+        let count = count;
         move || {
             // Runs when dependencies change
             log!("Count is: {}", count.get());
             ()
         }
     },
-    (count.clone(),),
+    (count,),
 );
 ```
 
@@ -157,6 +157,18 @@ code intentionally does not own that guard, use `use_retained_effect` or
 `use_retained_layout_effect`; the retained hook stores the guard in the mounted
 reactive node store until the component scope is disposed. Keep ordinary hooks
 when explicit guard ownership and early disposal are part of the design.
+
+### Copy Reactive Handles and Scope (0.4.x)
+
+`Signal`, `Memo`, `Effect`, `Callback`, `Action`, and `Resource` are `Copy`
+handles backed by a scope-owned generational arena. Remove clone ceremony for
+these reactive keys and create low-level nodes only while a `ReactiveScope` is
+active. The handle does not keep a disposed scope alive. Normal Pages SSR,
+hydration, and client launcher entrypoints manage the scope automatically.
+
+`Callback::new` also requires an active scope. Use `Callback::new_in_scope` for
+callbacks created outside a component scope. Reference-counted non-reactive
+values and setter functions may still need ordinary `clone()` calls.
 
 ### Derived Value Hooks
 
@@ -287,13 +299,13 @@ shared Pages code on browser WASM and during native SSR:
 let user_id = Signal::new(1);
 let user = use_resource(
     {
-        let user_id = user_id.clone();
+        let user_id = user_id;
         move || {
             let id = user_id.get();
             async move { fetch_user(id).await }
         }
     },
-    (user_id.clone(),),
+    (user_id,),
 );
 
 // Mount-only loading
