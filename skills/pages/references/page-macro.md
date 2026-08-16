@@ -316,6 +316,11 @@ button { @click: |_| { do_something(); }, "Run action" }
 button { @click: handle_click, "Handle click" }
 ```
 
+For typed style definitions, keep `#[style_def] static ... = style! { ... };`
+outside the `page!` expression and use its generated class/variable helpers in
+the markup. Link the generated stylesheet once per document; see
+[the style DSL reference](style-dsl.md).
+
 For external handlers, use the catalogued payload type (`ClickEvent`,
 `InputEvent`, `ChangeEvent`, and so on) rather than the removed `DummyEvent` or
 an untyped placeholder. Target helpers such as `value()`, `checked()`,

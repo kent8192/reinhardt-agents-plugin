@@ -1,6 +1,6 @@
 ---
 name: macros
-description: Use when working with reinhardt procedural macros - covers attribute macros (#[model], #[user], #[inject], HTTP decorators), derive macros, and function-like macros (guard!, installed_apps!, path!)
+description: Use when working with reinhardt procedural macros - covers attribute macros (#[model], #[user], #[inject], HTTP decorators), derive macros, and function-like macros (guard!, installed_apps!, path!, style!)
 versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.x"]
 ---
 
@@ -12,7 +12,7 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 
 - User uses or asks about any `#[attribute]` or `derive()` macro
 - User defines models, views, routes, or injectable services
-- User mentions: "macro", "#[model]", "#[user]", "#[inject]", "#[get]", "#[post]", "#[routes]", "#[component]", "#[layout]", "#[settings]", "#[admin]", "#[app_config]", "#[hook]", "guard!", "installed_apps!", "path!", "#[derive(Schema)]", "#[derive(Model)]", "#[derive(Validate)]", "#[server_fn]", "#[server_fnset]", "#[wasm_server_api]", "#[permission_required]", "#[injectable]", "#[injectable_key]", "#[use_inject]"
+- User mentions: "macro", "#[model]", "#[user]", "#[inject]", "#[get]", "#[post]", "#[routes]", "#[component]", "#[layout]", "#[settings]", "#[admin]", "#[app_config]", "#[hook]", "guard!", "installed_apps!", "path!", "style!", "#[style_def]", "#[derive(Schema)]", "#[derive(Model)]", "#[derive(Validate)]", "#[server_fn]", "#[server_fnset]", "#[wasm_server_api]", "#[permission_required]", "#[injectable]", "#[injectable_key]", "#[use_inject]"
 
 ## Workflow
 
@@ -44,6 +44,12 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
    server-function groups
 
 > **0.2.x note:** `#[url_patterns]` is removed in 0.2.x — use `#[routes]` for all URL registration.
+
+### Component-Scoped Styles
+
+1. Read `../pages/references/style-dsl.md`
+2. Define `#[style_def] static NAME: Styles = style! { ... };`
+3. Link `__reinhardt__/components.css` once per document
 
 ### Validation DTOs
 
@@ -77,6 +83,7 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 - `guard!` precedence: `!` > `&` > `|` — use parentheses for clarity
 - `installed_apps!` validates app names at compile time
 - `path!` validates URL patterns at compile time (must start with `/`, snake_case params)
+- `#[style_def]` wraps a `style!` definition in a static stylesheet; link its generated asset once and keep plain `class:` / `style:` attributes valid for compatibility
 - `#[injectable]` covers structs and provider functions in 0.3.x; `#[injectable_factory]` is a deprecated compatibility alias
 - `#[injectable]` auto-derives `Clone` on structs (no need to manually derive) and emits inert WASM stubs for shared provider functions
 - `#[inject(cache = false)]` creates a fresh instance per injection (no caching)

@@ -78,6 +78,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - **(0.4.x)** Use `SetStateExt::update` for functional state updates such as `set_count.update(|current| current + 1)`; retain `set_count(value)` for direct replacement.
 - **(0.4.x)** Use `use_retained_effect` / `use_retained_layout_effect` when registration-style code intentionally does not own the returned effect guard; use ordinary effects when RAII ownership and early disposal are desired.
 - In 0.4.x, reactive handles (`Signal`, `Memo`, `Effect`, `Callback`, `Action`, and `Resource`) are `Copy` scope keys. Create low-level handles inside an active `ReactiveScope`; do not clone reactive handles for ownership, but keep non-reactive setters and reference-counted values cloned when required.
+- Component-scoped styles use `#[style_def] static ... = style! { ... };`; link the generated `__reinhardt__/components.css` asset once per document because the macro does not inject a link. Plain `class:` and `style:` attributes remain valid.
 - Use `use_action` for component-local async mutations, `use_resource` for component-local async reads or derived text, and `use_callback` / `use_callback_with` for event handlers; keep `spawn_local` as an escape hatch for low-level browser integration only
 - **(0.4.x)** Use `use_query` and a stable `QueryKey` for app-wide keyed reads that should deduplicate, cache, poll, or be invalidated by `use_mutation(...).invalidates(query_key)`. `use_resource` remains the local component-scoped read primitive.
 - **(0.4.x)** `#[server_fn]` generates a marker-module `key(...)` helper for canonical JSON arguments; use it for query identity instead of embedding raw arguments in hydration IDs. Request-extractor or `#[inject]` server functions skip native SSR prefetch.
@@ -104,6 +105,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - DI patterns: `../dependency-injection/references/di-patterns.md`
 - Auth backends: `../authentication/references/auth-backends.md`
 - Macro overview: `../macros/references/attribute-macros.md`
+- Component-scoped style DSL: `references/style-dsl.md`
 - View patterns: `../api-development/references/view-patterns.md`
 
 ## Dynamic References
