@@ -207,6 +207,47 @@ let posts = Post::objects()
     .await?;
 ```
 
+### Typed Relation Traversal (0.4.x)
+
+Models generate `rel_*` accessors for relationship metadata. For a related
+model that also uses `#[model]`, call `.into_typed()` to expose generated field
+and nested relation accessors. This keeps relation names and field filters
+checked at compile time:
+
+```rust
+let posts = Post::objects()
+    .filter_by(
+        Post::rel_author()
+            .into_typed()
+            .field_email()
+            .eq("ada@example.com"),
+    )
+    .select_related(Post::rel_author())
+    .all()
+    .await?;
+
+let posts = Post::objects()
+    .prefetch_related(Post::rel_comments())
+    .all()
+    .await?;
+```
+
+Use typed `select_related` for forward ForeignKey / OneToOne paths and typed
+`prefetch_related` for reverse one-to-many and many-to-many paths. A nullable
+path can use `.optional()` for left-join semantics. Multi-hop prefetch remains
+an explicit sequence until the framework supports a single typed multi-hop
+plan. Raw relation paths can still be used for low-level loading and
+`Target::field_name()` filters; typed traversal begins at `.into_typed()`.
+
+Typed related filters are for SELECT builders. Update and delete builders reject
+related paths; select the primary keys in a subquery first, then use that
+subquery in the write predicate. Reverse and many-to-many counts over a typed
+filter count distinct root primary keys.
+
+The string APIs remain a compatibility surface in 0.4.x. When model metadata
+is available, invalid string relation paths fail during query construction, but
+new code should prefer the typed accessors.
+
 ### Annotations and Aggregation
 
 ```rust
@@ -330,6 +371,8 @@ let count = User::objects().count_with_conn(&conn).await?;
 | `values_list(&[fields])` | `QuerySet<M>` | Alias for values() |
 | `select_related(&[fields])` | `QuerySet<M>` | Eager load with JOIN |
 | `prefetch_related(&[fields])` | `QuerySet<M>` | Prefetch with separate queries |
+| `select_related(path)` | `QuerySet<M>` | **(0.4.x)** Typed eager load for a single-valued relation |
+| `prefetch_related(path)` | `QuerySet<M>` | **(0.4.x)** Typed prefetch for reverse or collection relations |
 | `annotate(Annotation)` | `QuerySet<M>` | Add computed field |
 | `annotate_subquery(name, fn)` | `QuerySet<M>` | Add scalar subquery |
 | `filter_array_overlap(field, &[])` | `QuerySet<M>` | PostgreSQL array && |
