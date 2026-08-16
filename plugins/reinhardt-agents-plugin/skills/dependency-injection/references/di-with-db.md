@@ -3,8 +3,9 @@
 ## DatabaseConnection Injection
 
 `DatabaseConnection` is available from the DI registry when the database feature
-is enabled. In 0.3.x, examples that consume it through `Depends` assume a keyed
-provider such as `PrimaryDatabase`. Register the provider before injecting it:
+is enabled. These examples use the 0.4.x explicit-key wrappers with a
+`PrimaryDatabase` key. For a project targeting 0.3.x, use `FactoryOutput<K, T>`
+and `Depends<K, T>` in place of their `Keyed*` counterparts.
 
 ```rust
 use reinhardt::di::prelude::*;
@@ -16,9 +17,9 @@ struct PrimaryDatabase;
 #[injectable(scope = "singleton")]
 async fn create_primary_database(
     #[inject] settings: DbSettings,
-) -> FactoryOutput<PrimaryDatabase, DatabaseConnection> {
+) -> KeyedFactoryOutput<PrimaryDatabase, DatabaseConnection> {
     let db = DatabaseConnection::connect(&settings.database_url).await.unwrap();
-    FactoryOutput::new(db)
+    KeyedFactoryOutput::new(db)
 }
 ```
 
@@ -31,7 +32,7 @@ use reinhardt::views::prelude::*;
 #[get("/users/{id}/", name = "user_retrieve")]
 pub async fn get_user(
     Path(id): Path<i64>,
-    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
+    #[inject] db: KeyedDepends<PrimaryDatabase, DatabaseConnection>,
 ) -> ViewResult<Response> {
     let user = User::objects()
         .filter(User::id.eq(id))
@@ -51,7 +52,7 @@ pub async fn get_user(
 #[post("/transfers/", name = "transfer_create")]
 pub async fn transfer_funds(
     Json(data): Json<TransferRequest>,
-    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
+    #[inject] db: KeyedDepends<PrimaryDatabase, DatabaseConnection>,
 ) -> ViewResult<Response> {
 
     // Begin a transaction
@@ -196,7 +197,7 @@ Handlers can receive any combination of injectable types:
 #[post("/orders/", name = "order_create")]
 pub async fn create_order(
     #[inject] AuthInfo(state): AuthInfo,
-    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
+    #[inject] db: KeyedDepends<PrimaryDatabase, DatabaseConnection>,
     #[inject] email_service: EmailService,
     #[inject] session: Session,
 ) -> ViewResult<Response> {
@@ -234,7 +235,7 @@ around one query.
 ```rust
 #[get("/users/", name = "user_list")]
 pub async fn list_users(
-    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
+    #[inject] db: KeyedDepends<PrimaryDatabase, DatabaseConnection>,
 ) -> ViewResult<Response> {
     let users = User::objects()
         .filter(User::is_active.eq(true))
@@ -250,7 +251,7 @@ pub async fn list_users(
 #[get("/users/by-email/{email}/", name = "user_by_email")]
 pub async fn get_user_by_email(
     Path(email): Path<String>,
-    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
+    #[inject] db: KeyedDepends<PrimaryDatabase, DatabaseConnection>,
 ) -> ViewResult<Response> {
     let user = User::objects()
         .filter(User::email.eq(email))
@@ -277,7 +278,7 @@ the domain operation, not a repository lookup.
 #[injectable(scope = "singleton")]
 pub struct UserRegistrationService {
     #[inject]
-    db: Depends<PrimaryDatabase, DatabaseConnection>,
+    db: KeyedDepends<PrimaryDatabase, DatabaseConnection>,
     #[inject]
     email: EmailService,
 }
