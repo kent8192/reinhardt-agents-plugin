@@ -257,6 +257,87 @@ Tests that mutate shared i18n state or catalogs must use `#[serial(i18n)]`.
 Keep the Arrange/Act/Assert structure and use strict assertions for both the
 pre-switch and post-switch rendered text.
 
+## Query Cache Tests (0.4.x)
+
+For `use_query`, test the cache contract rather than only the final rendered
+text:
+
+- concurrent consumers of one `QueryKey` issue one request;
+- `is_pending()` and `is_fetching()` distinguish initial and background work;
+- the last successful value remains visible during a refetch;
+- a successful `use_mutation(...).invalidates(key)` triggers the exact query;
+- canonical server-function keys remain stable for equivalent JSON arguments;
+- request-bound or injected server functions are not assumed to prefetch during
+  native SSR.
+
+## 0.4.x Nested Layout Route Regression Tests
+
+- Build a native `ClientRouter::routes` fixture with a `#[layout]` shell and
+  `Outlet`, then assert the fully composed path, inherited `Path` parameters,
+  named-route reverse lookup, and the layout's `children.index(...)` route.
+- Cover relative child paths, nested `children.layout(...)` trees, duplicate
+  route names or path parameters, and route guards/metadata attached at the
+  correct tree level.
+- In browser-WASM tests, navigate between sibling children and assert that the
+  shared shell remains mounted while only the outlet subtree is remounted.
+
+## 0.4.x `page!` Keyword Attribute Regression Tests
+
+Compile and render fixtures with `type:` on `input` and `button` elements.
+Keep the fixture spelling as `type:`, not Rust's raw identifier form
+`r#type:`; this verifies the HTML attribute DSL contract without implying
+that every Rust keyword has a direct DSL spelling.
+
+## 0.4.x Async SSR and Resource Regression Tests
+
+- Use an async native test and await `SsrRenderer` entry points; cover both
+  `render_page(...).await` plus `SsrStream::collect_string()` and the buffered
+  `render_page_to_string(...).await` helper.
+- Register deterministic resource fetchers and assert `Loading`, `Success`,
+  and `Error` behavior, timeout/fallback behavior, serialized hydration state,
+  and the no-refetch hydration path. Add a stable explicit key for conditional
+  `use_resource_with_key` calls.
+- When suspense streaming is enabled, assert the fallback shell arrives before
+  the replacement chunk; use `SsrChunk::into_bytes()` in HTTP stream adapters.
+
+## Typed Event and Reactive Settling Tests (0.4.x)
+
+Native component tests use the same intrinsic payload catalog as the browser.
+Dispatch an `EventFixture` through the queried element, then call
+`Screen::settle()` to drain handlers, nested tasks, and reactive rerenders:
+
+```rust
+let screen = render(|| {
+    let name = Signal::new(String::new());
+    let handler_name = name.clone();
+    page!({
+        label { "Name" }
+        input {
+            aria_label: "Name",
+            @input: move |event: InputEvent| {
+                if let Ok(value) = event.value() {
+                    handler_name.set(value);
+                }
+            }
+        }
+        p { { name.get() } }
+    })
+});
+
+screen
+    .get_by_label("Name")
+    .dispatch(EventFixture::input().value("Ada"))?;
+screen.settle().await;
+
+assert_eq!(screen.get_by_text("Ada").tag_name(), "p");
+```
+
+Use the convenience fixtures `click`, `submit`, `input`, `change`, `key_down`,
+and `pointer_move`, and use target-state setters for `checked`,
+`selected_values`, `files`, and `content_editable`. Cover the distinction
+between `target` and `current_target`, and use `raw_event_handler` only in a
+separate escape-hatch test.
+
 ## Testing Standards
 
 - ALL tests MUST use `rstest` (per project standards)

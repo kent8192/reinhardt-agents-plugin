@@ -1,6 +1,6 @@
 ---
 name: macros
-description: Use when working with reinhardt procedural macros - covers attribute macros (#[model], #[user], #[inject], HTTP decorators), derive macros, and function-like macros (guard!, installed_apps!, path!)
+description: Use when working with reinhardt procedural macros - covers attribute macros (#[model], #[user], #[inject], HTTP decorators), derive macros, and function-like macros (guard!, installed_apps!, path!, style!)
 versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.x"]
 ---
 
@@ -12,7 +12,7 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 
 - User uses or asks about any `#[attribute]` or `derive()` macro
 - User defines models, views, routes, or injectable services
-- User mentions: "macro", "#[model]", "#[user]", "#[inject]", "#[get]", "#[post]", "#[routes]", "#[component]", "#[settings]", "#[admin]", "#[app_config]", "#[hook]", "guard!", "installed_apps!", "path!", "#[derive(Schema)]", "#[derive(Model)]", "#[derive(Validate)]", "#[server_fn]", "#[wasm_server_api]", "#[permission_required]", "#[injectable]", "#[injectable_key]", "#[use_inject]"
+- User mentions: "macro", "#[model]", "#[user]", "#[inject]", "#[get]", "#[post]", "#[routes]", "#[component]", "#[layout]", "#[settings]", "#[admin]", "#[app_config]", "#[hook]", "guard!", "installed_apps!", "path!", "style!", "#[style_def]", "#[derive(Schema)]", "#[derive(Model)]", "#[derive(Validate)]", "#[server_fn]", "#[server_fnset]", "#[wasm_server_api]", "#[permission_required]", "#[injectable]", "#[injectable_key]", "#[use_inject]"
 
 ## Workflow
 
@@ -38,9 +38,19 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 2. Use `#[api_view]` for function-based API views
 3. Use `#[action]` for custom ViewSet actions
 4. Use `#[routes]` for URL pattern registration
-5. Use `#[component]` for 0.3 route-backed Pages components
+5. Use `#[component]` for route-backed Pages components
+6. Use `#[layout]` in 0.4.x for a route-backed Pages shell that accepts one
+   plain `Outlet`; register its relative children with `ClientRouter::routes`
+7. In 0.4.x, use `#[server_fnset]` for explicitly registered typed
+   server-function groups
 
 > **0.2.x note:** `#[url_patterns]` is removed in 0.2.x — use `#[routes]` for all URL registration.
+
+### Component-Scoped Styles
+
+1. Read `../pages/references/style-dsl.md`
+2. Define `#[style_def] static NAME: Styles = style! { ... };`
+3. Link `__reinhardt__/components.css` once per document
 
 ### Validation DTOs
 
@@ -75,11 +85,19 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 - `guard!` precedence: `!` > `&` > `|` — use parentheses for clarity
 - `installed_apps!` validates app names at compile time
 - `path!` validates URL patterns at compile time (must start with `/`, snake_case params)
+- `#[style_def]` wraps a `style!` definition in a static stylesheet; link its generated asset once and keep plain `class:` / `style:` attributes valid for compatibility
 - `#[injectable]` covers structs and provider functions in 0.3.x; `#[injectable_factory]` is a deprecated compatibility alias
 - `#[injectable]` auto-derives `Clone` on structs (no need to manually derive) and emits inert WASM stubs for shared provider functions
 - `#[inject(cache = false)]` creates a fresh instance per injection (no caching)
 - `#[hook(on = runserver)]` requires a unit struct (no fields, no generics) implementing `RunserverHook`
 - `#[model]` uses UUID v7 (`Uuid::now_v7()`) for `Option<Uuid>` primary keys — better index performance
+- `#[server_fnset]` groups markers but does not provide global discovery or turn model RPCs into REST ViewSets
+- In 0.4.x, `#[layout]` functions return `Page`, are synchronous and
+  non-generic, accept `Path` / `Query` extractors plus exactly one plain
+  `Outlet`, and use a globally unique `name = "..."` route name
+- In 0.4.x, layout paths are absolute while nested `ClientRouter::routes`
+  children use relative paths; use `children.index(...)` for the layout base
+  route and keep layout and leaf names unique across the full route tree
 
 ## Cross-Domain References
 
@@ -98,7 +116,7 @@ For the latest macro definitions:
 2. Read `reinhardt/crates/reinhardt-di/macros/src/lib.rs` for DI macros (#[injectable], #[injectable_key])
 3. Read `reinhardt/crates/reinhardt-auth/macros/src/lib.rs` for guard! macro
 4. Read `reinhardt/crates/reinhardt-db-macros/src/lib.rs` for #[document] macro
-5. Read `reinhardt/crates/reinhardt-pages/macros/src/lib.rs` for #[server_fn], page!, head!, form!
+5. Read `reinhardt/crates/reinhardt-pages/macros/src/lib.rs` for #[component], #[layout], #[server_fn], page!, head!, form!
 6. Read `reinhardt/crates/reinhardt-query/macros/src/lib.rs` for #[derive(Iden)]
 7. Read `reinhardt/crates/reinhardt-rest/openapi-macros/src/lib.rs` for #[derive(Schema)]
 8. Read `reinhardt/crates/reinhardt-urls/routers-macros/src/lib.rs` for path! macro
