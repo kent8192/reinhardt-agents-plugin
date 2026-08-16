@@ -340,7 +340,7 @@ actions at the attribute use site when the render closure also needs them:
 // 0.4.x direct body
 let save_click = use_callback(move |_| {
     save_action.dispatch(current_form_values());
-}, (save_action.clone(), form_state.clone()));
+}, deps![save_action.clone(), form_state.clone()]);
 
 page!({
     button { @click: save_click.clone(), "Save" }

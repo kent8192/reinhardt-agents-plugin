@@ -16,7 +16,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - User configures client-side routing, SSR, or hydration
 - User builds nested layout routes with `#[layout]` and `Outlet`
 - User uses async SSR, `SsrStream`, or native resource hydration
-- User mentions: "page", "head", "form", "server_fn", "server_fnset", "use_head", "use_page_title", "bind:", "HMR", "hot patch", "Signal", "useState", "useEffect", "use_query", "use_mutation", "QueryKey", "cache", "invalidation", "watch", "EventFixture", "i18n", "translation", "locale", "t!", "SSR", "hydration", "SsrStream", "resource_timeout", "WASM", "frontend", "router", "ClientRouter", "Outlet", "ApiQuerySet", "Table", "prelude", "component", "layout"
+- User mentions: "page", "head", "form", "server_fn", "server_fnset", "deps!", "deps_auto!", "use_head", "use_page_title", "bind:", "HMR", "hot patch", "Signal", "useState", "useEffect", "use_query", "use_mutation", "QueryKey", "cache", "invalidation", "watch", "EventFixture", "i18n", "translation", "locale", "t!", "SSR", "hydration", "SsrStream", "resource_timeout", "WASM", "frontend", "router", "ClientRouter", "Outlet", "ApiQuerySet", "Table", "prelude", "component", "layout"
 
 ## Workflow
 
@@ -74,11 +74,12 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - Keep Pages app `services/` modules focused on injectable keys, provider functions, and service structs/functions; put prompt builders, provider adapters, parsers, converters, repository/database internals, and narrow private helpers under app-local `server/` modules
 - Since 0.2.x, reactive expressions in `page!` are auto-wrapped — explicit `Page::reactive(...)` is no longer needed
 - Since 0.2.x, `use_effect`/`use_memo`/`use_callback` take explicit dependency arrays
-- In 0.4.x, cleanup-free `use_effect` / `use_layout_effect` closures return `()`, while cleanup-capable closures return `Option<C>`; keep the dependency tuple explicit.
+- In 0.4.x, cleanup-free `use_effect` / `use_layout_effect` closures return `()`, while cleanup-capable closures return `Option<C>`; keep the dependency mode explicit.
 - **(0.4.x)** Use `SetStateExt::update` for functional state updates such as `set_count.update(|current| current + 1)`; retain `set_count(value)` for direct replacement.
 - **(0.4.x)** Use `use_retained_effect` / `use_retained_layout_effect` when registration-style code intentionally does not own the returned effect guard; use ordinary effects when RAII ownership and early disposal are desired.
 - In 0.4.x, reactive handles (`Signal`, `Memo`, `Effect`, `Callback`, `Action`, and `Resource`) are `Copy` scope keys. Create low-level handles inside an active `ReactiveScope`; do not clone reactive handles for ownership, but keep non-reactive setters and reference-counted values cloned when required.
 - Component-scoped styles use `#[style_def] static ... = style! { ... };`; link the generated `__reinhardt__/components.css` asset once per document because the macro does not inject a link. Plain `class:` and `style:` attributes remain valid.
+- In 0.4.x, every dependency-aware hook requires a named mode: use `deps![...]` (`deps![]` for mount-only); use `deps_auto!()` only with effects, layout effects, and memos, never callbacks, resources, retained effects, or document-head hooks
 - Use `use_action` for component-local async mutations, `use_resource` for component-local async reads or derived text, and `use_callback` / `use_callback_with` for event handlers; keep `spawn_local` as an escape hatch for low-level browser integration only
 - **(0.4.x)** Use `use_query` and a stable `QueryKey` for app-wide keyed reads that should deduplicate, cache, poll, or be invalidated by `use_mutation(...).invalidates(query_key)`. `use_resource` remains the local component-scoped read primitive.
 - **(0.4.x)** `#[server_fn]` generates a marker-module `key(...)` helper for canonical JSON arguments; use it for query identity instead of embedding raw arguments in hydration IDs. Request-extractor or `#[inject]` server functions skip native SSR prefetch.

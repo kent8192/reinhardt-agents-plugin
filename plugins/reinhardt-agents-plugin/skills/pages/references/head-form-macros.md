@@ -467,7 +467,24 @@ let title = use_resource(
             }
         }
     },
-    (locale.clone(),),
+    (locale.clone(),), // 0.2.x–0.3.x
+);
+```
+
+In 0.1.x, use the two-closure adapter: the first closure produces the
+dependency and the fetcher receives it.
+
+```rust
+let title = create_resource_with_deps(
+    {
+        let locale = locale.clone();
+        move || locale.get()
+    },
+    |locale| async move {
+        translate_writing_label(locale, "workspace.title".to_string())
+            .await
+            .unwrap_or_else(|_| "Workspace".to_string())
+    },
 );
 ```
 
