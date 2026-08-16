@@ -43,6 +43,8 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] Nullable fields use `Option<T>`
 - [ ] Primary keys defined with `#[field(primary_key = true)]`
 - [ ] UUID primary keys use v7 (auto-handled by `#[model]` — flag any manual `Uuid::new_v4()` calls)
+- [ ] **(0.4.x)** Generated ForeignKey/OneToOne `*_id()` accessors are used by value on native and WASM; no dereference or target-specific workaround remains
+- [ ] **(0.4.x)** Typed JSON model fields use `Json<T>` and preserve SQL `NULL` (`Option<Json<T>>::None`) versus a present JSON `null`
 - [ ] Custom managers wired via `#[model(manager = ...)]` (rc.23+); veto hooks (`before_save` / `before_delete` / `before_bulk_update`) return early on policy violations rather than mutating state
 - [ ] **(0.2.x)** No usage of removed `HasCustomManager` trait or `custom_manager()` method — use `type Objects` associated type on `Model` instead
 - [ ] **(0.2.x)** `{Model}Info` companion struct considered for cross-layer DTOs; sensitive fields marked with `#[field(skip_info = true)]`
@@ -52,10 +54,12 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] Appropriate scoping (request-scoped vs singleton)
 - [ ] No circular dependency risk
 - [ ] `#[inject]` used correctly in handlers
-- [ ] No duplicate provider identities; use `#[injectable_key]` + `FactoryOutput<K, T>` when multiple providers return the same value type
+- [ ] **(0.4.x)** Self-keyed providers return direct `T` and consumers use `T` or `Depends<T>`; explicit duplicate identities use `KeyedFactoryOutput<K, T>` + `KeyedDepends<K, T>`
+- [ ] **(0.3.x)** `#[injectable_key]` + `FactoryOutput<K, T>` / `Depends<K, T>` is the native keyed provider API; use migration wording only during a 0.3-to-0.4 upgrade
 - [ ] No `#[injectable]` or `#[injectable_factory]` for framework-managed types (`reinhardt::*`) — use application-owned wrapper/key types
-- [ ] Prefer `try_unwrap()` over `into_inner()` for non-Clone values wrapped in `Depends<K, T>`
-- [ ] **(0.3.x)** No new `#[injectable_factory]`, `DependsResult`, or `DependsOption` usage — use `#[injectable]`, `FactoryOutput<K, T>`, and `Depends<K, T>`
+- [ ] Use `try_unwrap()` only for a demonstrably uncached/transient dependency with sole ownership; access request- and singleton-scoped `Depends<T>` / `KeyedDepends<K, T>` through dereference behavior
+- [ ] **(0.4.x)** No new `Depends<K, T>` or `FactoryOutput<K, T>` spelling when the current `Keyed*` wrappers are required; no `DependsResult` / `DependsOption` sugar aliases
+- [ ] **(0.3.x)** No new `#[injectable_factory]`; legacy provider migration uses `#[injectable]`, `FactoryOutput<K, T>`, and `Depends<K, T>` only on that version line
 - [ ] DI contains common dependencies and shared capabilities only; endpoint-specific validation, DTO assembly, persistence ordering, generation, and edit flows stay in the endpoint or adjacent private helper
 - [ ] No thick service facades such as `OutlineService`, `ManuscriptService`, or `DocumentService` when they only hide one `server_fn` / HTTP endpoint workflow
 - [ ] No file-only extraction from `#[server_fn]` into `server/`, `service/`, or `services/`; extracted code has a narrower contract, shared consumer, or independently testable invariant
@@ -86,14 +90,22 @@ Specialized agent for reviewing reinhardt-web application code against project c
 
 - [ ] Button actions operate on the displayed/current entity: route params, form values, loaded DTOs, selected rows/versions, and server return values, not fixture IDs, sample constants, or canned text
 - [ ] Async mutations use `use_action`, async reads or derived text use `use_resource`, and event handlers use `use_callback` / `use_callback_with`; `spawn_local` is limited to low-level browser integration
+- [ ] **(0.4.x)** Structural head values use `#head`, `Page::with_head`, or `RouteMetadata::with_head`; reactive head hooks use explicit dependencies and route-scoped scripts tolerate remounting
+- [ ] **(0.4.x)** `#[server_fnset]` groups and explicitly registers existing markers; model sets declare wire DTO mappings, typed unique lookup, and policy, and are not presented as REST ViewSets
+- [ ] **(0.4.x)** Signal-owned native controls use the type-correct `bind:` shape; number bindings expose `NumberParseError` only when rejected text needs UI, and uncontrolled controls retain one explicit source of truth
+- [ ] **(0.4.x)** HMR correctness does not depend on a hot patch: dynamic expressions, handlers, bindings, control flow, components, and shared code remain valid through the fallback rebuild path
 - [ ] Non-`Copy` callbacks/actions passed into `page!` render closures are cloned at the attribute use site when needed
 - [ ] **(0.4.x)** Cleanup-free `use_effect` / `use_layout_effect` closures return `()`, while cleanup-capable closures return `Option<C>`
+- [ ] **(0.4.x)** Standard intrinsic handlers use the exact catalog payload and target extraction `Result`s; raw `platform::Event` is confined to `raw_event_handler` / `@custom(...)`, and component event props retain their declared type
 - [ ] Internal button-triggered redirects use `reinhardt::pages::navigate(..., NavigationType::Push)` or the current router handle API, not `window.location.set_href`
 - [ ] **(0.4.x)** Catalog-backed Pages labels use feature-gated `I18nContext` with `t!` (or `tr` / `tn` / `tp` / `tnp`), not a per-label `#[server_fn]` and `use_resource` round trip
 - [ ] **(0.4.x)** Server-function translation remains limited to copy that depends on server-only policy, authorization, request data, or a remote source; it is registered and has a stable client fallback when used
 - [ ] **(0.4.x)** SSR localized Pages use `SsrOptions::new().i18n_context(context)` so translated output, `<html lang>`, and `pages.i18n` hydration state agree without a client catalog refetch
 - [ ] **(0.4.x)** Locale writes use `I18nContext::set_locale()` / `set_locale()` and reads use `locale()`; no code depends on the removed writable `locale_signal()` accessor
 - [ ] **(0.1.x through 0.3.x)** App-local i18n needed by Pages clients crosses the boundary through a registered `#[server_fn]` plus `use_resource` fallback, not duplicated client/server gettext code
+- [ ] **(0.4.x)** Nested Pages routes use `ClientRouter::routes` with `#[layout]` and exactly one plain `Outlet`; layout paths are absolute, child paths are relative, the base child uses `children.index(...)`, and layout/leaf names are globally unique
+- [ ] **(0.4.x)** `page!` HTML `type` attributes use the direct `type:` spelling; do not use `r#type:` in the macro DSL fixtures
+- [ ] **(0.4.x)** Async `SsrRenderer` calls are awaited, streamed `render_page` / `SsrStream` and buffered `render_page_to_string` are chosen intentionally, and native `use_resource` timeout, serialized hydration state, and suspense behavior are covered
 - [ ] Component examples import services, routes, serializers, server functions, and shared components at module scope instead of repeating full `crate::...` paths inside `page!` or event handlers
 - [ ] Label-requiring `input` types, `select`, and `textarea` in `page!` have a non-hidden accessible label, non-empty `aria-label`, or `aria-labelledby` that resolves to a non-hidden element with accessible content; generated `form!` fields retain meaningful labels
 - [ ] `button` and interactive `a` elements have an accessible name (text, ARIA label, or non-empty child image `alt`); `input type="submit"` / `"reset"` retain their built-in names, and image submit inputs have a non-empty `alt` or valid ARIA name
@@ -107,7 +119,9 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] Assertions are strict (`assert_eq!` preferred)
 - [ ] Fixtures used for shared setup
 - [ ] `#[serial]` used for global state tests
+- [ ] **(0.4.x)** Model/database tests prefer `TestDatabase` with exactly one schema-source mode, allow multiple `.model::<M>()` registrations in model-derived mode, and keep the guard alive through the test
 - [ ] DI override tests (`with_di_overrides!`, `register_override`) depend on the `testing` feature; keep `#[serial(di_registry)]` only for 0.1.x registry overrides or other global state because 0.2.x / 0.3.x use per-context registry isolation
+- [ ] **(0.4.x)** `dumpdata`/`loaddata` coverage checks `FixtureRecord` shape, explicit-PK and relationship ordering, binary/JSON-null handling, sequence reset, and transactional rollback; `seed` coverage checks registered idempotent hooks and unknown-label errors
 
 ### Documentation & Style
 
