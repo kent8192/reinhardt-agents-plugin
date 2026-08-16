@@ -21,14 +21,15 @@ Guide developers through model definition, database operations, and migration ma
 ### Defining a Model
 
 1. Read `references/model-patterns.md` for field types and relation patterns
-2. Before writing any `#[model]`, inventory every ForeignKey, OneToOne, and ManyToMany relationship; choose its `#[rel(...)]` marker field, target, and deletion behavior
-3. Guide model struct definition with `#[model]` attribute
-4. Choose appropriate scalar field types and constraints
-5. For 0.4.x generated columns, use the typed `SchemaExpr` contract in
+2. For 0.4.x, set the required `app_label` and decide whether to keep an explicit `table_name`; preserve deployed table names instead of accepting an accidental rename
+3. Before writing any `#[model]`, inventory every ForeignKey, OneToOne, and ManyToMany relationship; choose its `#[rel(...)]` marker field, target, and deletion behavior
+4. Guide model struct definition with `#[model]` attribute
+5. Choose appropriate scalar field types and constraints
+6. For 0.4.x generated columns, use the typed `SchemaExpr` contract in
    `references/model-patterns.md` before choosing a raw SQL escape hatch
-6. Define the inventoried relationships with `#[rel(...)]`
-7. After editing, audit every `*_id` field in each `#[model]`: replace relationship-shaped scalar IDs with `#[rel(...)]` marker fields, or document why a retained scalar is intentionally denormalized or external and add a narrow inline `nosemgrep: reinhardt-no-scalar-fk-id -- <reason>` exception
-8. Implement `pub use` re-exports in the module entry file
+7. Define the inventoried relationships with `#[rel(...)]`
+8. After editing, audit every `*_id` field in each `#[model]`: replace relationship-shaped scalar IDs with `#[rel(...)]` marker fields, or document why a retained scalar is intentionally denormalized or external and add a narrow inline `nosemgrep: reinhardt-no-scalar-fk-id -- <reason>` exception
+9. Implement `pub use` re-exports in the module entry file
 
 ### ORM Operations (Django-style)
 
@@ -88,6 +89,7 @@ Guide developers through model definition, database operations, and migration ma
 - Migration files use declarative `Operation` variants — there are NO `up`/`down` methods
 - Migration names are auto-generated from detected changes (`--name` is optional)
 - Field types map to Rust types (String, i32, i64, bool, Option<T>, DateTime<Utc>)
+- **(0.4.x)** `#[model]` requires an explicit `app_label`. If `table_name` is omitted, the default is `<app_label>_<singular_acronym_aware_snake_case_model_name>`; do not rely on pluralization. Keep an explicit deployed `table_name` when adopting the convention.
 - **(0.4.x)** Use `Json<T>` for typed JSON model fields. `Option<Json<T>>::None` is SQL `NULL`, while `Some(Json::new(serde_json::Value::Null))` is a present JSON `null` value.
 - Put `#[field(...)]` on every scalar model field, even when no options are required
 - Use `#[rel(...)]` for model relationships; do not represent foreign keys as unmanaged scalar IDs unless the scalar is intentionally denormalized or external, and document that non-relationship purpose next to the field with a narrow `nosemgrep: reinhardt-no-scalar-fk-id -- <reason>` exception

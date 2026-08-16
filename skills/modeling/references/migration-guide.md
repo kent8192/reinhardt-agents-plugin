@@ -12,6 +12,23 @@ Define/Modify Models -> Generate Migration -> Review -> Apply -> Verify
 
 Edit your model structs in `src/apps/<name>/models.rs`. See `model-patterns.md` for field types, relations, and attribute options.
 
+### Model Identity and Existing Tables (0.4.x)
+
+`#[model]` requires an explicit `app_label`. A missing `table_name` now uses
+the app label plus the singular, acronym-aware snake_case model name:
+
+```text
+User in accounts -> accounts_user
+BlogPost in blog -> blog_blog_post
+HTTPRoute in routing -> routing_http_route
+```
+
+The convention does not pluralize names. When upgrading an existing model, add
+`app_label` but keep its deployed `table_name` until a deliberate rename has
+been planned. `makemigrations` can emit `RenameTable` for a changed identity,
+including generated many-to-many through tables and columns. Review qualified
+string foreign keys against the registered app/model identity before applying.
+
 ### Step 2: Generate Migration
 
 After modifying models, generate a migration file:

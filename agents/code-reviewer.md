@@ -44,6 +44,7 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] Nullable fields use `Option<T>`
 - [ ] Primary keys defined with `#[field(primary_key = true)]`
 - [ ] UUID primary keys use v7 (auto-handled by `#[model]` — flag any manual `Uuid::new_v4()` calls)
+- [ ] **(0.4.x)** Every `#[model]` has an explicit `app_label`; omitted `table_name` is accepted only for a new/intentionally renamed schema, and deployed tables retain an explicit physical name
 - [ ] **(0.4.x)** Generated ForeignKey/OneToOne `*_id()` accessors are used by value on native and WASM; no dereference or target-specific workaround remains
 - [ ] **(0.4.x)** Typed JSON model fields use `Json<T>` and preserve SQL `NULL` (`Option<Json<T>>::None`) versus a present JSON `null`
 - [ ] Custom managers wired via `#[model(manager = ...)]` (rc.23+); veto hooks (`before_save` / `before_delete` / `before_bulk_update`) return early on policy violations rather than mutating state

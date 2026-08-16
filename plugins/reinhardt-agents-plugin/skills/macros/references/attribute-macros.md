@@ -43,6 +43,7 @@ pub struct Post {
 | Option | Type | Description |
 |--------|------|-------------|
 | `app_label` | `&str` | App this model belongs to (required) |
+| `table_name` | `&str` | **(0.4.x)** Optional physical table name. When omitted, uses `<app_label>_<singular_acronym_aware_snake_case_model_name>` without pluralization. Keep it explicit for deployed tables whose names must not change. |
 | `manager` | `Path` | (rc.23+, #3981) Opt the model into a user-supplied `CustomManager` implementor. Emits a `HasCustomManager` impl that wires the model to the named type. `Model::objects()` is untouched and still returns `Manager<Self>`. See `modeling/references/model-patterns.md` for usage examples and `modeling/references/queryset-api.md` for the trait surface. |
 | `info` | `bool` | **(0.2.x)** Opt-out of auto-generated `{Model}Info` companion struct. Set `info = false` to disable. Defaults to `true` in 0.2.x. |
 
