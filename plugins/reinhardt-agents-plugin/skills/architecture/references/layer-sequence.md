@@ -22,7 +22,7 @@ Define the data model using the `#[model]` macro.
 ```rust
 use reinhardt::prelude::*;
 
-#[model]
+#[model(app_label = "catalog")]
 pub struct Product {
     #[field(primary_key = true)]
     pub id: Option<Uuid>,
@@ -41,6 +41,7 @@ pub struct Product {
 **Checklist:**
 
 - [ ] `#[model]` macro applied
+- [ ] **(0.4.x)** Explicit `app_label` matches the owning application
 - [ ] Primary key defined (`Option<Uuid>` for auto-generated)
 - [ ] `Option<T>` used for nullable fields
 - [ ] Timestamps with `auto_now_add` / `auto_now`
