@@ -121,6 +121,18 @@ pub source_system_record_id: String, // nosemgrep: reinhardt-no-scalar-fk-id -- 
 Never use the suppression for a Reinhardt relationship; replace that scalar with
 the appropriate `#[rel(...)]` field instead.
 
+### Generated Foreign-Key ID Accessors (0.4.x)
+
+ForeignKey and OneToOne fields generate a consistent `*_id()` method on native
+and WASM targets. It returns the related primary key by value:
+
+```rust
+let question_id = choice.question_id();
+```
+
+Do not write `*choice.question_id()` or maintain separate target-specific
+accessor code. This is a source-compatible migration point for shared modules.
+
 ## Typed Generated Columns (0.4.x)
 
 **Source:** [original PR #5586](https://github.com/kent8192/reinhardt-web/pull/5586)
@@ -199,7 +211,47 @@ workflow depend on a model that has no writable fields.
 | `serde_json::Value` | `JSONB` | Requires `serde_json` |
 | `Uuid` | `UUID` | From `uuid` crate. `#[model]` generates `Uuid::now_v7()` for `Option<Uuid>` primary keys (time-ordered, better B-tree index performance) |
 | `Decimal` | `NUMERIC` / `DECIMAL` | From `rust_decimal` crate |
+| `Json<T>` | `JSONB` / `JSON` / `TEXT` | Typed JSON wrapper; backend storage follows the model field metadata |
 | `Option<T>` | Nullable variant of `T` | Column allows `NULL` |
+
+## Typed JSON Fields (0.4.x)
+
+Use `Json<T>` when a model field stores a structured JSON document. The wrapper
+serializes and deserializes like `T` while making JSON column metadata explicit:
+
+```rust
+use reinhardt::db::prelude::*;
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StyleSettings {
+    pub accent: String,
+    pub compact: bool,
+}
+
+#[model(table_name = "profiles")]
+#[derive(Debug, Clone)]
+pub struct Profile {
+    #[field(primary_key = true)]
+    pub id: i64,
+
+    #[field]
+    pub style_settings: Json<StyleSettings>,
+
+    #[field(null = true)]
+    pub metadata: Option<Json<serde_json::Value>>,
+}
+```
+
+`Json::new`, `as_inner`, `as_inner_mut`, and `into_inner` provide typed access;
+`to_json_value` and `from_json_value` are useful at serialization boundaries.
+`Option<Json<T>>::None` maps to SQL `NULL`. A present wrapper containing
+`serde_json::Value::Null` is JSON `null`, not SQL `NULL`. Hydration errors
+should retain the model, field, row, and column context from the ORM error.
+
+JSON path lookup is not implied by the typed wrapper. Use supported query
+filters or a deliberate backend-specific boundary when a query needs JSON path
+semantics.
 
 ## Relations
 

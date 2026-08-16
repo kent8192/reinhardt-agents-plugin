@@ -12,7 +12,7 @@ Guide developers through writing high-quality tests using rstest, AAA pattern, r
 
 - User wants to write tests for reinhardt code
 - User asks about testing strategies or patterns
-- User mentions: "test", "fixture", "TestContainers", "assert", "rstest", "integration test", "unit test", "use_query", "QueryKey", "query cache", "invalidation", "ClientForm", "DTO form test", "form validation test"
+- User mentions: "test", "fixture", "EventFixture", "Screen::settle", "TestDatabase", "TestContainers", "assert", "rstest", "integration test", "unit test", "use_query", "QueryKey", "query cache", "invalidation", "ClientForm", "DTO form test", "form validation test"
 
 ## Workflow
 
@@ -35,9 +35,31 @@ Guide developers through writing high-quality tests using rstest, AAA pattern, r
 ### Database Tests
 
 1. Read `references/testcontainers.md` for container setup
-2. Use rstest fixtures for PostgreSQL/MySQL/Redis containers
-3. Ensure Docker Desktop is running
-4. Use `#[serial(db)]` if tests share global database state
+2. Prefer `TestDatabase` for model-derived or migration-derived schemas; choose
+   `.sqlite()`, `.sqlite_memory()`, or `.postgres()` deliberately
+3. Select exactly one schema-source mode: model-derived mode may chain multiple
+   `.model::<M>()` calls, while migration-derived mode uses either
+   `.migrations::<Provider>()` or `.migrations_from_dir(path)`
+4. Use `.with_orm_global()` / `.with_di_context()` only when the test needs
+   those process/context integrations; SQLite memory cannot initialize the ORM
+   global or DI context
+5. Use rstest fixtures for PostgreSQL/MySQL/Redis containers when a real service
+   is required
+6. Ensure Docker Desktop is running only for `.postgres()` or other
+   TestContainers-backed services
+7. Use `#[serial(db)]` if tests share global database state
+
+### Model Fixture and Command Tests
+
+1. Test `dumpdata` with machine-readable `{ model, pk, fields }` records
+2. Test `loaddata` with explicit primary keys, foreign-key ordering,
+   many-to-many arrays, binary values, and transactional rollback on invalid
+   input
+3. Test `seed` with registered idempotent hooks, selected app labels, and an
+   error for an unknown requested label
+4. For reusable JSON fixtures, call
+   `reinhardt_test::fixtures::load_model_fixture_file(path)` after the test
+   database schema is ready
 
 ### 0.3 Migration Regression Tests
 
@@ -64,6 +86,30 @@ Guide developers through writing high-quality tests using rstest, AAA pattern, r
 2. Cover request deduplication, pending versus background fetching, retained
    data during refetch, exact mutation invalidation, and stable generated keys.
 
+### Pages Layout Route Tests (0.4.x)
+
+1. Build a native `ClientRouter::routes` fixture with a `#[layout]` shell and
+   `Outlet`; assert composed paths, inherited parameters, index routes, reverse
+   lookup, and unique layout/leaf names.
+2. Add browser-WASM navigation coverage for sibling children: the shared layout
+   must remain mounted while only the outlet subtree is remounted.
+
+### Pages Macro Fixture Tests (0.4.x)
+
+Compile and render `page!` fixtures with direct HTML `type:` attributes on
+inputs and buttons. Do not use `r#type:` inside the macro DSL; the direct form
+is the regression contract from the 0.4.x page fixtures.
+
+### Pages Async SSR and Resource Tests (0.4.x)
+
+1. Use async native tests for `SsrRenderer`; cover streamed
+   `render_page(...).await` plus `SsrStream::collect_string()`, buffered
+   `render_page_to_string(...).await`, resource timeout, and serialized
+   `Success` / `Error` hydration state.
+2. For conditional resource hooks, use and assert a stable
+   `use_resource_with_key` hydration key and cover suspense fallback and
+   replacement chunks.
+
 ## Important Rules
 
 - **NEVER** use `#[test]` — always use `#[rstest]`
@@ -77,6 +123,8 @@ Guide developers through writing high-quality tests using rstest, AAA pattern, r
 - Add focused regression tests for review-found bugs before broad happy-path expansion
 - In 0.3.x migrations, update stale fixtures that use `AuthUser`, `create_resource*`, `use_effect_event*`, raw `ServerRouter` registration, `DependsResult`, `DependsOption`, `pages.rs`, or `server_urls`
 - When generated `{Model}Info` relation fields change shape, update serializer/browser-test expectations intentionally rather than broadening assertions
+- **(0.4.x)** Pages event tests use the exact intrinsic payload type, `EventFixture`, and `Screen::settle()` after async or reactive writes; use raw platform events only for explicit escape-hatch coverage
+- **(0.4.x)** Keep a `TestDatabase` guard alive for the whole test; it owns the temporary backing resource and restores any ORM global/DI context on drop
 
 ## Cross-Domain References
 
