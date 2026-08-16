@@ -93,7 +93,7 @@ let theme: Signal<String> = get_context("theme").unwrap();
 | Hook | Signature | Description |
 |------|-----------|-------------|
 | `use_state` | `use_state(initial: T) -> (Signal<T>, SetState<T>)` | Local reactive state (takes value, not closure) |
-| `SetStateExt::update` | `set_state.update(|current| replacement)` | **(0.4.x)** Replace state from its current value without a separate read/clone |
+| `SetStateExt::update` | `set_state.update(closure)` | **(0.4.x)** Replace state from its current value without a separate read/clone |
 | `use_reducer` | `use_reducer(reducer, init) -> (Signal<S>, Dispatch<A>)` | State with reducer pattern |
 | `use_shared_state` | `use_shared_state(initial: T) -> (SharedSignal<T>, SharedSetState<T>)` | Shared state across components |
 | `use_optimistic` | `use_optimistic(initial: T) -> OptimisticState<T>` | Optimistic UI updates |
@@ -117,18 +117,35 @@ reading the signal separately; keep `set_count(value)` for direct replacement.
 | `use_layout_effect` | `use_layout_effect(closure, deps)` | Synchronous effect before paint |
 
 ```rust
+// 0.4.x
 use_effect(
     {
         let count = count.clone();
         move || {
             // Runs when dependencies change
             log!("Count is: {}", count.get());
-            None::<fn()>
+            ()
         }
     },
     (count.clone(),),
 );
 ```
+
+In 0.4.x, an effect closure may return `()` when it has no cleanup. A
+cleanup-capable closure continues to return `Option<C>`:
+
+```rust
+use_effect(
+    move || {
+        let subscription = subscribe_to_changes();
+        Some(move || subscription.dispose())
+    },
+    (account_id,),
+);
+```
+
+Do not add `None::<fn()>` solely to satisfy the cleanup return type when the
+effect has no cleanup logic.
 
 **When to use `use_layout_effect`**: DOM measurements, preventing visual flicker.
 **When to use `use_effect`** (preferred): Data fetching, subscriptions, logging.
@@ -239,36 +256,56 @@ If the result affects app state, prefer `Action` or `Resource` instead.
 |------|-------------|
 | `use_debug_value` | Custom label in dev tools (requires `debug-hooks` feature) |
 
-## Resource (WASM Only)
+## Resource (0.1.x–0.3.x)
 
-Async data loading with reactive dependencies.
+Keep `use_resource` behind `#[cfg(wasm)]`; native SSR resource execution is a
+0.4.x capability. Use the pre-0.4 resource state API:
 
 ```rust
 #[cfg(wasm)]
-{
-    let user_id = Signal::new(1);
-    let user = use_resource(
-        {
-            let user_id = user_id.clone();
-            move || {
-                let id = user_id.get();
-                async move { fetch_user(id).await }
-            }
-        },
-        (user_id.clone(),),
-    );
-
-    // Mount-only loading
-    let current_user = use_resource(fetch_current_user, ());
-
-    // Check state
-    match user.state().get() {
-        ResourceState::Loading => { /* show spinner */ },
-        ResourceState::Ready(data) => { /* render data */ },
-        ResourceState::Error(err) => { /* show error */ },
-    }
+match user.state().get() {
+    ResourceState::Loading => { /* show spinner */ },
+    ResourceState::Ready(data) => { /* render data */ },
+    ResourceState::Error(err) => { /* show error */ },
 }
 ```
+
+## Resource (WASM and native SSR, 0.4.x)
+
+Async data loading with reactive dependencies. The same hook can be used in
+shared Pages code on browser WASM and during native SSR:
+
+```rust
+let user_id = Signal::new(1);
+let user = use_resource(
+    {
+        let user_id = user_id.clone();
+        move || {
+            let id = user_id.get();
+            async move { fetch_user(id).await }
+        }
+    },
+    (user_id.clone(),),
+);
+
+// Mount-only loading
+let current_user = use_resource(fetch_current_user, ());
+
+match user.get() {
+    ResourceState::Loading => { /* show spinner */ },
+    ResourceState::Success(data) => { /* render data */ },
+    ResourceState::Error(err) => { /* show error */ },
+}
+```
+
+On WASM, the fetcher runs through the browser async runtime. On native targets
+outside an `SsrRenderer` context, the inert scheduler leaves the resource in
+`Loading`. During native SSR, a registered fetcher is awaited up to
+`SsrOptions::resource_timeout(...)`; `Success` or `Error` is serialized into
+the hydration payload so the browser can reuse the result. Use
+`use_resource_with_key("stable-key", fetcher, deps)` when a resource is called
+conditionally and needs a stable hydration identity instead of the implicit
+`rh-res-N` key.
 
 ## Platform Event Type
 
