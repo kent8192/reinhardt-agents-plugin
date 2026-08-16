@@ -199,9 +199,28 @@ button { disabled: true, "Submit" }
 | `form` | `method` | `get`, `post`, `dialog` |
 | `form` | `enctype` | `application/x-www-form-urlencoded`, `multipart/form-data`, `text/plain` |
 
+HTML attribute names use the `page!` DSL spelling. Write the HTML `type`
+attribute directly, including when the name is also a Rust keyword:
+
+```rust
+page!({
+    input { type: "email", name: "email" }
+    button { type: "submit", "Save" }
+})
+```
+
+Do not write `r#type:` inside `page!`; the page macro accepts `type:` directly.
+This rule is specific to the HTML attribute DSL—do not generalize it to every
+Rust keyword used in ordinary Rust expressions.
+
 ## Event Handlers
 
-Events use `@event: handler` syntax. Handlers are auto-handled (active on WASM, no-op on native).
+Events use `@event: handler` syntax. On WASM, handlers attach to browser events.
+In 0.4.x native component tests, `EventFixture::dispatch` invokes intrinsic
+handlers and `Screen::settle()` drains their work. Standard intrinsic names
+select their exact catalogued payload type; see
+[the typed events reference](events.md) for the complete contract and native
+test fixtures.
 
 ### Mouse Events
 
@@ -214,6 +233,51 @@ Events use `@event: handler` syntax. Handlers are auto-handled (active on WASM, 
 ### Form Events
 
 `@input`, `@change`, `@submit`, `@focus`, `@blur`
+
+## Controlled Form Elements (0.4.x)
+
+Use `bind:` when a signal owns the control value after hydration. Leave the
+directive off for an uncontrolled control whose value is read from an event or
+another explicit DOM integration.
+
+| Control | Bound signal |
+|---------|--------------|
+| Text input, radio, textarea, single select | `Signal<String>` |
+| Checkbox | `Signal<bool>` |
+| Number input | `Signal<T>` where `T: NumberValue` |
+| Multiple select | `Signal<Vec<String>>` |
+
+```rust
+use reinhardt::pages::prelude::*;
+
+let query = Signal::new(String::new());
+let amount = Signal::new(0_f64);
+let amount_error = Signal::new(None::<NumberParseError>);
+
+page!({
+    input { aria_label: "Search", bind: query }
+    input {
+        aria_label: "Amount",
+        type: "number",
+        bind: number(amount, amount_error),
+    }
+})
+```
+
+Hydration first adopts the live DOM value so browser restoration and edits made
+before hydration survive. Later signal writes update the DOM. Input updates the
+signal before an explicit handler for the same event runs. Text bindings defer
+writes during IME composition.
+
+Use direct `bind: amount` when invalid number text does not need separate UI.
+Use `number(amount, amount_error)` to preserve the last valid value while
+reporting `Empty`, `Incomplete`, `Invalid`, or `OutOfRange`. For an editor that
+must retain exact incomplete text on every browser, use a text input with
+`inputmode="decimal"` and explicit parsing.
+
+`bind:` is reserved on supported controls. Use a standards-compatible
+`data_bind` attribute, or `PageElement::new("input").attr("bind", value)` only
+when a literal nonstandard attribute is required.
 
 ### Touch Events
 
@@ -251,6 +315,17 @@ button { @click: |_| { do_something(); }, "Run action" }
 // Function reference
 button { @click: handle_click, "Handle click" }
 ```
+
+For external handlers, use the catalogued payload type (`ClickEvent`,
+`InputEvent`, `ChangeEvent`, and so on) rather than the removed `DummyEvent` or
+an untyped placeholder. Target helpers such as `value()`, `checked()`,
+`selected_values()`, and `files()` return `Result<_, EventTargetError>` and
+operate on an owned `current_target` snapshot. Capture that snapshot before an
+`await`.
+
+Use `raw_event_handler` with `platform::Event` only for low-level browser
+integration. `@custom("event-name")` is the explicit raw custom-event path;
+component `@event` props retain the type declared by the component.
 
 Closures must have 0 or 1 parameter (compile error if more). Prefer named
 `use_callback` handles for nontrivial work, and clone non-`Copy` callbacks or
