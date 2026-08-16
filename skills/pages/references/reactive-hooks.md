@@ -111,18 +111,35 @@ set_count(5);
 | `use_layout_effect` | `use_layout_effect(closure, deps)` | Synchronous effect before paint |
 
 ```rust
+// 0.4.x
 use_effect(
     {
         let count = count.clone();
         move || {
             // Runs when dependencies change
             log!("Count is: {}", count.get());
-            None::<fn()>
+            ()
         }
     },
     (count.clone(),),
 );
 ```
+
+In 0.4.x, an effect closure may return `()` when it has no cleanup. A
+cleanup-capable closure continues to return `Option<C>`:
+
+```rust
+use_effect(
+    move || {
+        let subscription = subscribe_to_changes();
+        Some(move || subscription.dispose())
+    },
+    (account_id,),
+);
+```
+
+Do not add `None::<fn()>` solely to satisfy the cleanup return type when the
+effect has no cleanup logic.
 
 **When to use `use_layout_effect`**: DOM measurements, preventing visual flicker.
 **When to use `use_effect`** (preferred): Data fetching, subscriptions, logging.
