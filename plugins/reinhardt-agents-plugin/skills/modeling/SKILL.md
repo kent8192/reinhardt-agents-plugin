@@ -14,7 +14,7 @@ Guide developers through model definition, database operations, and migration ma
 - User works with QuerySet operations or ORM queries
 - User generates or applies migrations
 - User asks about SQLAlchemy-style queries or sessions
-- User mentions: "model", "table", "migration", "QuerySet", "field", "relation", "ForeignKey", "ManyToMany", "database", "schema", "objects", "Manager", "Session", "select", "migrate", "makemigrations"
+- User mentions: "model", "table", "migration", "QuerySet", "field", "relation", "ForeignKey", "ManyToMany", "Json<T>", "database", "schema", "objects", "Manager", "Session", "select", "migrate", "makemigrations", "dumpdata", "loaddata", "seed"
 
 ## Workflow
 
@@ -34,8 +34,13 @@ Guide developers through model definition, database operations, and migration ma
 
 1. Read `references/queryset-api.md` for the `Model::objects()` API
 2. Use `Model::objects()` for application-level CRUD (recommended)
-3. Chain methods: `filter()`, `order_by()`, `limit()`, `select_related()`, etc.
+3. Chain methods such as `filter()`, `order_by()`, and `limit()`; in 0.4.x use
+   typed `select_related()` / `prefetch_related()`, while 0.1.x through 0.3.x
+   use their string-path forms.
 4. Execute with `.all().await`, `.get().await`, `.count().await`, `.exists().await`
+5. **(0.4.x)** For model-to-model traversal, use the generated `rel_*` accessor and call
+   `.into_typed()` before typed field filters or nested relation traversal; keep
+   string relation paths for 0.1.x through 0.3.x and other compatibility code.
 
 ### SQLAlchemy-Style Operations
 
@@ -62,6 +67,15 @@ Guide developers through model definition, database operations, and migration ma
 5. Apply: `cargo run --bin manage migrate`
 6. For custom operations (indexes, data migrations), write hand-written migration files
 
+### Model Fixture Commands (0.4.x)
+
+1. Use `manage dumpdata` for machine-readable model fixtures and
+   `manage loaddata` for transactional loading with explicit primary keys
+2. Use `manage seed` only for registered, idempotent per-app seed hooks; an
+   unknown requested label must fail
+3. Read the fixture section of `references/migration-guide.md` before adding
+   fixture files or seed data
+
 ## Important Rules
 
 - ALWAYS use `Model::objects()` for application-level CRUD
@@ -74,8 +88,11 @@ Guide developers through model definition, database operations, and migration ma
 - Migration files use declarative `Operation` variants — there are NO `up`/`down` methods
 - Migration names are auto-generated from detected changes (`--name` is optional)
 - Field types map to Rust types (String, i32, i64, bool, Option<T>, DateTime<Utc>)
+- **(0.4.x)** Use `Json<T>` for typed JSON model fields. `Option<Json<T>>::None` is SQL `NULL`, while `Some(Json::new(serde_json::Value::Null))` is a present JSON `null` value.
 - Put `#[field(...)]` on every scalar model field, even when no options are required
 - Use `#[rel(...)]` for model relationships; do not represent foreign keys as unmanaged scalar IDs unless the scalar is intentionally denormalized or external, and document that non-relationship purpose next to the field with a narrow `nosemgrep: reinhardt-no-scalar-fk-id -- <reason>` exception
+- **(0.4.x)** Typed relation paths compile-check relation names and nested fields. Use typed `select_related` for single-valued relations and typed `prefetch_related` for reverse one-to-many / many-to-many relations. Typed related filters are SELECT-only; use a subquery for writes.
+- **(0.4.x)** Generated `*_id()` accessors return the related primary key by value on native and WASM; do not dereference the accessor or add target-specific copies.
 - ALL model struct fields that can be NULL must use `Option<T>`
 - **(0.4.x)** Prefer `generated = SchemaExpr::...` for generated columns. Use
   `generated_sql = "..."` only for trusted backend-specific expressions that

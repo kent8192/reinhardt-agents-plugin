@@ -2,10 +2,6 @@
 
 ## Core Primitives
 
-The 0.4.x examples in this section run inside a component or launcher-managed
-`ReactiveScope`. Low-level callers must establish an active scope before
-constructing reactive nodes.
-
 ### Signal
 
 A reactive value with automatic dependency tracking.
@@ -77,7 +73,7 @@ use reinhardt::pages::prelude::*;
 
 // Provide context
 let theme = Signal::new("dark".to_string());
-provide_context("theme", theme);
+provide_context("theme", theme.clone());
 
 // Consume context (anywhere in the subtree)
 let theme: Signal<String> = get_context("theme").unwrap();
@@ -97,6 +93,7 @@ let theme: Signal<String> = get_context("theme").unwrap();
 | Hook | Signature | Description |
 |------|-----------|-------------|
 | `use_state` | `use_state(initial: T) -> (Signal<T>, SetState<T>)` | Local reactive state (takes value, not closure) |
+| `SetStateExt::update` | `set_state.update(closure)` | **(0.4.x)** Replace state from its current value without a separate read/clone |
 | `use_reducer` | `use_reducer(reducer, init) -> (Signal<S>, Dispatch<A>)` | State with reducer pattern |
 | `use_shared_state` | `use_shared_state(initial: T) -> (SharedSignal<T>, SharedSetState<T>)` | Shared state across components |
 | `use_optimistic` | `use_optimistic(initial: T) -> OptimisticState<T>` | Optimistic UI updates |
@@ -105,7 +102,12 @@ let theme: Signal<String> = get_context("theme").unwrap();
 // use_state takes a value directly (NOT a closure)
 let (count, set_count) = use_state(0);
 set_count(5);
+set_count.update(|current| current + 1);
 ```
+
+`SetStateExt::update` receives the current value and returns its replacement.
+Use it in callbacks where the new state depends on the current state instead of
+reading the signal separately; keep `set_count(value)` for direct replacement.
 
 ### Effect Hooks
 
@@ -113,23 +115,48 @@ set_count(5);
 |------|-----------|-------------|
 | `use_effect` | `use_effect(closure, deps)` | Side effect (async-safe) |
 | `use_layout_effect` | `use_layout_effect(closure, deps)` | Synchronous effect before paint |
+| `use_retained_effect` | `use_retained_effect(closure, deps)` | **(0.4.x)** Registration-style effect whose guard is retained for component lifetime |
+| `use_retained_layout_effect` | `use_retained_layout_effect(closure, deps)` | **(0.4.x)** Retained layout effect |
 
 ```rust
-use_effect(
+// 0.4.x
+let _effect_guard = use_effect(
     {
         let count = count;
         move || {
             // Runs when dependencies change
             log!("Count is: {}", count.get());
-            None::<fn()>
+            ()
         }
     },
     (count,),
 );
 ```
 
+In 0.4.x, an effect closure may return `()` when it has no cleanup. A
+cleanup-capable closure continues to return `Option<C>`:
+
+```rust
+use_effect(
+    move || {
+        let subscription = subscribe_to_changes();
+        Some(move || subscription.dispose())
+    },
+    (account_id,),
+);
+```
+
+Do not add `None::<fn()>` solely to satisfy the cleanup return type when the
+effect has no cleanup logic.
+
 **When to use `use_layout_effect`**: DOM measurements, preventing visual flicker.
 **When to use `use_effect`** (preferred): Data fetching, subscriptions, logging.
+
+`use_effect` and `use_layout_effect` return an RAII guard. If registration-style
+code intentionally does not own that guard, use `use_retained_effect` or
+`use_retained_layout_effect`; the retained hook stores the guard in the mounted
+reactive node store until the component scope is disposed. Keep ordinary hooks
+when explicit guard ownership and early disposal are part of the design.
 
 ### Copy Reactive Handles and Scope (0.4.x)
 
@@ -214,8 +241,8 @@ let save_action = use_action(|input: SaveSettingsRequest| async move {
 
 let save_click = use_callback(
     {
-        let save_action = save_action;
-        let project_id = project_id;
+        let save_action = save_action.clone();
+        let project_id = project_id.clone();
         let form = form.clone();
         move |_| {
             save_action.dispatch(SaveSettingsRequest {
@@ -226,7 +253,7 @@ let save_click = use_callback(
             });
         }
     },
-    (save_action, project_id, form.clone()),
+    (save_action.clone(), project_id.clone(), form.clone()),
 );
 ```
 
@@ -249,36 +276,56 @@ If the result affects app state, prefer `Action` or `Resource` instead.
 |------|-------------|
 | `use_debug_value` | Custom label in dev tools (requires `debug-hooks` feature) |
 
-## Resource (WASM Only)
+## Resource (0.1.x–0.3.x)
 
-Async data loading with reactive dependencies.
+Keep `use_resource` behind `#[cfg(wasm)]`; native SSR resource execution is a
+0.4.x capability. Use the pre-0.4 resource state API:
 
 ```rust
 #[cfg(wasm)]
-{
-    let user_id = Signal::new(1);
-    let user = use_resource(
-        {
-            let user_id = user_id;
-            move || {
-                let id = user_id.get();
-                async move { fetch_user(id).await }
-            }
-        },
-        (user_id,),
-    );
-
-    // Mount-only loading
-    let current_user = use_resource(fetch_current_user, ());
-
-    // Check state
-    match user.state().get() {
-        ResourceState::Loading => { /* show spinner */ },
-        ResourceState::Ready(data) => { /* render data */ },
-        ResourceState::Error(err) => { /* show error */ },
-    }
+match user.state().get() {
+    ResourceState::Loading => { /* show spinner */ },
+    ResourceState::Ready(data) => { /* render data */ },
+    ResourceState::Error(err) => { /* show error */ },
 }
 ```
+
+## Resource (WASM and native SSR, 0.4.x)
+
+Async data loading with reactive dependencies. The same hook can be used in
+shared Pages code on browser WASM and during native SSR:
+
+```rust
+let user_id = Signal::new(1);
+let user = use_resource(
+    {
+        let user_id = user_id;
+        move || {
+            let id = user_id.get();
+            async move { fetch_user(id).await }
+        }
+    },
+    (user_id,),
+);
+
+// Mount-only loading
+let current_user = use_resource(fetch_current_user, ());
+
+match user.get() {
+    ResourceState::Loading => { /* show spinner */ },
+    ResourceState::Success(data) => { /* render data */ },
+    ResourceState::Error(err) => { /* show error */ },
+}
+```
+
+On WASM, the fetcher runs through the browser async runtime. On native targets
+outside an `SsrRenderer` context, the inert scheduler leaves the resource in
+`Loading`. During native SSR, a registered fetcher is awaited up to
+`SsrOptions::resource_timeout(...)`; `Success` or `Error` is serialized into
+the hydration payload so the browser can reuse the result. Use
+`use_resource_with_key("stable-key", fetcher, deps)` when a resource is called
+conditionally and needs a stable hydration identity instead of the implicit
+`rh-res-N` key.
 
 ## Platform Event Type
 
@@ -338,23 +385,21 @@ auth_state().update(AuthData {
 });
 ```
 
-## Effect-Based Reactive Rendering (0.4.x)
+## Effect-Based Reactive Rendering
 
 Use `Effect` to reactively re-render when Signals change:
 
 ```rust
 use reinhardt::pages::reactive::Effect;
 
-let path_signal = router::with_router(|r| *r.current_path());
-Effect::new(move || {
+let path_signal = router::with_router(|r| r.current_path().clone());
+let effect = Effect::new(move || {
     let path = path_signal.get();  // Subscribe to path changes
     let page = router::with_router(|r| r.render_current());
     app_el.set_inner_html(&page.render_to_string());
-}); // Remains active until the current ReactiveScope is disposed.
+});
+std::mem::forget(effect);  // Keep alive for page lifetime
 ```
-
-For 0.1.x through 0.3.x, retain the returned handle for the required lifetime;
-the older runtime uses handle ownership rather than scope-owned arena lifetime.
 
 ## watch Blocks vs Hooks
 
@@ -406,7 +451,7 @@ page!({
 ### watch Best Practices
 
 - **Pass Signals directly** to `page!` — don't extract values before the macro
-- **Copy reactive handles in 0.4.x** — clone only non-reactive captured values
+- **Clone Signals freely** — `Signal::clone()` is cheap (Rc-based)
 - **One expression per watch** — each block must contain exactly one `if`, `match`, or `for`
 - **Don't nest watch blocks** — use multiple sibling watch blocks instead
 
@@ -415,7 +460,8 @@ page!({
 - **Fine-grained reactivity**: Only DOM nodes depending on changed Signals update (not entire component trees)
 - **Pull-based model**: Signals track dependencies automatically via `.get()` calls
 - **Batching**: Multiple Signal changes batch into a single update cycle via micro-tasks
-- **Memory management (0.4.x)**: Reactive nodes live until their owning `ReactiveScope` is disposed; copying or forgetting an arena handle does not extend that lifetime
+- **Memory management**: All reactive nodes auto-cleanup when dropped
+- **`std::mem::forget`**: Use for Effects that should live for the entire page lifetime (e.g., routing)
 - **watch compiles to `Page::reactive()`**: The reactive closure is tracked by the runtime and re-evaluated on Signal changes
 
 ## Version Differences (0.2.x)
