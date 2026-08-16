@@ -12,6 +12,23 @@ Define/Modify Models -> Generate Migration -> Review -> Apply -> Verify
 
 Edit your model structs in `src/apps/<name>/models.rs`. See `model-patterns.md` for field types, relations, and attribute options.
 
+### Model Identity and Existing Tables (0.4.x)
+
+`#[model]` requires an explicit `app_label`. A missing `table_name` now uses
+the app label plus the singular, acronym-aware snake_case model name:
+
+```text
+User in accounts -> accounts_user
+BlogPost in blog -> blog_blog_post
+HTTPRoute in routing -> routing_http_route
+```
+
+The convention does not pluralize names. When upgrading an existing model, add
+`app_label` but keep its deployed `table_name` until a deliberate rename has
+been planned. `makemigrations` can emit `RenameTable` for a changed identity,
+including generated many-to-many through tables and columns. Review qualified
+string foreign keys against the registered app/model identity before applying.
+
 ### Step 2: Generate Migration
 
 After modifying models, generate a migration file:
@@ -110,6 +127,37 @@ cargo nextest run --workspace --all-features
 ```
 
 > **Note:** There is no `showmigrations` command. Check migration state by reviewing the `migrations/` directory or inspecting the `reinhardt_migrations` table in the database.
+
+## Model Fixture and Seed Commands (0.4.x)
+
+The project `manage` binary provides Django-compatible model data commands when
+the facade `database` feature and a database backend are enabled and migrations
+are available:
+
+```bash
+# Emit machine-readable FixtureRecord JSON to stdout
+cargo run --bin manage dumpdata polls.Question polls.Choice
+
+# Load a fixture transactionally, preserving explicit primary keys
+cargo run --bin manage loaddata fixtures/polls.json
+
+# Run all registered idempotent seed hooks, or selected app labels
+cargo run --bin manage seed
+cargo run --bin manage seed polls
+```
+
+`FixtureRecord` uses `{ model, pk, fields }` with `model` in
+`app_label.ModelName` form. JSON `null` fields that need to remain distinct
+from omitted fields use the `_reinhardt_json_null_fields` extension. `loaddata`
+orders foreign keys, handles many-to-many arrays and binary values, and resets
+sequences after explicit-primary-key inserts. `seed` accepts only registered
+per-app hooks and is idempotent by contract; an unknown requested label is an
+error rather than an invitation to execute arbitrary code.
+
+For test code, use
+`reinhardt_test::fixtures::load_model_fixture_file(path)` after a test database
+schema has been built. Keep fixture files portable and assert that loading is
+transactional when a record violates a constraint.
 
 ## CLI Summary
 

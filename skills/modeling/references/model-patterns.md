@@ -1,5 +1,35 @@
 # Reinhardt Model Patterns Reference
 
+## Model Identity and Table Naming (0.4.x)
+
+Every `#[model]` must declare an explicit `app_label`. `table_name` is optional
+for new models: when omitted, Reinhardt uses the app label plus the singular,
+acronym-aware snake_case model name. There is no automatic pluralization.
+
+```rust
+#[model(app_label = "accounts")]
+#[derive(Debug, Clone)]
+pub struct User {
+    #[field(primary_key = true)]
+    pub id: i64,
+}
+```
+
+For an existing table, keep its explicit `table_name` while adding `app_label`;
+omitting it can generate a `RenameTable` migration. The same preservation rule
+applies to generated many-to-many through tables and their columns.
+
+| Model | `app_label` | Default table name |
+|-------|-------------|--------------------|
+| `User` | `accounts` | `accounts_user` |
+| `BlogPost` | `blog` | `blog_blog_post` |
+| `HTTPRoute` | `routing` | `routing_http_route` |
+| `Person` | `people` | `people_person` |
+
+When a qualified string foreign key names a model, resolve it through the
+registered app/model identity. Review the generated migration rather than
+accepting a drop/create or rename accidentally.
+
 ## Basic Model Definition
 
 Models are defined as Rust structs with the `#[model]` attribute macro. The macro generates the database table mapping, field definitions, and QuerySet integration.
@@ -8,7 +38,7 @@ Models are defined as Rust structs with the `#[model]` attribute macro. The macr
 use reinhardt::db::prelude::*;
 use chrono::{DateTime, Utc};
 
-#[model(table_name = "users")]
+#[model(app_label = "accounts", table_name = "users")]
 #[derive(Debug, Clone)]
 pub struct User {
     #[field(primary_key = true)]
@@ -76,7 +106,7 @@ than a scalar ID column.
 #### Anti-pattern
 
 ```rust
-#[model(table_name = "articles")]
+#[model(app_label = "content", table_name = "articles")]
 #[derive(Debug, Clone)]
 pub struct Article {
     #[field(primary_key = true)]
@@ -90,7 +120,7 @@ pub struct Article {
 #### Preferred
 
 ```rust
-#[model(table_name = "articles")]
+#[model(app_label = "content", table_name = "articles")]
 #[derive(Debug, Clone)]
 pub struct Article {
     #[field(primary_key = true)]
@@ -172,6 +202,18 @@ Job::objects()
 Passing a raw string or integer is a compile error. Unknown stored values fail
 hydration with field context. Nullable enum fields use `Option<Enum>` normally.
 
+### Generated Foreign-Key ID Accessors (0.4.x)
+
+ForeignKey and OneToOne fields generate a consistent `*_id()` method on native
+and WASM targets. It returns the related primary key by value:
+
+```rust
+let question_id = choice.question_id();
+```
+
+Do not write `*choice.question_id()` or maintain separate target-specific
+accessor code. This is a source-compatible migration point for shared modules.
+
 ## Typed Generated Columns (0.4.x)
 
 **Source:** [original PR #5586](https://github.com/kent8192/reinhardt-web/pull/5586)
@@ -185,7 +227,7 @@ Prefer the portable, DDL-safe `SchemaExpr` subset. It accepts
 ```rust
 use reinhardt::db::migrations::SchemaExpr;
 
-#[model(table_name = "users")]
+#[model(app_label = "accounts", table_name = "users")]
 #[derive(Debug, Clone)]
 pub struct User {
     #[field(primary_key = true)]
@@ -299,7 +341,7 @@ semantics.
 A many-to-one relationship. Defined with the `#[rel]` attribute on the field.
 
 ```rust
-#[model(table_name = "posts")]
+#[model(app_label = "content", table_name = "posts")]
 #[derive(Debug, Clone)]
 pub struct Post {
     #[field(primary_key = true)]
@@ -331,7 +373,7 @@ The `on_delete` option controls referential integrity:
 A many-to-many relationship creates a join table automatically.
 
 ```rust
-#[model(table_name = "articles")]
+#[model(app_label = "content", table_name = "articles")]
 #[derive(Debug, Clone)]
 pub struct Article {
     #[field(primary_key = true)]
@@ -344,7 +386,7 @@ pub struct Article {
     pub tags: ManyToManyField<Article, Tag>,
 }
 
-#[model(table_name = "tags")]
+#[model(app_label = "content", table_name = "tags")]
 #[derive(Debug, Clone)]
 pub struct Tag {
     #[field(primary_key = true)]
