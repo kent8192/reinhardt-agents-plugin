@@ -215,6 +215,164 @@ render_baseline() {
     '  :guidance "Inspect Cargo.toml and the application structure before editing. Use the bundled Reinhardt skills that apply, follow guidance for the detected Reinhardt version, and run relevant validation.")'
 }
 
+list_apps() {
+  [ -d src/apps ] || return 0
+  find src/apps -mindepth 1 -maxdepth 1 -type d -exec basename {} \; 2>/dev/null | LC_ALL=C sort
+}
+
+payload_mentions_app() {
+  local payload="$1" app="$2" mode="$3" lower_payload lower_app
+  if [ "$mode" = "tool" ]; then
+    case "$payload" in *"src/apps/$app/"*) return 0 ;; esac
+    return 1
+  fi
+  lower_payload="$(printf '%s' "$payload" | tr '[:upper:]' '[:lower:]')"
+  lower_app="$(printf '%s' "$app" | tr '[:upper:]' '[:lower:]')"
+  case "$lower_payload" in *"src/apps/$lower_app/"*|*"src/apps/$lower_app\\\""*) return 0 ;; esac
+  printf '%s\n' "$lower_payload" | awk -v app="$lower_app" '
+    {
+      start = 1
+      while (start <= length($0)) {
+        position = index(substr($0, start), app)
+        if (!position) break
+        position += start - 1
+        before = position == 1 ? "" : substr($0, position - 1, 1)
+        after = substr($0, position + length(app), 1)
+        if (before !~ /[A-Za-z0-9_-]/ && after !~ /[A-Za-z0-9_-]/) { found=1; exit }
+        start = position + 1
+      }
+    }
+    END { exit !found }
+  '
+}
+
+state_root() {
+  local candidate
+  umask 077
+  for candidate in "${CLAUDE_PLUGIN_DATA:-}" "${PLUGIN_DATA:-}" "${TMPDIR:-/tmp}/reinhardt-agents-plugin"; do
+    [ -n "$candidate" ] || continue
+    if mkdir -p "$candidate" 2>/dev/null; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+  return 1
+}
+
+valid_session_id() {
+  [[ "$1" =~ ^[A-Za-z0-9._-]+$ ]]
+}
+
+claim_app() {
+  local session_id="$1" app="$2" root marker
+  umask 077
+  valid_session_id "$session_id" || return 0
+  root="$(state_root)" || return 0
+  marker="$(printf '%s' "$app" | cksum | awk '{ print $1 }')"
+  mkdir -p "$root/$session_id" 2>/dev/null || return 0
+  mkdir "$root/$session_id/$marker" 2>/dev/null
+}
+
+clear_session() {
+  local session_id="$1" root
+  valid_session_id "$session_id" || return 0
+  root="$(state_root)" || return 0
+  rm -rf "$root/$session_id"
+}
+
+extract_json_string() {
+  local field="$1"
+  printf '%s' "$HOOK_INPUT" | sed -n "s/.*\\\"$field\\\"[[:space:]]*:[[:space:]]*\\\"\\([^\\\"\\\\]*\\)\\\".*/\\1/p" | head -n 1
+}
+
+valid_object_input() {
+  [ -n "$(printf '%s' "$HOOK_INPUT" | tr -d '[:space:]')" ] && valid_hook_input
+}
+
+display_app_name() {
+  local value max_bytes=96
+  value="$(printf '%s' "$1" | sanitize_text)"
+  if [ "$(printf '%s' "$value" | LC_ALL=C wc -c | tr -d '[:space:]')" -le "$max_bytes" ]; then
+    printf '%s' "$value"
+  else
+    printf '%s...' "$(printf '%s' "$value" | LC_ALL=C cut -c 1-$((max_bytes - 3)))"
+  fi
+}
+
+render_app() {
+  local app="$1" directory="src/apps/$1" display categories="" summary
+  local -a found_categories=()
+  { [ -f "$directory/models.rs" ] || [ -d "$directory/models" ]; } && found_categories+=(models)
+  { [ -f "$directory/api.rs" ] || [ -d "$directory/api" ]; } && found_categories+=(api)
+  { [ -f "$directory/pages.rs" ] || [ -d "$directory/pages" ]; } && found_categories+=(pages)
+  { [ -f "$directory/admin.rs" ] || [ -d "$directory/admin" ]; } && found_categories+=(admin)
+  [ -d "$directory/migrations" ] && found_categories+=(migrations)
+  { [ -f "$directory/config.rs" ] || [ -d "$directory/config" ] || [ -f "$directory/settings.rs" ] || [ -d "$directory/settings" ]; } && found_categories+=(configuration)
+  categories="$(printf '%s, ' "${found_categories[@]}")"
+  categories="${categories%, }"
+  display="$(display_app_name "$app")"
+  summary="$(printf '%s\n' \
+    '(reinhardt-application-context' \
+    '  :kind "app"' \
+    "  :app \"$display\"" \
+    "  :categories \"$categories\"" \
+    ')')"
+  [ "$(printf '%s' "$summary" | LC_ALL=C wc -c | tr -d '[:space:]')" -le 512 ] || return 1
+  printf '%s\n' "$summary"
+}
+
+json_escape() {
+  local value="$1"
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  value="${value//$'\n'/\\n}"
+  value="${value//$'\r'/\\r}"
+  value="${value//$'\t'/\\t}"
+  printf '%s' "$value"
+}
+
+emit_tool_context() {
+  printf '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"%s"}}\n' \
+    "$(json_escape "$1")"
+}
+
+render_matching_apps() {
+  local payload="$1" session_id="$2" mode="$3" app emitted=0 summary
+  while IFS= read -r app; do
+    payload_mentions_app "$payload" "$app" "$mode" || continue
+    [ "$emitted" -lt 5 ] || break
+    claim_app "$session_id" "$app" || continue
+    summary="$(render_app "$app")" || continue
+    if [ "$mode" = "tool" ]; then emit_tool_context "$summary"; else printf '%s\n' "$summary"; fi
+    emitted=$((emitted + 1))
+  done < <(list_apps)
+}
+
+tool_succeeded() {
+  local exit_code
+  exit_code="$(printf '%s' "$HOOK_INPUT" | sed -n 's/.*"exit_code"[[:space:]]*:[[:space:]]*\(-\{0,1\}[0-9][0-9]*\).*/\1/p' | head -n 1)"
+  [ -z "$exit_code" ] || [ "$exit_code" -eq 0 ]
+}
+
 case "$MODE" in
-  session-start|subagent-start) if valid_hook_input && load_reinhardt_metadata; then render_baseline; fi ;;
+  session-start)
+    if valid_hook_input; then
+      session_id="$(extract_json_string session_id)"
+      source="$(extract_json_string source)"
+      case "$source" in startup|clear|compact) clear_session "$session_id" ;; esac
+      if load_reinhardt_metadata; then render_baseline; fi
+    fi
+    ;;
+  prompt)
+    if valid_object_input && load_reinhardt_metadata; then
+      render_matching_apps "$HOOK_INPUT" "$(extract_json_string session_id)" prompt
+    fi
+    ;;
+  tool)
+    if valid_object_input && tool_succeeded && load_reinhardt_metadata; then
+      render_matching_apps "$HOOK_INPUT" "$(extract_json_string session_id)" tool
+    fi
+    ;;
+  subagent-start) if valid_hook_input && load_reinhardt_metadata; then render_baseline; fi ;;
+  session-end) if valid_hook_input; then clear_session "$(extract_json_string session_id)"; fi ;;
 esac
