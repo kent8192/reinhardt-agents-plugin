@@ -25,24 +25,72 @@ assert_empty() {
 
 assert_hook_mapping() {
   local event="$1" matcher="$2" command="$3"
-  if python3 - "$ROOT/hooks/hooks.json" "$event" "$matcher" "$command" <<'PY'
-import json
-import sys
-
-path, event, matcher, command = sys.argv[1:]
-with open(path, encoding="utf-8") as source:
-    hooks = json.load(source)["hooks"].get(event, [])
-for registration in hooks:
-    if registration.get("matcher", "") != matcher:
-        continue
-    if any(hook.get("type") == "command" and hook.get("command") == command for hook in registration.get("hooks", [])):
-        raise SystemExit(0)
-raise SystemExit(1)
-PY
-  then
+  if awk -v wanted_event="$event" -v wanted_matcher="$matcher" -v wanted_command="$command" '
+    function string_value(line, after_colon, i,c,escaped,out) {
+      i=1
+      if (after_colon) i=index(line, ":") + 1
+      while (i <= length(line) && substr(line,i,1) != "\"") i++
+      if (i > length(line)) return ""
+      escaped=0; out=""
+      for (i=i+1; i<=length(line); i++) {
+        c=substr(line,i,1)
+        if (escaped) {
+          if (c=="n") out=out "\n"
+          else if (c=="r") out=out "\r"
+          else if (c=="t") out=out "\t"
+          else out=out c
+          escaped=0
+        } else if (c=="\\") escaped=1
+        else if (c=="\"") return out
+        else out=out c
+      }
+      return ""
+    }
+    /^    "[^"]+": \[$/ { current_event=string_value($0, 0); current_matcher=""; next }
+    /^        "matcher": / { current_matcher=string_value($0, 1); next }
+    /^            "command": / {
+      current_command=string_value($0, 1)
+      if (current_event==wanted_event && current_matcher==wanted_matcher && current_command==wanted_command) found=1
+    }
+    END { exit !found }
+  ' "$ROOT/hooks/hooks.json"; then
     return 0
   fi
   fail "missing $event hook mapping: $command"
+}
+
+decode_tool_context() {
+  local json="$1"
+  local prefix='{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"'
+  local suffix='"}}'
+  case "$json" in "$prefix"*"$suffix") ;; *) return 1 ;; esac
+  json="${json#"$prefix"}"
+  json="${json%"$suffix"}"
+  printf '%s' "$json" | awk '
+    { input=input $0 }
+    END {
+      for (i=1; i<=length(input); i++) {
+        c=substr(input,i,1)
+        if (c!="\\") { if (c=="\"") exit 1; output=output c; continue }
+        i++; c=substr(input,i,1)
+        if (c=="n") output=output "\n"
+        else if (c=="r") output=output "\r"
+        else if (c=="t") output=output "\t"
+        else if (c=="\\" || c=="\"") output=output c
+        else exit 1
+      }
+      printf "%s", output
+    }
+  '
+}
+
+directory_mode() {
+  local directory="$1" stat_command="${2:-stat}" mode
+  if mode="$("$stat_command" -f '%Lp' "$directory" 2>/dev/null)"; then
+    printf '%s\n' "$mode"
+  else
+    "$stat_command" -c '%a' "$directory" 2>/dev/null
+  fi
 }
 
 make_app() {
@@ -64,6 +112,194 @@ run_hook() {
   fi
   (cd "$dir" && PLUGIN_DATA="$STATE_ROOT" "$HOOK" "$mode" <<<"$payload")
 }
+
+run_hook_with_system_bash() {
+  local dir="$1" mode="$2" payload="$3"
+  (cd "$dir" && PLUGIN_DATA="$STATE_ROOT" /bin/bash "$HOOK" "$mode" <<<"$payload")
+}
+
+regression_categoryless_app() {
+  local app error_file output
+  app="$(make_app final-categoryless $'[dependencies]\nreinhardt = "0.4.0"')"
+  mkdir -p "$app/src/apps/empty"
+  error_file="$TEST_ROOT/final-categoryless.err"
+  output="$(run_hook_with_system_bash "$app" prompt '{"session_id":"final-categoryless","prompt":"empty"}' 2>"$error_file")"
+  [ ! -s "$error_file" ] || fail "categoryless app wrote stderr: $(<"$error_file")"
+  assert_contains "$output" ':app "empty"'
+  assert_contains "$output" ':categories ""'
+}
+
+assert_bounded_version() {
+  local app="$1" expected="$2" output line value
+  output="$(run_hook "$app" session-start '{"session_id":"bounded-version","source":"startup"}')"
+  line="$(printf '%s\n' "$output" | awk '/^  :reinhardt-version /')"
+  value="${line#*\"}"
+  value="${value%\"}"
+  [ "$(printf '%s' "$value" | LC_ALL=C wc -c | tr -d '[:space:]')" -le 128 ] || fail 'version scalar exceeded 128 bytes'
+  [ "$value" = "$expected" ] || fail "unexpected bounded version: $value"
+}
+
+regression_bounded_text_boundaries() {
+  local version_prefix app_prefix manifest app name output
+  version_prefix="$(awk 'BEGIN { for (i=0; i<124; i++) printf "v" }')"
+
+  manifest="$(printf '[dependencies]\nreinhardt = { version = "%s界tail" }\n' "$version_prefix")"
+  app="$(make_app final-version-utf8 "$manifest")"
+  assert_bounded_version "$app" "$version_prefix..."
+
+  manifest="$(printf '[dependencies]\nreinhardt = { version = "%s\\\"tail" }\n' "$version_prefix")"
+  app="$(make_app final-version-quote "$manifest")"
+  assert_bounded_version "$app" "$version_prefix..."
+
+  manifest="$(printf '[dependencies]\nreinhardt = { version = "%s\\\\tail" }\n' "$version_prefix")"
+  app="$(make_app final-version-backslash "$manifest")"
+  assert_bounded_version "$app" "$version_prefix..."
+
+  app="$(make_app final-app-utf8 $'[dependencies]\nreinhardt = "0.4.0"')"
+  app_prefix="$(awk 'BEGIN { for (i=0; i<92; i++) printf "a" }')"
+  name="${app_prefix}界tail"
+  mkdir -p "$app/src/apps/$name/models"
+  output="$(run_hook "$app" prompt "{\"session_id\":\"bounded-app\",\"prompt\":\"src/apps/$name/models\"}")"
+  assert_contains "$output" ":app \"$app_prefix...\""
+}
+
+regression_tool_path_boundaries() {
+  local app invalid invalid_payload valid valid_payload session
+  app="$(make_app final-tool-boundaries $'[dependencies]\nreinhardt = "0.4.0"')"
+  mkdir -p "$app/src/apps/users/models"
+
+  assert_contains "$(run_hook "$app" tool '{"session_id":"command-delimiter","tool_input":{"command":"cat src/apps/users/models.rs"},"tool_response":{"exit_code":0}}')" ':app \"users\"'
+  assert_contains "$(run_hook "$app" tool '{"session_id":"json-delimiter","path":"src/apps/users","tool_response":{"exit_code":0}}')" ':app \"users\"'
+
+  for session in nested absolute fused; do
+    case "$session" in
+      nested) invalid='vendor/src/apps/users/models.rs' ;;
+      absolute) invalid='/tmp/src/apps/users/models.rs' ;;
+      fused) invalid='foosrc/apps/users/models.rs' ;;
+    esac
+    invalid_payload="$(printf '{"session_id":"boundary-%s","path":"%s","tool_response":{"exit_code":0}}' "$session" "$invalid")"
+    assert_empty "$(run_hook "$app" tool "$invalid_payload")"
+    valid_payload="$(printf '{"session_id":"boundary-%s","path":"src/apps/users/models.rs","tool_response":{"exit_code":0}}' "$session")"
+    valid="$(run_hook "$app" tool "$valid_payload")"
+    assert_contains "$valid" ':app \"users\"'
+  done
+}
+
+regression_workspace_default_features() {
+  local workspace member output
+
+  workspace="$TEST_ROOT/final-workspace-false"
+  member="$workspace/member"
+  mkdir -p "$member/src/bin" "$member/src/apps"
+  : > "$member/src/bin/manage.rs"
+  printf '%s\n' $'[workspace]\nmembers = ["member"]\n[workspace.dependencies]\nframework = { package = "reinhardt-web", version = "0.4.0", default-features = false }' > "$workspace/Cargo.toml"
+  printf '%s\n' $'[dependencies]\nframework = { workspace = true, default-features = true }' > "$member/Cargo.toml"
+  output="$(run_hook "$member" session-start)"
+  assert_contains "$output" ':default-features false'
+
+  workspace="$TEST_ROOT/final-workspace-true"
+  member="$workspace/member"
+  mkdir -p "$member/src/bin" "$member/src/apps"
+  : > "$member/src/bin/manage.rs"
+  printf '%s\n' $'[workspace]\nmembers = ["member"]\n[workspace.dependencies]\nframework = { package = "reinhardt-web", version = "0.4.0", default-features = true }' > "$workspace/Cargo.toml"
+  printf '%s\n' $'[dependencies]\nframework = { workspace = true, default-features = false }' > "$member/Cargo.toml"
+  output="$(run_hook "$member" session-start)"
+  assert_contains "$output" ':default-features false'
+}
+
+regression_no_per_app_basename() {
+  local app fake_bin output
+  app="$(make_app final-no-basename $'[dependencies]\nreinhardt = "0.4.0"')"
+  mkdir -p "$app/src/apps/users/models"
+  fake_bin="$TEST_ROOT/final-no-basename-bin"
+  mkdir -p "$fake_bin"
+  printf '%s\n' '#!/bin/sh' 'exit 99' > "$fake_bin/basename"
+  chmod +x "$fake_bin/basename"
+  output="$(cd "$app" && PATH="$fake_bin:$PATH" PLUGIN_DATA="$STATE_ROOT" /bin/bash "$HOOK" prompt <<< '{"session_id":"no-basename","prompt":"users"}')"
+  assert_contains "$output" ':app "users"'
+}
+
+trace_match_processes() {
+  local app="$1" trace_bin="$2" label="$3" awk_trace tr_trace real_awk real_tr
+  awk_trace="$TEST_ROOT/$label.awk"
+  tr_trace="$TEST_ROOT/$label.tr"
+  real_awk="$(command -v awk)"
+  real_tr="$(command -v tr)"
+  : > "$awk_trace"
+  : > "$tr_trace"
+  (cd "$app" && \
+    PATH="$trace_bin:$PATH" \
+    TRACE_AWK="$awk_trace" TRACE_TR="$tr_trace" \
+    REAL_AWK="$real_awk" REAL_TR="$real_tr" \
+    PLUGIN_DATA="$STATE_ROOT" /bin/bash "$HOOK" prompt \
+    <<< "{\"session_id\":\"$label\",\"prompt\":\"no-match-here\"}") >/dev/null
+  printf '%s %s\n' \
+    "$(wc -l < "$awk_trace" | tr -d '[:space:]')" \
+    "$(wc -l < "$tr_trace" | tr -d '[:space:]')"
+}
+
+regression_one_pass_matching() {
+  local one many trace_bin one_awk one_tr many_awk many_tr index
+  one="$(make_app final-one-app $'[dependencies]\nreinhardt = "0.4.0"')"
+  many="$(make_app final-many-apps $'[dependencies]\nreinhardt = "0.4.0"')"
+  mkdir -p "$one/src/apps/app-01"
+  for index in $(awk 'BEGIN { for (i=1; i<=40; i++) printf "%02d\n", i }'); do
+    mkdir -p "$many/src/apps/app-$index"
+  done
+
+  trace_bin="$TEST_ROOT/final-process-trace-bin"
+  mkdir -p "$trace_bin"
+  printf '%s\n' '#!/bin/sh' 'printf "x\n" >> "$TRACE_AWK"' 'exec "$REAL_AWK" "$@"' > "$trace_bin/awk"
+  printf '%s\n' '#!/bin/sh' 'printf "x\n" >> "$TRACE_TR"' 'exec "$REAL_TR" "$@"' > "$trace_bin/tr"
+  chmod +x "$trace_bin/awk" "$trace_bin/tr"
+
+  read -r one_awk one_tr <<< "$(trace_match_processes "$one" "$trace_bin" final-process-one)"
+  read -r many_awk many_tr <<< "$(trace_match_processes "$many" "$trace_bin" final-process-many)"
+  [ "$many_awk" -le $((one_awk + 1)) ] || fail "app-scaled awk processes: $one_awk -> $many_awk"
+  [ "$many_tr" -le $((one_tr + 1)) ] || fail "app-scaled tr processes: $one_tr -> $many_tr"
+}
+
+regression_unbalanced_manifest() {
+  local app
+  app="$(make_app final-unbalanced $'[dependencies]\nreinhardt = { version = "0.4.0"')"
+  assert_empty "$(run_hook "$app" session-start)"
+}
+
+regression_top_level_json_fields() {
+  local app output
+  app="$(make_app final-json-fields $'[dependencies]\nreinhardt = "0.4.0"')"
+  mkdir -p "$app/src/apps/users/models"
+
+  run_hook "$app" prompt '{"session_id":"outer-session","nested":{"session_id":"nested-session"},"session_id":"duplicate-session","prompt":"users"}' >/dev/null
+  assert_empty "$(run_hook "$app" prompt '{"session_id":"outer-session","prompt":"users"}')"
+
+  run_hook "$app" prompt '{"session_id":"source-session","prompt":"users"}' >/dev/null
+  run_hook "$app" session-start '{"session_id":"source-session","source":"resume","nested":{"source":"clear"},"source":"clear"}' >/dev/null
+  assert_empty "$(run_hook "$app" prompt '{"session_id":"source-session","prompt":"users"}')"
+
+  output="$(run_hook "$app" tool '{"session_id":"exit-session","path":"src/apps/users/models.rs","tool_response":{"exit_code":1,"nested":{"exit_code":0},"exit_code":0}}')"
+  assert_empty "$output"
+}
+
+final_review_failures=0
+for regression in \
+  regression_categoryless_app \
+  regression_bounded_text_boundaries \
+  regression_tool_path_boundaries \
+  regression_workspace_default_features \
+  regression_no_per_app_basename \
+  regression_one_pass_matching \
+  regression_unbalanced_manifest \
+  regression_top_level_json_fields
+do
+  if ( "$regression" ); then
+    :
+  else
+    printf 'FINAL REVIEW REGRESSION FAILED: %s\n' "$regression" >&2
+    final_review_failures=$((final_review_failures + 1))
+  fi
+done
+[ "$final_review_failures" -eq 0 ] || fail "$final_review_failures final review regressions failed"
 
 direct="$(make_app direct $'[package]\nname = "direct"\nversion = "0.1.0"\n[dependencies]\nreinhardt = { package = "reinhardt-web", version = "0.4.0", default-features = false, features = ["db-sqlite", "auth-session"] }')"
 output="$(run_hook "$direct" session-start)"
@@ -191,33 +427,17 @@ tool_payload='{"session_id":"tool-session","tool_name":"Bash","tool_input":{"com
 tool_output="$(run_hook "$app" tool "$tool_payload")"
 assert_contains "$tool_output" '"hookEventName":"PostToolUse"'
 assert_contains "$tool_output" '\n  :app \"users\"'
-if ! python3 - "$tool_output" <<'PY'
-import json
-import sys
-
-context = json.loads(sys.argv[1])["hookSpecificOutput"]["additionalContext"]
-assert '\n  :app "users"' in context
-PY
-then
-  fail "tool output is not valid JSON context"
-fi
+decoded_tool_output="$(decode_tool_context "$tool_output")" || fail "tool output is not valid JSON context"
+assert_contains "$decoded_tool_output" $'\n  :app "users"'
 
 mkdir -p "$app/src/apps/reports/models"
 tool_multi_payload='{"session_id":"tool-multi-session","tool_name":"Bash","tool_input":{"command":"cat src/apps/reports/models.rs src/apps/users/models.rs"},"tool_response":{"exit_code":0}}'
 tool_multi_output="$(run_hook "$app" tool "$tool_multi_payload")"
 [ "$(printf '%s\n' "$tool_multi_output" | wc -l | tr -d ' ')" -eq 1 ] || fail "tool multi-app output must be one JSON line"
-if ! python3 - "$tool_multi_output" <<'PY'
-import json
-import sys
-
-context = json.loads(sys.argv[1])["hookSpecificOutput"]["additionalContext"]
-assert context.count(':kind "app"') == 2
-assert ':app "reports"' in context
-assert ':app "users"' in context
-PY
-then
-  fail "tool multi-app output is not one valid JSON context"
-fi
+decoded_tool_multi_output="$(decode_tool_context "$tool_multi_output")" || fail "tool multi-app output is not one valid JSON context"
+[ "$(printf '%s\n' "$decoded_tool_multi_output" | awk '/:kind "app"/ { count++ } END { print count + 0 }')" -eq 2 ] || fail "tool multi-app context did not contain two summaries"
+assert_contains "$decoded_tool_multi_output" ':app "reports"'
+assert_contains "$decoded_tool_multi_output" ':app "users"'
 
 tool_root_path='{"session_id":"tool-root-path","tool_name":"Bash","tool_input":{"command":"ls src/apps/users"},"tool_response":{"exit_code":0}}'
 assert_contains "$(run_hook "$app" tool "$tool_root_path")" ':app \"users\"'
@@ -295,7 +515,12 @@ assert_empty "$(run_hook "$app" prompt '{"session_id":"safe-session","prompt":"u
 
 run_hook "$app" prompt '{"session_id":"permission-session","prompt":"users"}' >/dev/null
 marker_dir="$(find "$STATE_ROOT/permission-session" -mindepth 1 -maxdepth 1 -type d -print -quit)"
-[ "$(stat -f '%Lp' "$marker_dir")" = 700 ] || fail "state marker directory is not private"
+[ "$(directory_mode "$marker_dir")" = 700 ] || fail "state marker directory is not private"
+if command -v gstat >/dev/null 2>&1; then
+  [ "$(directory_mode "$marker_dir" "$(command -v gstat)")" = 700 ] || fail "GNU stat fallback did not read the private marker mode"
+elif stat --version >/dev/null 2>&1; then
+  [ "$(directory_mode "$marker_dir")" = 700 ] || fail "GNU stat fallback did not read the private marker mode"
+fi
 
 priority_root="$TEST_ROOT/claude-priority"
 secondary_root="$TEST_ROOT/plugin-secondary"

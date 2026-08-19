@@ -37,7 +37,7 @@ parse_dependency_manifest() {
     function direct_version(s, p) { p=1; while (substr(s,p,1) ~ /[[:space:]]/) p++; if (substr(s,p,1)=="\"") { read_quoted(s,p); return QVAL }; return "" }
     function collect_features(s, start,p,depth,c,quoted,escaped) { start=1; while (find_field(s,"features",start)) { p=FPOS; if (substr(s,p,1)!="[") { start=p+1; continue }; depth=0; quoted=escaped=0; for (; p<=length(s); p++) { c=substr(s,p,1); if (escaped) { escaped=0; continue }; if (quoted && c=="\\") { escaped=1; continue }; if (c=="\"") { if (!quoted) { read_quoted(s,p); feature[QVAL]=1; p=QEND-1 }; continue }; if (c=="[") depth++; if (c=="]") { depth--; if (!depth) break } }; start=p+1 } }
     function is_facade(key,text) { return key=="reinhardt" || scalar(text,"package")=="reinhardt-web" }
-    function process_member(key,text, effective,version) { if (scalar(text,"workspace")=="true") { if (!(key in workspace_record)) return; inherited="true"; effective=text "\n" workspace_record[key] } else effective=text; if (!is_facade(key,effective)) return; found="true"; version=scalar(effective,"version"); if (version=="") version=direct_version(effective); if (explicit_version=="" && version!="") explicit_version=version; if (!path_seen && scalar(effective,"path")!="") path_seen=1; if (!git_seen && scalar(effective,"git")!="") git_seen=1; if (scalar(effective,"default-features")=="false") defaults="false"; collect_features(effective) }
+    function process_member(key,text, effective,version,workspace_text) { workspace_text=""; if (scalar(text,"workspace")=="true") { if (!(key in workspace_record)) return; inherited="true"; workspace_text=workspace_record[key]; effective=text "\n" workspace_text } else effective=text; if (!is_facade(key,effective)) return; found="true"; version=scalar(effective,"version"); if (version=="") version=direct_version(effective); if (explicit_version=="" && version!="") explicit_version=version; if (!path_seen && scalar(effective,"path")!="") path_seen=1; if (!git_seen && scalar(effective,"git")!="") git_seen=1; if (scalar(text,"default-features")=="false" || (workspace_text!="" && scalar(workspace_text,"default-features")=="false")) defaults="false"; collect_features(effective) }
     {
       kind=(FILENAME==member ? "member" : (FILENAME==workspace ? "workspace" : "")); line=strip_comment($0); if (trim(line)=="") next
       if (line ~ /^[[:space:]]*\[[^][]+\][[:space:]]*$/) { begin_section(trim(line),kind); pending=""; pending_balance=0; next }
@@ -47,7 +47,9 @@ parse_dependency_manifest() {
       pending=line; pending_balance=balance(line); if (pending_balance==0) { process_record(pending); pending="" }
     }
     END {
-      if (pending!="") process_record(pending); flush_table()
+      malformed=(pending!="" && pending_balance!=0)
+      if (pending!="" && !malformed) process_record(pending); flush_table()
+      if (malformed) { print "false\tfalse\tunknown\ttrue\t"; exit }
       for (i=1; i<=record_count; i++) if (record_kind[i]=="workspace") workspace_record[record_key[i]]=record_text[i]
       found="false"; inherited="false"; defaults="true"; explicit_version=""; path_seen=git_seen=0
       for (i=1; i<=record_count; i++) if (record_kind[i]=="member") process_member(record_key[i],record_text[i])
@@ -98,54 +100,99 @@ bounded_join() {
 
 sanitize_text() { LC_ALL=C tr -d '\000-\037\177' | sed 's/\\/\\\\/g; s/"/\\"/g'; }
 
+sanitize_bounded_text() {
+  local max_bytes="$1"
+  LC_ALL=C awk -v max_bytes="$max_bytes" '
+    function continuation(position, count, i,value) {
+      if (position + count - 1 > length(source)) return 0
+      for (i=0; i<count; i++) {
+        value=byte[substr(source,position+i,1)]
+        if (value < 128 || value > 191) return 0
+      }
+      return 1
+    }
+    BEGIN { for (i=1; i<256; i++) byte[sprintf("%c",i)]=i }
+    { source=source $0 }
+    END {
+      for (i=1; i<=length(source); i++) {
+        character=substr(source,i,1); value=byte[character]; width=1
+        if (value < 32 || value == 127) continue
+        if (value >= 194 && value <= 223 && continuation(i+1,1)) width=2
+        else if (value >= 224 && value <= 239 && continuation(i+1,2)) width=3
+        else if (value >= 240 && value <= 244 && continuation(i+1,3)) width=4
+        piece=substr(source,i,width); i+=width-1
+        if (width == 1 && (character == "\\" || character == "\"")) piece="\\" character
+        pieces[++count]=piece; piece_bytes[count]=length(piece); total+=piece_bytes[count]
+      }
+      limit=max_bytes
+      if (total > max_bytes) limit=max_bytes-3
+      for (i=1; i<=count && length(output)+piece_bytes[i]<=limit; i++) output=output pieces[i]
+      if (total > max_bytes) output=output "..."
+      printf "%s", output
+    }
+  '
+}
+
 sanitized_byte_length() { printf '%s' "$1" | sanitize_text | LC_ALL=C wc -c | tr -d '[:space:]'; }
 
 has_feature() { case ",$1," in *",$2,"*) return 0 ;; *) return 1 ;; esac; }
 
-valid_hook_input() {
-  [ -z "$HOOK_INPUT" ] && return 0
-  printf '%s' "$HOOK_INPUT" | awk '
+parse_hook_json() {
+  local wanted_field="${1:-}" wanted_type="${2:-}" wanted_parent="${3:-}"
+  printf '%s' "$HOOK_INPUT" | LC_ALL=C awk \
+    -v wanted_field="$wanted_field" -v wanted_type="$wanted_type" -v wanted_parent="$wanted_parent" '
     function skip() { while (substr(input,position,1) ~ /[[:space:]]/) position++ }
-    function string(    character,escaped,count) {
+    function parse_string(    character,escaped,count) {
       if (substr(input,position,1) != "\"") return 0
-      position++; escaped=0
+      position++; escaped=0; string_value=""; string_extractable=1
       while (position <= input_length) {
         character=substr(input,position,1)
         if (escaped) {
-          if (character ~ /["\\\\\/bfnrt]/) { position++; escaped=0; continue }
+          if (character ~ /["\\\\\/]/) { string_value=string_value character; position++; escaped=0; continue }
+          if (character ~ /[bfnrt]/) { string_extractable=0; position++; escaped=0; continue }
           if (character == "u") {
             for (count=1; count<=4; count++) if (substr(input,position+count,1) !~ /[[:xdigit:]]/) return 0
-            position+=5; escaped=0; continue
+            string_extractable=0; position+=5; escaped=0; continue
           }
           return 0
         }
         if (character == "\\") { escaped=1; position++; continue }
         if (character == "\"") { position++; return 1 }
-        if (character ~ /[[:cntrl:]]/) return 0
-        position++
+        if (byte[character] < 32 || byte[character] == 127) return 0
+        string_value=string_value character; position++
       }
       return 0
     }
-    function number(    rest) {
+    function parse_number(    rest) {
       rest=substr(input,position)
-      if (match(rest, /^-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?/)) { position+=RLENGTH; return 1 }
+      if (match(rest, /^-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?/)) {
+        number_value=substr(rest,1,RLENGTH); position+=RLENGTH; return 1
+      }
       return 0
     }
-    function value(    character) {
+    function parse_value(path,capture,    character) {
       skip(); character=substr(input,position,1)
-      if (character == "\"") return string()
-      if (character == "{") return object()
-      if (character == "[") return array()
-      if (character == "-" || character ~ /[0-9]/) return number()
+      if (character == "\"") {
+        if (!parse_string()) return 0
+        if (capture && wanted_type=="string" && string_extractable) captured_value=string_value
+        return 1
+      }
+      if (character == "{") return parse_object(path)
+      if (character == "[") return parse_array(path)
+      if (character == "-" || character ~ /[0-9]/) {
+        if (!parse_number()) return 0
+        if (capture && wanted_type=="number") captured_value=number_value
+        return 1
+      }
       if (substr(input,position,4) == "true") { position+=4; return 1 }
       if (substr(input,position,5) == "false") { position+=5; return 1 }
       if (substr(input,position,4) == "null") { position+=4; return 1 }
       return 0
     }
-    function array() {
+    function parse_array(path) {
       position++; skip()
       if (substr(input,position,1) == "]") { position++; return 1 }
-      while (value()) {
+      while (parse_value(path "[]",0)) {
         skip()
         if (substr(input,position,1) == "]") { position++; return 1 }
         if (substr(input,position,1) != ",") return 0
@@ -153,12 +200,17 @@ valid_hook_input() {
       }
       return 0
     }
-    function object() {
+    function parse_object(owner,    key,key_extractable,path,capture) {
       position++; skip()
       if (substr(input,position,1) == "}") { position++; return 1 }
-      while (string()) {
+      while (parse_string()) {
+        key=string_value; key_extractable=string_extractable
         skip(); if (substr(input,position,1) != ":") return 0
-        position++; if (!value()) return 0
+        position++
+        path=(owner=="" ? key : owner "." key)
+        capture=key_extractable && owner==wanted_parent && key==wanted_field && !target_seen
+        if (capture) target_seen=1
+        if (!parse_value(path,capture)) return 0
         skip()
         if (substr(input,position,1) == "}") { position++; return 1 }
         if (substr(input,position,1) != ",") return 0
@@ -166,9 +218,20 @@ valid_hook_input() {
       }
       return 0
     }
+    BEGIN { for (byte_value=1; byte_value<256; byte_value++) byte[sprintf("%c",byte_value)]=byte_value }
     { input=input $0 ORS }
-    END { input_length=length(input); position=1; if (!object()) exit 1; skip(); exit position <= input_length }
+    END {
+      input_length=length(input); position=1
+      if (!parse_object("")) exit 1
+      skip(); if (position <= input_length) exit 1
+      if (captured_value != "") print captured_value
+    }
   '
+}
+
+valid_hook_input() {
+  [ -z "$HOOK_INPUT" ] && return 0
+  parse_hook_json >/dev/null
 }
 
 load_reinhardt_metadata() {
@@ -200,7 +263,7 @@ load_reinhardt_metadata() {
 
 render_baseline() {
   local version features database auth
-  version="$(printf '%s' "$REINHARDT_VERSION" | sanitize_text)"; features="$(printf '%s' "$FEATURES" | sanitize_text)"; database="$(printf '%s' "$DB_BACKEND" | sanitize_text)"; auth="$(printf '%s' "$AUTH_METHOD" | sanitize_text)"
+  version="$(printf '%s' "$REINHARDT_VERSION" | sanitize_bounded_text 128)"; features="$(printf '%s' "$FEATURES" | sanitize_text)"; database="$(printf '%s' "$DB_BACKEND" | sanitize_text)"; auth="$(printf '%s' "$AUTH_METHOD" | sanitize_text)"
   printf '%s\n' \
     '(reinhardt-application-context' \
     '  :kind "baseline"' \
@@ -217,46 +280,59 @@ render_baseline() {
 
 list_apps() {
   [ -d src/apps ] || return 0
-  find src/apps -mindepth 1 -maxdepth 1 -type d -exec basename {} \; 2>/dev/null | LC_ALL=C sort
+  find src/apps -mindepth 1 -maxdepth 1 -type d -print 2>/dev/null | sed 's#^src/apps/##' | LC_ALL=C sort
 }
 
-payload_mentions_app() {
-  local payload="$1" app="$2" mode="$3" lower_payload lower_app
-  if [ "$mode" = "tool" ]; then
-    printf '%s\n' "$payload" | awk -v path="src/apps/$app" '
-      {
-        start = 1
-        while (start <= length($0)) {
-          position = index(substr($0, start), path)
-          if (!position) break
-          position += start - 1
-          after = substr($0, position + length(path), 1)
-          if (after !~ /[A-Za-z0-9_-]/) { found=1; exit }
-          start = position + 1
-        }
-      }
-      END { exit !found }
-    '
-    return
+ascii_lower() {
+  local value="$1" upper=ABCDEFGHIJKLMNOPQRSTUVWXYZ lower=abcdefghijklmnopqrstuvwxyz index from to
+  for ((index=0; index<26; index++)); do
+    from="${upper:index:1}"
+    to="${lower:index:1}"
+    value="${value//$from/$to}"
+  done
+  LOWERED_VALUE="$value"
+}
+
+token_delimiter() {
+  case "$1" in [A-Za-z0-9_-]) return 1 ;; *) return 0 ;; esac
+}
+
+tool_leading_delimiter() {
+  case "$1" in [A-Za-z0-9_.-]|/|\\) return 1 ;; *) return 0 ;; esac
+}
+
+payload_matches_app() {
+  local remaining="$1" token="$2" mode="$3" prefix before after
+  while [[ "$remaining" == *"$token"* ]]; do
+    prefix="${remaining%%"$token"*}"
+    before="${prefix: -1}"
+    remaining="${remaining#*"$token"}"
+    after="${remaining:0:1}"
+    if token_delimiter "$after"; then
+      if [ "$mode" = "prompt" ] && token_delimiter "$before"; then return 0; fi
+      if [ "$mode" = "tool" ] && tool_leading_delimiter "$before"; then return 0; fi
+    fi
+  done
+  return 1
+}
+
+matching_apps() {
+  local payload="$1" mode="$2" normalized_payload app normalized_app
+  if [ "$mode" = "prompt" ]; then
+    ascii_lower "$payload"
+    normalized_payload="$LOWERED_VALUE"
+  else
+    normalized_payload="$payload"
   fi
-  lower_payload="$(printf '%s' "$payload" | tr '[:upper:]' '[:lower:]')"
-  lower_app="$(printf '%s' "$app" | tr '[:upper:]' '[:lower:]')"
-  case "$lower_payload" in *"src/apps/$lower_app/"*|*"src/apps/$lower_app\\\""*) return 0 ;; esac
-  printf '%s\n' "$lower_payload" | awk -v app="$lower_app" '
-    {
-      start = 1
-      while (start <= length($0)) {
-        position = index(substr($0, start), app)
-        if (!position) break
-        position += start - 1
-        before = position == 1 ? "" : substr($0, position - 1, 1)
-        after = substr($0, position + length(app), 1)
-        if (before !~ /[A-Za-z0-9_-]/ && after !~ /[A-Za-z0-9_-]/) { found=1; exit }
-        start = position + 1
-      }
-    }
-    END { exit !found }
-  '
+  while IFS= read -r app; do
+    if [ "$mode" = "prompt" ]; then
+      ascii_lower "$app"
+      normalized_app="$LOWERED_VALUE"
+    else
+      normalized_app="src/apps/$app"
+    fi
+    payload_matches_app "$normalized_payload" "$normalized_app" "$mode" && printf '%s\n' "$app"
+  done < <(list_apps)
 }
 
 state_root() {
@@ -300,8 +376,11 @@ clear_session() {
 }
 
 extract_json_string() {
-  local field="$1"
-  printf '%s' "$HOOK_INPUT" | sed -n "s/.*\\\"$field\\\"[[:space:]]*:[[:space:]]*\\\"\\([^\\\"\\\\]*\\)\\\".*/\\1/p" | head -n 1
+  parse_hook_json "$1" string 2>/dev/null || true
+}
+
+extract_json_number() {
+  parse_hook_json "$1" number "${2:-}" 2>/dev/null || true
 }
 
 valid_object_input() {
@@ -309,26 +388,17 @@ valid_object_input() {
 }
 
 display_app_name() {
-  local value max_bytes=96
-  value="$(printf '%s' "$1" | sanitize_text)"
-  if [ "$(printf '%s' "$value" | LC_ALL=C wc -c | tr -d '[:space:]')" -le "$max_bytes" ]; then
-    printf '%s' "$value"
-  else
-    printf '%s...' "$(printf '%s' "$value" | LC_ALL=C cut -c 1-$((max_bytes - 3)))"
-  fi
+  printf '%s' "$1" | sanitize_bounded_text 96
 }
 
 render_app() {
   local app="$1" directory="src/apps/$1" display categories="" summary
-  local -a found_categories=()
-  { [ -f "$directory/models.rs" ] || [ -d "$directory/models" ]; } && found_categories+=(models)
-  { [ -f "$directory/api.rs" ] || [ -d "$directory/api" ]; } && found_categories+=(api)
-  { [ -f "$directory/pages.rs" ] || [ -d "$directory/pages" ]; } && found_categories+=(pages)
-  { [ -f "$directory/admin.rs" ] || [ -d "$directory/admin" ]; } && found_categories+=(admin)
-  [ -d "$directory/migrations" ] && found_categories+=(migrations)
-  { [ -f "$directory/config.rs" ] || [ -d "$directory/config" ] || [ -f "$directory/settings.rs" ] || [ -d "$directory/settings" ]; } && found_categories+=(configuration)
-  categories="$(printf '%s, ' "${found_categories[@]}")"
-  categories="${categories%, }"
+  { [ -f "$directory/models.rs" ] || [ -d "$directory/models" ]; } && categories="models"
+  { [ -f "$directory/api.rs" ] || [ -d "$directory/api" ]; } && categories="${categories}${categories:+, }api"
+  { [ -f "$directory/pages.rs" ] || [ -d "$directory/pages" ]; } && categories="${categories}${categories:+, }pages"
+  { [ -f "$directory/admin.rs" ] || [ -d "$directory/admin" ]; } && categories="${categories}${categories:+, }admin"
+  [ -d "$directory/migrations" ] && categories="${categories}${categories:+, }migrations"
+  { [ -f "$directory/config.rs" ] || [ -d "$directory/config" ] || [ -f "$directory/settings.rs" ] || [ -d "$directory/settings" ]; } && categories="${categories}${categories:+, }configuration"
   display="$(display_app_name "$app")"
   summary="$(printf '%s\n' \
     '(reinhardt-application-context' \
@@ -360,19 +430,19 @@ emit_tool_context() {
 render_matching_apps() {
   local payload="$1" session_id="$2" mode="$3" app emitted=0 summary context=""
   while IFS= read -r app; do
-    payload_mentions_app "$payload" "$app" "$mode" || continue
     [ "$emitted" -lt 5 ] || break
     claim_app "$session_id" "$app" || continue
     summary="$(render_app "$app")" || continue
     if [ "$mode" = "tool" ]; then context="${context}${context:+$'\n'}$summary"; else printf '%s\n' "$summary"; fi
     emitted=$((emitted + 1))
-  done < <(list_apps)
+  done < <(matching_apps "$payload" "$mode")
   if [ "$mode" = "tool" ] && [ -n "$context" ]; then emit_tool_context "$context"; fi
 }
 
 tool_succeeded() {
   local exit_code
-  exit_code="$(printf '%s' "$HOOK_INPUT" | sed -n 's/.*"exit_code"[[:space:]]*:[[:space:]]*\(-\{0,1\}[0-9][0-9]*\).*/\1/p' | head -n 1)"
+  exit_code="$(extract_json_number exit_code)"
+  [ -n "$exit_code" ] || exit_code="$(extract_json_number exit_code tool_response)"
   [ -z "$exit_code" ] || [ "$exit_code" -eq 0 ]
 }
 
