@@ -223,8 +223,21 @@ list_apps() {
 payload_mentions_app() {
   local payload="$1" app="$2" mode="$3" lower_payload lower_app
   if [ "$mode" = "tool" ]; then
-    case "$payload" in *"src/apps/$app/"*|*"src/apps/$app\""*) return 0 ;; esac
-    return 1
+    printf '%s\n' "$payload" | awk -v path="src/apps/$app" '
+      {
+        start = 1
+        while (start <= length($0)) {
+          position = index(substr($0, start), path)
+          if (!position) break
+          position += start - 1
+          after = substr($0, position + length(path), 1)
+          if (after !~ /[A-Za-z0-9_-]/) { found=1; exit }
+          start = position + 1
+        }
+      }
+      END { exit !found }
+    '
+    return
   fi
   lower_payload="$(printf '%s' "$payload" | tr '[:upper:]' '[:lower:]')"
   lower_app="$(printf '%s' "$app" | tr '[:upper:]' '[:lower:]')"

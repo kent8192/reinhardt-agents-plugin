@@ -222,6 +222,9 @@ fi
 tool_root_path='{"session_id":"tool-root-path","tool_name":"Bash","tool_input":{"command":"ls src/apps/users"},"tool_response":{"exit_code":0}}'
 assert_contains "$(run_hook "$app" tool "$tool_root_path")" ':app \"users\"'
 
+tool_punctuation_path='{"session_id":"tool-punctuation-path","tool_name":"Bash","tool_input":{"command":"ls src/apps/users && printf done"},"tool_response":{"exit_code":0}}'
+assert_contains "$(run_hook "$app" tool "$tool_punctuation_path")" ':app \"users\"'
+
 failed_tool='{"session_id":"failed-tool","tool_name":"Bash","tool_input":{"command":"cat src/apps/users/missing.rs"},"tool_response":{"exit_code":1}}'
 assert_empty "$(run_hook "$app" tool "$failed_tool")"
 
