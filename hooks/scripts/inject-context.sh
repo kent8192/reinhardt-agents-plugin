@@ -86,7 +86,7 @@ bounded_join() {
     fi
     suffix=""; [ "$remaining" -gt 0 ] && suffix=", ... (+$remaining more)"
     candidate="${output}${output:+, }${values[$index]}${suffix}"
-    if [ "${#candidate}" -le "$max_bytes" ]; then output="${output}${output:+, }${values[$index]}"; [ "$remaining" -eq 0 ] && break
+    if [ "$(sanitized_byte_length "$candidate")" -le "$max_bytes" ]; then output="${output}${output:+, }${values[$index]}"; [ "$remaining" -eq 0 ] && break
     else
       suffix="... (+$((count - index)) more)"
       output="${output}${output:+, }${suffix}"
@@ -98,7 +98,78 @@ bounded_join() {
 
 sanitize_text() { LC_ALL=C tr -d '\000-\037\177' | sed 's/\\/\\\\/g; s/"/\\"/g'; }
 
+sanitized_byte_length() { printf '%s' "$1" | sanitize_text | LC_ALL=C wc -c | tr -d '[:space:]'; }
+
 has_feature() { case ",$1," in *",$2,"*) return 0 ;; *) return 1 ;; esac; }
+
+valid_hook_input() {
+  [ -z "$HOOK_INPUT" ] && return 0
+  printf '%s' "$HOOK_INPUT" | awk '
+    function skip() { while (substr(input,position,1) ~ /[[:space:]]/) position++ }
+    function string(    character,escaped,count) {
+      if (substr(input,position,1) != "\"") return 0
+      position++; escaped=0
+      while (position <= input_length) {
+        character=substr(input,position,1)
+        if (escaped) {
+          if (character ~ /["\\\\\/bfnrt]/) { position++; escaped=0; continue }
+          if (character == "u") {
+            for (count=1; count<=4; count++) if (substr(input,position+count,1) !~ /[[:xdigit:]]/) return 0
+            position+=5; escaped=0; continue
+          }
+          return 0
+        }
+        if (character == "\\") { escaped=1; position++; continue }
+        if (character == "\"") { position++; return 1 }
+        if (character ~ /[[:cntrl:]]/) return 0
+        position++
+      }
+      return 0
+    }
+    function number(    rest) {
+      rest=substr(input,position)
+      if (match(rest, /^-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?/)) { position+=RLENGTH; return 1 }
+      return 0
+    }
+    function value(    character) {
+      skip(); character=substr(input,position,1)
+      if (character == "\"") return string()
+      if (character == "{") return object()
+      if (character == "[") return array()
+      if (character == "-" || character ~ /[0-9]/) return number()
+      if (substr(input,position,4) == "true") { position+=4; return 1 }
+      if (substr(input,position,5) == "false") { position+=5; return 1 }
+      if (substr(input,position,4) == "null") { position+=4; return 1 }
+      return 0
+    }
+    function array() {
+      position++; skip()
+      if (substr(input,position,1) == "]") { position++; return 1 }
+      while (value()) {
+        skip()
+        if (substr(input,position,1) == "]") { position++; return 1 }
+        if (substr(input,position,1) != ",") return 0
+        position++; skip()
+      }
+      return 0
+    }
+    function object() {
+      position++; skip()
+      if (substr(input,position,1) == "}") { position++; return 1 }
+      while (string()) {
+        skip(); if (substr(input,position,1) != ":") return 0
+        position++; if (!value()) return 0
+        skip()
+        if (substr(input,position,1) == "}") { position++; return 1 }
+        if (substr(input,position,1) != ",") return 0
+        position++; skip()
+      }
+      return 0
+    }
+    { input=input $0 ORS }
+    END { input_length=length(input); position=1; if (!object()) exit 1; skip(); exit position <= input_length }
+  '
+}
 
 load_reinhardt_metadata() {
   [ -f "$CARGO_TOML" ] || return 1
@@ -145,5 +216,5 @@ render_baseline() {
 }
 
 case "$MODE" in
-  session-start|subagent-start) if load_reinhardt_metadata; then render_baseline; fi ;;
+  session-start|subagent-start) if valid_hook_input && load_reinhardt_metadata; then render_baseline; fi ;;
 esac

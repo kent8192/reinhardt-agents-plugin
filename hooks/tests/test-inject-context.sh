@@ -110,6 +110,28 @@ assert_empty "$(run_hook "$virtual" session-start)"
 metadata="$(make_app metadata $'[package.metadata]\nframework = "reinhardt-web"')"
 assert_empty "$(run_hook "$metadata" session-start)"
 
+assert_empty "$(run_hook "$plain" session-start '{"session_id":')"
+
+escaped_features="$(make_app escaped-features $'[dependencies]\nreinhardt = "0.4.2"')"
+{
+  printf '%s' 'reinhardt = { version = "0.4.2", features = ['
+  for index in $(seq 1 20); do
+    [ "$index" -eq 1 ] || printf ', '
+    printf '"\\\\界xxxxxxxxxxxxxxxxxxxx%02d"' "$index"
+  done
+  printf '%s\n' '] }'
+} >> "$escaped_features/Cargo.toml"
+output="$(run_hook "$escaped_features" session-start)"
+features_line="$(printf '%s\n' "$output" | awk '/^  :features /')"
+features_value="${features_line#*\"}"
+features_value="${features_value%\"}"
+[ "$(LC_ALL=C printf '%s' "$features_value" | wc -c | tr -d '[:space:]')" -le 512 ] || fail 'expected escaped feature bytes to be at most 512'
+assert_contains "$features_value" $'\\\\界'
+case "$features_value" in
+  *'... (+'*' more)') ;;
+  *) fail 'expected escaped feature list to be truncated' ;;
+esac
+
 assert_contains "$(run_hook "$plain" subagent-start)" ':kind "baseline"'
 assert_empty "$(run_hook "$plain" unknown-mode)"
 
