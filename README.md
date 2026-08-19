@@ -115,7 +115,25 @@ usable when read from Codex.
 | Event | Matcher | Description |
 |-------|---------|-------------|
 | `PostToolUse` | `Write\|Edit` | Runs semgrep anti-pattern detection on modified Rust files and `Cargo.toml` |
-| `SessionStart` | (all) | Injects reinhardt project context (crate structure, feature flags, conventions) into the session |
+| `SessionStart` | (all) | Injects bounded project metadata and the available skill list |
+| `UserPromptSubmit` | (all) | Injects an explicitly named application |
+| `PostToolUse` | `Read\|Glob\|Grep\|Edit\|Write\|Bash` | Injects an app first discovered through a concrete `src/apps/<name>` path |
+| `SubagentStart` | (all) | Restores the baseline context for subagents |
+| `SessionEnd` | (all) | Removes hook state |
+
+The context hook recognizes an application only when the current directory has
+`Cargo.toml`, `src/bin/manage.rs`, and a normal runtime dependency on the
+Reinhardt facade. Direct, table, path, Git, target-specific, and nearest-parent
+workspace dependency declarations are supported. Comments, dev/build-only
+dependencies, component crates, and workspace declarations alone do not match.
+
+`SessionStart` injects bounded project metadata and the available skill list.
+`UserPromptSubmit` injects an explicitly named app, while `PostToolUse` injects
+an app first discovered through a concrete `src/apps/<name>` path. Each app is
+injected once per session and becomes eligible again after context compaction.
+One event emits at most five 512-byte app summaries; the feature list is limited
+to 20 items and 512 bytes. `SubagentStart` restores the baseline for subagents,
+and `SessionEnd` removes hook state.
 
 Hook commands support both plugin-root variables:
 
