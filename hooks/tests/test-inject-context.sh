@@ -174,6 +174,7 @@ prompt_payload='{"session_id":"prompt-session","prompt":"Update the USERS authen
 output="$(run_hook "$app" prompt "$prompt_payload")"
 assert_contains "$output" ':kind "app"'
 assert_contains "$output" ':app "users"'
+assert_contains "$output" $':app "users"\n  :path "src/apps/users"\n  :categories "models, api, pages, admin, migrations, configuration"\n  :guidance "Inspect this app before editing and use the applicable bundled Reinhardt skills."'
 assert_contains "$output" ':categories "models, api, pages, admin, migrations, configuration"'
 
 assert_empty "$(run_hook "$app" prompt "$prompt_payload")"
@@ -200,6 +201,26 @@ PY
 then
   fail "tool output is not valid JSON context"
 fi
+
+mkdir -p "$app/src/apps/reports/models"
+tool_multi_payload='{"session_id":"tool-multi-session","tool_name":"Bash","tool_input":{"command":"cat src/apps/reports/models.rs src/apps/users/models.rs"},"tool_response":{"exit_code":0}}'
+tool_multi_output="$(run_hook "$app" tool "$tool_multi_payload")"
+[ "$(printf '%s\n' "$tool_multi_output" | wc -l | tr -d ' ')" -eq 1 ] || fail "tool multi-app output must be one JSON line"
+if ! python3 - "$tool_multi_output" <<'PY'
+import json
+import sys
+
+context = json.loads(sys.argv[1])["hookSpecificOutput"]["additionalContext"]
+assert context.count(':kind "app"') == 2
+assert ':app "reports"' in context
+assert ':app "users"' in context
+PY
+then
+  fail "tool multi-app output is not one valid JSON context"
+fi
+
+tool_root_path='{"session_id":"tool-root-path","tool_name":"Bash","tool_input":{"command":"ls src/apps/users"},"tool_response":{"exit_code":0}}'
+assert_contains "$(run_hook "$app" tool "$tool_root_path")" ':app \"users\"'
 
 failed_tool='{"session_id":"failed-tool","tool_name":"Bash","tool_input":{"command":"cat src/apps/users/missing.rs"},"tool_response":{"exit_code":1}}'
 assert_empty "$(run_hook "$app" tool "$failed_tool")"
@@ -254,6 +275,21 @@ unsafe_two="$(run_hook "$app" prompt '{"session_id":"../unsafe","prompt":"users"
 assert_contains "$unsafe_one" ':app "users"'
 assert_contains "$unsafe_two" ':app "users"'
 
+dot_one="$(run_hook "$app" prompt '{"session_id":".","prompt":"users"}')"
+dot_two="$(run_hook "$app" prompt '{"session_id":".","prompt":"users"}')"
+dotdot_one="$(run_hook "$app" prompt '{"session_id":"..","prompt":"users"}')"
+dotdot_two="$(run_hook "$app" prompt '{"session_id":"..","prompt":"users"}')"
+assert_contains "$dot_one" ':app "users"'
+assert_contains "$dot_two" ':app "users"'
+assert_contains "$dotdot_one" ':app "users"'
+assert_contains "$dotdot_two" ':app "users"'
+[ -z "$(find "$STATE_ROOT" -mindepth 1 -maxdepth 1 -type d -name '[0-9]*' -print -quit)" ] || fail "dot session created a root-level state marker"
+
+run_hook "$app" prompt '{"session_id":"safe-session","prompt":"users"}' >/dev/null
+run_hook "$app" session-end '{"session_id":".","reason":"other"}' >/dev/null
+run_hook "$app" session-end '{"session_id":"..","reason":"other"}' >/dev/null
+assert_empty "$(run_hook "$app" prompt '{"session_id":"safe-session","prompt":"users"}')"
+
 run_hook "$app" prompt '{"session_id":"permission-session","prompt":"users"}' >/dev/null
 marker_dir="$(find "$STATE_ROOT/permission-session" -mindepth 1 -maxdepth 1 -type d -print -quit)"
 [ "$(stat -f '%Lp' "$marker_dir")" = 700 ] || fail "state marker directory is not private"
@@ -263,6 +299,26 @@ secondary_root="$TEST_ROOT/plugin-secondary"
 (cd "$app" && CLAUDE_PLUGIN_DATA="$priority_root" PLUGIN_DATA="$secondary_root" "$HOOK" prompt <<< '{"session_id":"priority-session","prompt":"users"}') >/dev/null
 [ -d "$priority_root" ] || fail "CLAUDE_PLUGIN_DATA was not selected"
 [ ! -e "$secondary_root" ] || fail "PLUGIN_DATA was used before CLAUDE_PLUGIN_DATA"
+
+unusable_root="$TEST_ROOT/unusable-root"
+fallback_root="$TEST_ROOT/fallback-root"
+mkdir "$unusable_root"
+chmod 500 "$unusable_root"
+fallback_one="$(cd "$app" && CLAUDE_PLUGIN_DATA="$unusable_root" PLUGIN_DATA="$fallback_root" "$HOOK" prompt <<< '{"session_id":"fallback-session","prompt":"users"}')"
+fallback_two="$(cd "$app" && CLAUDE_PLUGIN_DATA="$unusable_root" PLUGIN_DATA="$fallback_root" "$HOOK" prompt <<< '{"session_id":"fallback-session","prompt":"users"}')"
+chmod 700 "$unusable_root"
+assert_contains "$fallback_one" ':app "users"'
+assert_empty "$fallback_two"
+[ -d "$fallback_root/fallback-session" ] || fail "writable fallback state root was not selected"
+
+marker_failure_root="$TEST_ROOT/marker-failure-root"
+mkdir -p "$marker_failure_root/marker-failure-session"
+chmod 500 "$marker_failure_root/marker-failure-session"
+marker_failure_one="$(cd "$app" && CLAUDE_PLUGIN_DATA="$marker_failure_root" PLUGIN_DATA=/dev/null "$HOOK" prompt <<< '{"session_id":"marker-failure-session","prompt":"users"}')"
+marker_failure_two="$(cd "$app" && CLAUDE_PLUGIN_DATA="$marker_failure_root" PLUGIN_DATA=/dev/null "$HOOK" prompt <<< '{"session_id":"marker-failure-session","prompt":"users"}')"
+chmod 700 "$marker_failure_root/marker-failure-session"
+assert_contains "$marker_failure_one" ':app "users"'
+assert_contains "$marker_failure_two" ':app "users"'
 
 feature_manifest=$'[package]\nname = "bounded"\nversion = "0.1.0"\n[dependencies]\nreinhardt = { package = "reinhardt-web", version = "0.4.0", features = [\n  "00-quote\\\"feature",\n  "01-slash\\\\feature",\n'
 for number in $(awk 'BEGIN { for (i = 2; i < 27; i++) print i }'); do

@@ -223,7 +223,7 @@ list_apps() {
 payload_mentions_app() {
   local payload="$1" app="$2" mode="$3" lower_payload lower_app
   if [ "$mode" = "tool" ]; then
-    case "$payload" in *"src/apps/$app/"*) return 0 ;; esac
+    case "$payload" in *"src/apps/$app/"*|*"src/apps/$app\""*) return 0 ;; esac
     return 1
   fi
   lower_payload="$(printf '%s' "$payload" | tr '[:upper:]' '[:lower:]')"
@@ -247,20 +247,24 @@ payload_mentions_app() {
 }
 
 state_root() {
-  local candidate
+  local candidate probe
   umask 077
   for candidate in "${CLAUDE_PLUGIN_DATA:-}" "${PLUGIN_DATA:-}" "${TMPDIR:-/tmp}/reinhardt-agents-plugin"; do
     [ -n "$candidate" ] || continue
     if mkdir -p "$candidate" 2>/dev/null; then
-      printf '%s\n' "$candidate"
-      return 0
+      probe="$candidate/.reinhardt-context-probe-$$"
+      if mkdir "$probe" 2>/dev/null; then
+        rmdir "$probe" 2>/dev/null || true
+        printf '%s\n' "$candidate"
+        return 0
+      fi
     fi
   done
   return 1
 }
 
 valid_session_id() {
-  [[ "$1" =~ ^[A-Za-z0-9._-]+$ ]]
+  [[ "$1" =~ ^[A-Za-z0-9._-]+$ ]] && [ "$1" != "." ] && [ "$1" != ".." ]
 }
 
 claim_app() {
@@ -270,7 +274,9 @@ claim_app() {
   root="$(state_root)" || return 0
   marker="$(printf '%s' "$app" | cksum | awk '{ print $1 }')"
   mkdir -p "$root/$session_id" 2>/dev/null || return 0
-  mkdir "$root/$session_id/$marker" 2>/dev/null
+  if mkdir "$root/$session_id/$marker" 2>/dev/null; then return 0; fi
+  [ -d "$root/$session_id/$marker" ] && return 1
+  return 0
 }
 
 clear_session() {
@@ -315,7 +321,9 @@ render_app() {
     '(reinhardt-application-context' \
     '  :kind "app"' \
     "  :app \"$display\"" \
+    "  :path \"src/apps/$display\"" \
     "  :categories \"$categories\"" \
+    '  :guidance "Inspect this app before editing and use the applicable bundled Reinhardt skills."' \
     ')')"
   [ "$(printf '%s' "$summary" | LC_ALL=C wc -c | tr -d '[:space:]')" -le 512 ] || return 1
   printf '%s\n' "$summary"
@@ -337,15 +345,16 @@ emit_tool_context() {
 }
 
 render_matching_apps() {
-  local payload="$1" session_id="$2" mode="$3" app emitted=0 summary
+  local payload="$1" session_id="$2" mode="$3" app emitted=0 summary context=""
   while IFS= read -r app; do
     payload_mentions_app "$payload" "$app" "$mode" || continue
     [ "$emitted" -lt 5 ] || break
     claim_app "$session_id" "$app" || continue
     summary="$(render_app "$app")" || continue
-    if [ "$mode" = "tool" ]; then emit_tool_context "$summary"; else printf '%s\n' "$summary"; fi
+    if [ "$mode" = "tool" ]; then context="${context}${context:+$'\n'}$summary"; else printf '%s\n' "$summary"; fi
     emitted=$((emitted + 1))
   done < <(list_apps)
+  if [ "$mode" = "tool" ] && [ -n "$context" ]; then emit_tool_context "$context"; fi
 }
 
 tool_succeeded() {
