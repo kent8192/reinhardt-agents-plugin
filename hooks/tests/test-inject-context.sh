@@ -186,6 +186,7 @@ regression_tool_path_boundaries() {
 
   absolute_payload="$(printf '{"session_id":"boundary-absolute-inside","path":"%s/src/apps/users/models.rs","tool_response":{"exit_code":0}}' "$app")"
   assert_contains "$(run_hook "$app" tool "$absolute_payload")" ':app \"users\"'
+  assert_contains "$(run_hook "$app" tool '{"session_id":"boundary-dot-relative","path":"./src/apps/users/models.rs","tool_response":{"exit_code":0}}')" ':app \"users\"'
 }
 
 regression_workspace_default_features() {
@@ -247,7 +248,7 @@ regression_prompt_value_only() {
 }
 
 regression_default_feature_preset() {
-  local app output
+  local app explicit output
   app="$(make_app final-default-preset $'[dependencies]\nreinhardt = "0.4.0"')"
   output="$(run_hook "$app" session-start)"
   assert_contains "$output" ':default-features true'
@@ -256,6 +257,22 @@ regression_default_feature_preset() {
   assert_contains "$output" 'db-postgres'
   assert_contains "$output" ':db-backend "postgres"'
   assert_contains "$output" ':auth-method "auth (default)"'
+
+  explicit="$(make_app final-explicit-preset $'[dependencies]\nreinhardt = { version = "0.4.0", default-features = false, features = ["standard"] }')"
+  output="$(run_hook "$explicit" session-start)"
+  assert_contains "$output" ':default-features false'
+  assert_contains "$output" ':db-backend "postgres"'
+  assert_contains "$output" ':auth-method "auth (default)"'
+}
+
+regression_effective_facade_package() {
+  local direct mismatch output
+  direct="$(make_app final-direct-web-key $'[dependencies]\nreinhardt-web = "0.4.0"')"
+  assert_contains "$(run_hook "$direct" session-start)" ':reinhardt-version "0.4.0"'
+
+  mismatch="$(make_app final-mismatched-package $'[dependencies]\nreinhardt = { package = "some-other-crate", version = "0.4.0" }')"
+  output="$(run_hook "$mismatch" session-start)"
+  assert_empty "$output"
 }
 
 trace_match_processes() {
@@ -329,6 +346,7 @@ for regression in \
   regression_no_per_app_basename \
   regression_prompt_value_only \
   regression_default_feature_preset \
+  regression_effective_facade_package \
   regression_one_pass_matching \
   regression_unbalanced_manifest \
   regression_top_level_json_fields

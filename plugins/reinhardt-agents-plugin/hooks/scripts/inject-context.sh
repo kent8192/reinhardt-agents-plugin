@@ -39,7 +39,7 @@ parse_dependency_manifest() {
     function collect_features(s, start,p,depth,c) { start=1; while (find_field(s,"features",start)) { p=FPOS; if (substr(s,p,1)!="[") { start=p+1; continue }; depth=0; for (; p<=length(s); p++) { c=substr(s,p,1); if (is_quote(c)) { read_quoted(s,p); feature[QVAL]=1; p=QEND-1; continue }; if (c=="[") depth++; if (c=="]") { depth--; if (!depth) break } }; start=p+1 } }
     function default_features(s, value) { value=scalar(s,"default-features"); if (value=="") value=scalar(s,"default_features"); return value }
     function add_default_preset() { feature["standard"]=1; feature["minimal"]=1; feature["core"]=1; feature["routing"]=1; feature["di"]=1; feature["server"]=1; feature["database"]=1; feature["db-postgres"]=1; feature["rest"]=1; feature["auth"]=1; feature["middleware"]=1; feature["sessions"]=1; feature["pages"]=1 }
-    function is_facade(key,text) { return key=="reinhardt" || scalar(text,"package")=="reinhardt-web" }
+    function is_facade(key,text,package_name) { package_name=scalar(text,"package"); if (package_name=="") package_name=key; return package_name=="reinhardt" || package_name=="reinhardt-web" }
     function process_member(key,text, effective,version,workspace_text,member_defaults,workspace_defaults) { workspace_text=""; if (scalar(text,"workspace")=="true") { if (!(key in workspace_record)) return; inherited="true"; workspace_text=workspace_record[key]; effective=text "\n" workspace_text } else effective=text; if (!is_facade(key,effective)) return; found="true"; version=scalar(effective,"version"); if (version=="") version=direct_version(effective); if (explicit_version=="" && version!="") explicit_version=version; if (!path_seen && scalar(effective,"path")!="") path_seen=1; if (!git_seen && scalar(effective,"git")!="") git_seen=1; member_defaults=default_features(text); workspace_defaults=default_features(workspace_text); if (member_defaults=="true" || workspace_defaults=="true") defaults="true"; else if (member_defaults=="false" || workspace_defaults=="false") defaults="false"; collect_features(effective) }
     {
       kind=(FILENAME==member ? "member" : (FILENAME==workspace ? "workspace" : "")); line=strip_comment($0); if (trim(line)=="") next
@@ -56,7 +56,7 @@ parse_dependency_manifest() {
       for (i=1; i<=record_count; i++) if (record_kind[i]=="workspace") workspace_record[record_key[i]]=record_text[i]
       found="false"; inherited="false"; defaults="true"; explicit_version=""; path_seen=git_seen=0
       for (i=1; i<=record_count; i++) if (record_kind[i]=="member") process_member(record_key[i],record_text[i])
-      if (defaults=="true") add_default_preset()
+      if (defaults=="true" || ("standard" in feature)) add_default_preset()
       feature_csv=""; for (name in feature) feature_csv=feature_csv (feature_csv=="" ? "" : ",") name
       if (explicit_version!="") source=explicit_version; else if (path_seen) source="path"; else if (git_seen) source="git"; else source="unknown"
       print found "\t" inherited "\t" source "\t" defaults "\t" feature_csv
@@ -337,7 +337,7 @@ payload_matches_app() {
 }
 
 matching_apps() {
-  local payload="$1" mode="$2" normalized_payload app normalized_app project_prefix
+  local payload="$1" mode="$2" normalized_payload app normalized_app project_prefix dot_prefix
   if [ "$mode" = "prompt" ]; then
     ascii_lower "$payload"
     normalized_payload="$LOWERED_VALUE"
@@ -345,6 +345,8 @@ matching_apps() {
     normalized_payload="$payload"
     project_prefix="${PWD%/}/src/apps/"
     normalized_payload="${normalized_payload//"$project_prefix"/src/apps/}"
+    dot_prefix="./src/apps/"
+    normalized_payload="${normalized_payload//"$dot_prefix"/src/apps/}"
   fi
   while IFS= read -r app; do
     if [ "$mode" = "prompt" ]; then
