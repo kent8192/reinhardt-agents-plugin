@@ -33,6 +33,67 @@ DEFAULT_FEATURES = {
     "sessions",
     "pages",
 }
+FULL_FEATURES = {
+    "admin",
+    "api",
+    "argon2-hasher",
+    "auth",
+    "auth-jwt",
+    "auth-oauth",
+    "auth-session",
+    "auth-token",
+    "bcrypt-hasher",
+    "browsable-api",
+    "cache",
+    "chrono",
+    "client-router",
+    "commands",
+    "conf",
+    "core",
+    "database",
+    "db-cockroachdb",
+    "db-mysql",
+    "db-postgres",
+    "db-sqlite",
+    "deeplink",
+    "dentdelion",
+    "di",
+    "dispatch",
+    "forms",
+    "graphql",
+    "grpc",
+    "i18n",
+    "mail",
+    "messages",
+    "middleware",
+    "middleware-auth-jwt",
+    "middleware-compression",
+    "middleware-cors",
+    "middleware-rate-limit",
+    "middleware-security",
+    "migrations",
+    "openapi",
+    "openapi-router",
+    "pages",
+    "pages-web-sys-full",
+    "redis-backend",
+    "rest",
+    "server",
+    "server-fn-test",
+    "session-redis",
+    "sessions",
+    "shortcuts",
+    "standard",
+    "static-files",
+    "storage",
+    "tasks",
+    "tasks-durable",
+    "test",
+    "testcontainers",
+    "uuid",
+    "websockets",
+    "websockets-pages",
+}
 PRESET_FEATURES = {
     "minimal": {"core", "di", "server"},
     "standard": DEFAULT_FEATURES,
@@ -41,8 +102,8 @@ PRESET_FEATURES = {
     "websocket-server": {"minimal", "auth", "websockets", "cache"},
     "cli-tools": {"database", "migrations", "tasks", "mail"},
     "test-utils": {"test", "testcontainers", "database"},
+    "full": FULL_FEATURES,
 }
-PRESET_FEATURES["full"] = set().union(*PRESET_FEATURES.values())
 TOKEN_CHARACTER = r"A-Za-z0-9_-"
 TOOL_PREFIX_CHARACTER = r"A-Za-z0-9_.\-/\\"
 
@@ -145,16 +206,23 @@ def target_matches(target: str, platform) -> bool:
 
 def runtime_dependencies(manifest: dict):
     yield from manifest.get("dependencies", {}).items()
+    targets = [
+        (predicate, target)
+        for predicate, target in manifest.get("target", {}).items()
+        if isinstance(target, dict) and target.get("dependencies")
+    ]
+    if not targets:
+        return
     platform = rust_target()
-    for predicate, target in manifest.get("target", {}).items():
+    for predicate, target in targets:
         if isinstance(target, dict) and target_matches(predicate, platform):
             yield from target.get("dependencies", {}).items()
 
 
-def dependency_table(value) -> dict:
+def dependency_table(value) -> dict | None:
     if isinstance(value, str):
         return {"version": value}
-    return value if isinstance(value, dict) else {}
+    return value if isinstance(value, dict) else None
 
 
 def inherited_dependency(
@@ -168,6 +236,8 @@ def inherited_dependency(
         return None
 
     inherited = dependency_table(inherited)
+    if inherited is None:
+        return None
     effective = inherited | dependency
     effective["features"] = [
         *inherited.get("features", []),
@@ -186,12 +256,15 @@ def inherited_dependency(
     return effective
 
 
-def forwarded_dependency_features(manifest: dict, aliases: set[str]) -> set[str]:
+def default_feature_graph(
+    manifest: dict, aliases: set[str]
+) -> tuple[set[str], set[str]]:
     definitions = manifest.get("features", {})
     if not isinstance(definitions, dict):
-        return set()
+        return set(), set()
 
     forwarded = set()
+    activated_dependencies = set()
     pending = list(definitions.get("default", []))
     visited = set()
     while pending:
@@ -199,15 +272,23 @@ def forwarded_dependency_features(manifest: dict, aliases: set[str]) -> set[str]
         if not isinstance(feature, str) or feature in visited:
             continue
         visited.add(feature)
-        if "/" in feature:
+        if feature.startswith("dep:"):
+            activated_dependencies.add(feature.removeprefix("dep:"))
+        elif "/" in feature:
             dependency, dependency_feature = feature.split("/", 1)
-            if dependency.removesuffix("?") in aliases:
+            weak = dependency.endswith("?")
+            dependency = dependency.removesuffix("?")
+            if dependency in aliases:
                 forwarded.add(dependency_feature)
-        elif not feature.startswith("dep:"):
+                if not weak:
+                    activated_dependencies.add(dependency)
+        elif feature in definitions:
             nested = definitions.get(feature, [])
             if isinstance(nested, list):
                 pending.extend(nested)
-    return forwarded
+        elif feature in aliases:
+            activated_dependencies.add(feature)
+    return forwarded, activated_dependencies
 
 
 def expand_features(features: set[str]) -> set[str]:
@@ -226,22 +307,32 @@ def dependency_metadata(manifest: dict, workspace: dict) -> dict | None:
     version = None
     saw_path = False
     saw_git = False
-    default_features = True
+    default_features = False
     features: set[str] = set()
-    aliases = set()
-    found = False
-
+    declarations = []
     for name, raw_dependency in runtime_dependencies(manifest):
-        dependency = inherited_dependency(
-            name, dependency_table(raw_dependency), workspace
-        )
+        table = dependency_table(raw_dependency)
+        if table is None:
+            continue
+        dependency = inherited_dependency(name, table, workspace)
         if dependency is None:
             continue
         if dependency.get("package", name) not in {"reinhardt", "reinhardt-web"}:
             continue
+        declarations.append((name, dependency))
 
-        found = True
-        aliases.add(name)
+    aliases = {name for name, _ in declarations}
+    forwarded, activated_dependencies = default_feature_graph(manifest, aliases)
+    active_declarations = [
+        (name, dependency)
+        for name, dependency in declarations
+        if dependency.get("optional") is not True
+        or name in activated_dependencies
+    ]
+    if not active_declarations:
+        return None
+
+    for name, dependency in active_declarations:
         if version is None and isinstance(dependency.get("version"), str):
             version = dependency["version"]
         saw_path |= "path" in dependency
@@ -250,17 +341,14 @@ def dependency_metadata(manifest: dict, workspace: dict) -> dict | None:
         declared_default = dependency.get(
             "default-features", dependency.get("default_features")
         )
-        if declared_default is not None:
-            default_features = bool(declared_default)
+        default_features |= declared_default is not False
         features.update(
             feature
             for feature in dependency.get("features", [])
             if isinstance(feature, str)
         )
 
-    if not found:
-        return None
-    features.update(forwarded_dependency_features(manifest, aliases))
+    features.update(forwarded)
     if default_features or "standard" in features:
         features.update(DEFAULT_FEATURES)
     features = expand_features(features)
@@ -401,10 +489,7 @@ def application_metadata() -> dict | None:
         if feature in features
     ]
     metadata["auth"] = ", ".join(auth) or "none"
-    apps = Path("src/apps")
-    metadata["app_count"] = (
-        sum(path.is_dir() for path in apps.iterdir()) if apps.is_dir() else 0
-    )
+    metadata["app_count"] = len(list_apps())
     return metadata
 
 
@@ -431,7 +516,10 @@ def list_apps() -> list[str]:
     root = Path("src/apps")
     if not root.is_dir():
         return []
-    return sorted(path.name for path in root.iterdir() if path.is_dir())
+    try:
+        return sorted(path.name for path in root.iterdir() if path.is_dir())
+    except OSError:
+        return []
 
 
 def ascii_lower(value: str) -> str:
@@ -443,30 +531,39 @@ def ascii_lower(value: str) -> str:
 def matching_apps(text: str, mode: str) -> list[str]:
     if mode == "prompt":
         text = ascii_lower(text)
-    else:
-        text = text.replace("\\", "/")
-        text = re.sub(
-            r"(?i)(?<![A-Za-z0-9])([a-z]):/",
-            lambda match: f"/{match.group(1).lower()}/",
+        return [
+            app
+            for app in list_apps()
+            if re.search(
+                rf"(?<![{TOKEN_CHARACTER}]){re.escape(ascii_lower(app))}"
+                rf"(?![{TOKEN_CHARACTER}])",
+                text,
+            )
+        ]
+
+    text = text.replace("\\", "/")
+    text = re.sub(
+        r"(?i)(?<![A-Za-z0-9])([a-z]):/",
+        lambda match: f"/{match.group(1).lower()}/",
+        text,
+    )
+    logical_cwd = os.environ.get("PWD", str(Path.cwd())).replace("\\", "/")
+    logical_cwd = re.sub(
+        r"(?i)^([a-z]):/",
+        lambda match: f"/{match.group(1).lower()}/",
+        logical_cwd,
+    ).rstrip("/")
+    text = text.replace(f"{logical_cwd}/src/apps/", "src/apps/")
+    text = text.replace("./src/apps/", "src/apps/")
+    candidates = set(
+        re.findall(
+            rf"(?<![{TOOL_PREFIX_CHARACTER}])src/apps/"
+            r"([^/\s\"'`;,|&:<>()\[\]{}]+)"
+            r"(?=/|[\s\"'`;,|&:<>()\[\]{}]|$)",
             text,
         )
-        logical_cwd = os.environ.get("PWD", str(Path.cwd())).replace("\\", "/")
-        logical_cwd = re.sub(
-            r"(?i)^([a-z]):/",
-            lambda match: f"/{match.group(1).lower()}/",
-            logical_cwd,
-        ).rstrip("/")
-        text = text.replace(f"{logical_cwd}/src/apps/", "src/apps/")
-        text = text.replace("./src/apps/", "src/apps/")
-
-    matches = []
-    for app in list_apps():
-        token = ascii_lower(app) if mode == "prompt" else f"src/apps/{app}"
-        leading = TOKEN_CHARACTER if mode == "prompt" else TOOL_PREFIX_CHARACTER
-        pattern = rf"(?<![{leading}]){re.escape(token)}(?![{TOKEN_CHARACTER}])"
-        if re.search(pattern, text):
-            matches.append(app)
-    return matches
+    )
+    return [app for app in list_apps() if app in candidates]
 
 
 def state_root() -> Path | None:

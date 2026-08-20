@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 HOOK="$ROOT/hooks/scripts/inject-context.sh"
 PY_HOOK="$ROOT/hooks/scripts/inject_context.py"
+PYTHON_BIN="$(python3 -c 'import sys; print(sys.executable)')"
 TEST_ROOT="$(mktemp -d)"
 STATE_ROOT="$TEST_ROOT/state"
 trap 'rm -rf "$TEST_ROOT"' EXIT
@@ -233,7 +234,7 @@ regression_no_per_app_basename() {
   mkdir -p "$fake_bin"
   printf '%s\n' '#!/bin/sh' 'exit 99' > "$fake_bin/basename"
   chmod +x "$fake_bin/basename"
-  output="$(cd "$app" && PATH="$fake_bin:$PATH" PLUGIN_DATA="$STATE_ROOT" /bin/bash "$HOOK" prompt <<< '{"session_id":"no-basename","prompt":"users"}')"
+  output="$(cd "$app" && PATH="$fake_bin:$PATH" PLUGIN_DATA="$STATE_ROOT" "$PYTHON_BIN" "$PY_HOOK" prompt <<< '{"session_id":"no-basename","prompt":"users"}')"
   assert_contains "$output" ':app "users"'
 }
 
@@ -369,8 +370,68 @@ regression_windows_tool_path() {
   local app output
   app="$(make_app final-windows-path $'[dependencies]\nreinhardt = "0.4.0"')"
   mkdir -p "$app/src/apps/users/models"
-  output="$(cd "$app" && PWD='C:/repo' PLUGIN_DATA="$STATE_ROOT" python3 "$PY_HOOK" tool <<< '{"session_id":"windows-path","path":"C:\\repo\\src\\apps\\users\\models.rs","tool_response":{"exit_code":0}}')"
+  output="$(cd "$app" && PWD='C:/repo' PLUGIN_DATA="$STATE_ROOT" "$PYTHON_BIN" "$PY_HOOK" tool <<< '{"session_id":"windows-path","path":"C:\\repo\\src\\apps\\users\\models.rs","tool_response":{"exit_code":0}}')"
   assert_contains "$output" ':app \"users\"'
+}
+
+regression_combined_dependency_defaults() {
+  local app output
+  app="$(make_app final-combined-defaults $'[dependencies]\nreinhardt = "0.4.0"\n[target.\'cfg(unix)\'.dependencies]\nreinhardt = { version = "0.4.0", default-features = false }')"
+  output="$(run_hook "$app" session-start)"
+  assert_contains "$output" ':default-features true'
+  assert_contains "$output" ':db-backend "postgres"'
+}
+
+regression_full_preset_auth() {
+  local app output
+  app="$(make_app final-full-preset $'[dependencies]\nreinhardt = { version = "0.4.0", default-features = false, features = ["full"] }')"
+  output="$(run_hook "$app" session-start)"
+  assert_contains "$output" ':auth-method "jwt, session, oauth, token, auth (default)"'
+}
+
+regression_optional_dependency_activation() {
+  local inactive active
+  inactive="$(make_app final-optional-inactive $'[features]\ndefault = []\n[dependencies]\nreinhardt = { version = "0.4.0", optional = true, features = ["db-sqlite"] }')"
+  assert_empty "$(run_hook "$inactive" session-start)"
+
+  active="$(make_app final-optional-active $'[features]\ndefault = ["dep:reinhardt"]\n[dependencies]\nreinhardt = { version = "0.4.0", optional = true, default-features = false, features = ["db-sqlite"] }')"
+  assert_contains "$(run_hook "$active" session-start)" ':db-backend "sqlite"'
+}
+
+regression_invalid_dependency_type() {
+  local app
+  app="$(make_app final-invalid-dependency $'[dependencies]\nreinhardt = 1')"
+  assert_empty "$(run_hook "$app" session-start)"
+}
+
+regression_no_unneeded_rustc_probe() {
+  local app fake_bin trace output
+  app="$(make_app final-no-rustc $'[dependencies]\nreinhardt = "0.4.0"')"
+  fake_bin="$TEST_ROOT/final-no-rustc-bin"
+  trace="$TEST_ROOT/final-no-rustc.trace"
+  mkdir -p "$fake_bin"
+  printf '%s\n' '#!/bin/sh' 'printf "called\n" >> "$RUSTC_TRACE"' 'exit 99' > "$fake_bin/rustc"
+  chmod +x "$fake_bin/rustc"
+  output="$(cd "$app" && PATH="$fake_bin:$PATH" RUSTC_TRACE="$trace" PLUGIN_DATA="$STATE_ROOT" "$PYTHON_BIN" "$PY_HOOK" session-start <<< '{}')"
+  assert_contains "$output" ':kind "baseline"'
+  [ ! -e "$trace" ] || fail "ordinary dependencies invoked rustc"
+}
+
+regression_tool_directory_boundary() {
+  local app
+  app="$(make_app final-tool-directory-boundary $'[dependencies]\nreinhardt = "0.4.0"')"
+  mkdir -p "$app/src/apps/users/models"
+  assert_empty "$(run_hook "$app" tool '{"session_id":"tool-file-boundary","path":"src/apps/users.rs","tool_response":{"exit_code":0}}')"
+  assert_contains "$(run_hook "$app" tool '{"session_id":"tool-directory-boundary","path":"src/apps/users/models.rs","tool_response":{"exit_code":0}}')" ':app \"users\"'
+}
+
+regression_unreadable_apps_fail_open() {
+  local app output
+  app="$(make_app final-unreadable-apps $'[dependencies]\nreinhardt = "0.4.0"')"
+  chmod 000 "$app/src/apps"
+  output="$(run_hook "$app" session-start 2>/dev/null)"
+  chmod 700 "$app/src/apps"
+  assert_contains "$output" ':app-count 0'
 }
 
 regression_maximal_app_name() {
@@ -400,6 +461,13 @@ for regression in \
   regression_forwarded_default_features \
   regression_active_target_only \
   regression_windows_tool_path \
+  regression_combined_dependency_defaults \
+  regression_full_preset_auth \
+  regression_optional_dependency_activation \
+  regression_invalid_dependency_type \
+  regression_no_unneeded_rustc_probe \
+  regression_tool_directory_boundary \
+  regression_unreadable_apps_fail_open \
   regression_maximal_app_name
 do
   if ( "$regression" ); then
@@ -510,7 +578,7 @@ assert_empty "$(run_hook "$plain" session-start '{"session_id":')"
 escaped_features="$(make_app escaped-features '[dependencies]')"
 {
   printf '%s' 'reinhardt = { version = "0.4.2", features = ['
-  for index in $(seq 1 20); do
+  for ((index=1; index<=20; index++)); do
     [ "$index" -eq 1 ] || printf ', '
     printf '"\\\\界xxxxxxxxxxxxxxxxxxxx%02d"' "$index"
   done
