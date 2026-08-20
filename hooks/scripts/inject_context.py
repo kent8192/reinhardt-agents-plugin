@@ -159,30 +159,54 @@ def find_workspace(start: Path) -> dict:
 
 def cargo_configs(start: Path) -> list[dict]:
     configs = []
-    for directory in (start, *start.parents):
-        for name in ("config", "config.toml"):
-            path = directory / ".cargo" / name
+    seen_directories = set()
+
+    def append_config(directory: Path, names) -> None:
+        try:
+            key = directory.resolve()
+        except OSError:
+            key = directory.absolute()
+        if key in seen_directories:
+            return
+        seen_directories.add(key)
+        for name in names:
+            path = directory / name
             if not path.is_file():
                 continue
             config = load_toml(path)
             if config is not None:
                 configs.append(config)
             break
+
+    for directory in (start, *start.parents):
+        append_config(directory / ".cargo", ("config", "config.toml"))
+
+    cargo_home = os.environ.get("CARGO_HOME")
+    cargo_home_path = Path(cargo_home).expanduser() if cargo_home else Path.home() / ".cargo"
+    append_config(cargo_home_path, ("config", "config.toml"))
     return configs
+
+
+def merge_config_value(current, value):
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list) and all(isinstance(item, str) for item in value):
+        if isinstance(current, list):
+            return [*current, *value]
+        return list(value)
+    return current
 
 
 def configured_target(start: Path) -> str | list[str] | None:
     target = os.environ.get("CARGO_BUILD_TARGET")
     if target:
         return target
-    for config in cargo_configs(start):
+    target = None
+    for config in reversed(cargo_configs(start)):
         build = config.get("build", {})
-        target = build.get("target") if isinstance(build, dict) else None
-        if isinstance(target, str):
-            return target
-        if isinstance(target, list) and all(isinstance(item, str) for item in target):
-            return target
-    return None
+        if isinstance(build, dict) and "target" in build:
+            target = merge_config_value(target, build["target"])
+    return target
 
 
 def parse_rustflags(value) -> list[str] | None:
@@ -196,9 +220,7 @@ def parse_rustflags(value) -> list[str] | None:
     return None
 
 
-def configured_rustflags(
-    start: Path, target: str, platform
-) -> list[str]:
+def environment_rustflags(target: str) -> list[str] | None:
     if "CARGO_ENCODED_RUSTFLAGS" in os.environ:
         return [
             flag
@@ -209,18 +231,45 @@ def configured_rustflags(
     if "RUSTFLAGS" in os.environ:
         return parse_rustflags(os.environ["RUSTFLAGS"]) or []
 
-    target_rustflags = []
-    build_rustflags = []
+    target_name = re.sub(r"[^A-Za-z0-9]", "_", target).upper()
+    target_variable = f"CARGO_TARGET_{target_name}_RUSTFLAGS"
+    if target_variable in os.environ:
+        return parse_rustflags(os.environ[target_variable]) or []
+
+    if "CARGO_BUILD_RUSTFLAGS" in os.environ:
+        return parse_rustflags(os.environ["CARGO_BUILD_RUSTFLAGS"]) or []
+    return None
+
+
+def merge_rustflags(current: list[str] | None, value) -> list[str] | None:
+    parsed = parse_rustflags(value)
+    if parsed is None:
+        return current
+    if isinstance(value, list):
+        return [*(current or []), *parsed]
+    return parsed
+
+
+def configured_rustflags(
+    start: Path, target: str, platform
+) -> list[str]:
+    configured = environment_rustflags(target)
+    if configured is not None:
+        return configured
+
+    target_rustflags = None
+    build_rustflags = None
     for config in reversed(cargo_configs(start)):
         matched_target = False
         target_config = config.get("target", {})
         if isinstance(target_config, dict):
             exact = target_config.get(target)
             if isinstance(exact, dict) and "rustflags" in exact:
-                rustflags = parse_rustflags(exact["rustflags"])
-                if rustflags is not None:
-                    target_rustflags.extend(rustflags)
-                    matched_target = True
+                exact_rustflags = parse_rustflags(exact["rustflags"])
+                target_rustflags = merge_rustflags(
+                    target_rustflags, exact["rustflags"]
+                )
+                matched_target = exact_rustflags is not None
 
             if not matched_target:
                 for predicate, settings in target_config.items():
@@ -231,17 +280,22 @@ def configured_rustflags(
                             target_matches(predicate, platform)
                             and "rustflags" in settings
                         ):
-                            rustflags = parse_rustflags(settings["rustflags"])
-                            if rustflags is not None:
-                                target_rustflags.extend(rustflags)
-                                matched_target = True
+                            predicate_rustflags = parse_rustflags(
+                                settings["rustflags"]
+                            )
+                            target_rustflags = merge_rustflags(
+                                target_rustflags, settings["rustflags"]
+                            )
+                            matched_target = predicate_rustflags is not None
 
         build = config.get("build", {})
         if isinstance(build, dict) and "rustflags" in build:
-            rustflags = parse_rustflags(build["rustflags"])
-            if rustflags is not None:
-                build_rustflags.extend(rustflags)
-    return target_rustflags or build_rustflags
+            build_rustflags = merge_rustflags(
+                build_rustflags, build["rustflags"]
+            )
+    if target_rustflags is not None:
+        return target_rustflags
+    return build_rustflags or []
 
 
 class CfgParser:
@@ -410,12 +464,12 @@ def inherited_dependency(
 
 def default_feature_graph(
     manifest: dict, aliases: set[str]
-) -> tuple[set[str], set[str]]:
+) -> tuple[dict[str, set[str]], set[str]]:
     definitions = manifest.get("features", {})
     if not isinstance(definitions, dict):
-        return set(), set()
+        return {}, set()
 
-    forwarded = set()
+    forwarded = {}
     activated_dependencies = set()
     pending = list(definitions.get("default", []))
     visited = set()
@@ -431,7 +485,7 @@ def default_feature_graph(
             weak = dependency.endswith("?")
             dependency = dependency.removesuffix("?")
             if dependency in aliases:
-                forwarded.add(dependency_feature)
+                forwarded.setdefault(dependency, set()).add(dependency_feature)
                 if not weak:
                     activated_dependencies.add(dependency)
         elif feature in definitions:
@@ -474,7 +528,9 @@ def dependency_metadata(manifest: dict, workspace: dict) -> dict | None:
         declarations.append((name, dependency))
 
     aliases = {name for name, _ in declarations}
-    forwarded, activated_dependencies = default_feature_graph(manifest, aliases)
+    forwarded_by_dependency, activated_dependencies = default_feature_graph(
+        manifest, aliases
+    )
     active_declarations = [
         (name, dependency)
         for name, dependency in declarations
@@ -499,8 +555,8 @@ def dependency_metadata(manifest: dict, workspace: dict) -> dict | None:
             for feature in dependency.get("features", [])
             if isinstance(feature, str)
         )
+        features.update(forwarded_by_dependency.get(name, set()))
 
-    features.update(forwarded)
     if default_features or {"default", "standard"} & features:
         features.update(DEFAULT_FEATURES)
     features = expand_features(features)
@@ -890,9 +946,10 @@ def main() -> None:
         exit_code = number_field(payload, "exit_code")
         if exit_code is None:
             exit_code = number_field(payload, "exit_code", "tool_response")
-        if exit_code in {None, 0} and application_metadata() is not None:
+        if exit_code in {None, 0}:
             tool_text = "\n".join(string_values(payload))
-            render_matching_apps(tool_text, session_id, "tool")
+            if matching_apps(tool_text, "tool") and application_metadata() is not None:
+                render_matching_apps(tool_text, session_id, "tool")
     elif mode == "subagent-start":
         metadata = application_metadata()
         if metadata is not None:

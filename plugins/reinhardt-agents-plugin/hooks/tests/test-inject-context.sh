@@ -466,6 +466,16 @@ regression_configured_target() {
   assert_contains "$output" 'db-postgres'
 }
 
+regression_cargo_home_config() {
+  local app output cargo_home
+  app="$(make_app final-cargo-home $'[target.\'cfg(target_arch = "wasm32")\'.dependencies]\nreinhardt = { version = "0.4.0", default-features = false, features = ["db-sqlite"] }')"
+  cargo_home="$TEST_ROOT/final-cargo-home"
+  mkdir -p "$cargo_home"
+  printf '%s\n' $'[build]\ntarget = "wasm32-unknown-unknown"' > "$cargo_home/config.toml"
+  output="$(cd "$app" && CARGO_HOME="$cargo_home" PLUGIN_DATA="$STATE_ROOT" "$HOOK" session-start <<< '{}')"
+  assert_contains "$output" ':db-backend "sqlite"'
+}
+
 regression_configured_rustflags() {
   local app output host_target host_arch
   app="$(make_app final-configured-rustflags $'[target.\'cfg(custom_flag)\'.dependencies]\nreinhardt = { version = "0.4.0", default-features = false, features = ["db-sqlite"] }')"
@@ -493,6 +503,23 @@ regression_configured_rustflags() {
   printf '%s\n' $'[build]\nrustflags = ["--cfg", "custom_flag"]' > "$app/.cargo/config"
   output="$(cd "$app" && CARGO_ENCODED_RUSTFLAGS= PLUGIN_DATA="$STATE_ROOT" "$HOOK" session-start <<< '{}')"
   assert_empty "$output"
+}
+
+regression_environment_rustflags() {
+  local app output host_target target_variable cargo_home
+  cargo_home="$TEST_ROOT/final-env-rustflags-cargo-home"
+  mkdir -p "$cargo_home"
+
+  app="$(make_app final-cargo-build-rustflags $'[target.\'cfg(custom_flag)\'.dependencies]\nreinhardt = { version = "0.4.0", default-features = false, features = ["db-sqlite"] }')"
+  output="$(cd "$app" && env -u CARGO_ENCODED_RUSTFLAGS -u RUSTFLAGS CARGO_BUILD_RUSTFLAGS='--cfg custom_flag' CARGO_HOME="$cargo_home" PLUGIN_DATA="$STATE_ROOT" "$HOOK" session-start <<< '{}')"
+  assert_contains "$output" ':db-backend "sqlite"'
+
+  host_target="$(rustc -vV | awk '/^host: / { print $2 }')"
+  target_variable="CARGO_TARGET_${host_target//-/_}_RUSTFLAGS"
+  target_variable="${target_variable^^}"
+  app="$(make_app final-cargo-target-rustflags $'[target.\'cfg(custom_flag)\'.dependencies]\nreinhardt = { version = "0.4.0", default-features = false, features = ["db-sqlite"] }')"
+  output="$(cd "$app" && env -u CARGO_ENCODED_RUSTFLAGS -u RUSTFLAGS "$target_variable=--cfg custom_flag" CARGO_HOME="$cargo_home" PLUGIN_DATA="$STATE_ROOT" "$HOOK" session-start <<< '{}')"
+  assert_contains "$output" ':db-backend "sqlite"'
 }
 
 regression_config_file_precedence() {
@@ -542,6 +569,38 @@ regression_ancestor_rustflags() {
   assert_contains "$output" ':db-backend "sqlite"'
 }
 
+regression_scalar_rustflags_override() {
+  local root app output
+  root="$TEST_ROOT/final-scalar-rustflags"
+  app="$root/project/app"
+  mkdir -p "$root/.cargo" "$app/.cargo" "$app/src/bin" "$app/src/apps" "$TEST_ROOT/empty-cargo-home"
+  : > "$app/src/bin/manage.rs"
+  printf '%s\n' $'[target.\'cfg(custom_flag)\'.dependencies]\nreinhardt = { version = "0.4.0", default-features = false, features = ["db-sqlite"] }' > "$app/Cargo.toml"
+  printf '%s\n' $'[build]\nrustflags = "--cfg custom_flag"' > "$root/.cargo/config"
+  printf '%s\n' $'[build]\nrustflags = "--cfg child_flag"' > "$app/.cargo/config"
+  output="$(cd "$app" && CARGO_HOME="$TEST_ROOT/empty-cargo-home" PLUGIN_DATA="$STATE_ROOT" "$HOOK" session-start <<< '{}')"
+  assert_empty "$output"
+}
+
+regression_ancestor_target_arrays() {
+  local root app output host_target
+  host_target="$(rustc -vV | awk '/^host: / { print $2 }')"
+  root="$TEST_ROOT/final-ancestor-target-arrays"
+  app="$root/project/app"
+  mkdir -p "$root/.cargo" "$app/.cargo" "$app/src/bin" "$app/src/apps" "$TEST_ROOT/empty-array-cargo-home"
+  : > "$app/src/bin/manage.rs"
+  printf '%s\n' \
+    '[target.wasm32-unknown-unknown.dependencies]' \
+    'reinhardt = { version = "0.4.0", default-features = false, features = ["db-sqlite"] }' \
+    "[target.\"$host_target\".dependencies]" \
+    'reinhardt = { version = "0.4.0", default-features = false, features = ["db-postgres"] }' > "$app/Cargo.toml"
+  printf '%s\n' '[build]' 'target = ["wasm32-unknown-unknown"]' > "$root/.cargo/config"
+  printf '%s\n' '[build]' "target = [\"$host_target\"]" > "$app/.cargo/config"
+  output="$(cd "$app" && CARGO_HOME="$TEST_ROOT/empty-array-cargo-home" PLUGIN_DATA="$STATE_ROOT" "$HOOK" session-start <<< '{}')"
+  assert_contains "$output" 'db-sqlite'
+  assert_contains "$output" 'db-postgres'
+}
+
 regression_windows_tool_path() {
   local app output case_variant msys_variant
   app="$(make_app final-windows-path $'[dependencies]\nreinhardt = "0.4.0"')"
@@ -578,6 +637,16 @@ regression_optional_dependency_activation() {
   assert_contains "$(run_hook "$active" session-start)" ':db-backend "sqlite"'
 }
 
+regression_weak_forwarded_features() {
+  local app output
+  app="$(make_app final-weak-forwarding $'[features]\ndefault = ["optional_alias?/db-sqlite"]\n[dependencies]\nreinhardt = { version = "0.4.0", default-features = false }\noptional_alias = { package = "reinhardt-web", version = "0.4.0", optional = true, default-features = false }')"
+  output="$(run_hook "$app" session-start)"
+  assert_contains "$output" ':db-backend "none"'
+  case "$output" in
+    *db-sqlite*) fail 'weak feature from inactive optional dependency was forwarded' ;;
+  esac
+}
+
 regression_invalid_dependency_type() {
   local app
   app="$(make_app final-invalid-dependency $'[dependencies]\nreinhardt = 1')"
@@ -585,7 +654,7 @@ regression_invalid_dependency_type() {
 }
 
 regression_no_unneeded_rustc_probe() {
-  local app fake_bin trace output
+  local app target_app fake_bin trace output
   app="$(make_app final-no-rustc $'[dependencies]\nreinhardt = "0.4.0"')"
   fake_bin="$TEST_ROOT/final-no-rustc-bin"
   trace="$TEST_ROOT/final-no-rustc.trace"
@@ -595,6 +664,12 @@ regression_no_unneeded_rustc_probe() {
   output="$(cd "$app" && PATH="$fake_bin:$PATH" RUSTC_TRACE="$trace" PLUGIN_DATA="$STATE_ROOT" "$PYTHON_BIN" "$PY_HOOK" session-start <<< '{}')"
   assert_contains "$output" ':kind "baseline"'
   [ ! -e "$trace" ] || fail "ordinary dependencies invoked rustc"
+
+  target_app="$(make_app final-no-rustc-tool $'[target.\'cfg(unix)\'.dependencies]\nreinhardt = { version = "0.4.0", default-features = false, features = ["db-sqlite"] }')"
+  rm -f "$trace"
+  output="$(cd "$target_app" && PATH="$fake_bin:$PATH" RUSTC_TRACE="$trace" PLUGIN_DATA="$STATE_ROOT" "$PYTHON_BIN" "$PY_HOOK" tool <<< '{"session_id":"no-rustc-tool","path":"README.md","tool_response":{"exit_code":0}}')"
+  assert_empty "$output"
+  [ ! -e "$trace" ] || fail "unmatched tool event invoked rustc"
 }
 
 regression_tool_directory_boundary() {
@@ -647,14 +722,19 @@ for regression in \
   regression_forwarded_default_features \
   regression_active_target_only \
   regression_configured_target \
+  regression_cargo_home_config \
   regression_configured_rustflags \
+  regression_environment_rustflags \
   regression_config_file_precedence \
   regression_config_file_selection \
   regression_ancestor_rustflags \
+  regression_scalar_rustflags_override \
+  regression_ancestor_target_arrays \
   regression_windows_tool_path \
   regression_combined_dependency_defaults \
   regression_full_preset_auth \
   regression_optional_dependency_activation \
+  regression_weak_forwarded_features \
   regression_invalid_dependency_type \
   regression_no_unneeded_rustc_probe \
   regression_tool_directory_boundary \
