@@ -125,8 +125,26 @@ def load_toml(path: Path) -> dict | None:
 def find_workspace(start: Path) -> dict:
     for directory in (start, *start.parents):
         manifest = load_toml(directory / "Cargo.toml")
-        if manifest is not None and "workspace" in manifest:
+        if manifest is None:
+            continue
+
+        if isinstance(manifest.get("workspace"), dict):
             return manifest
+
+        package = manifest.get("package")
+        workspace_root = package.get("workspace") if isinstance(package, dict) else None
+        if not isinstance(workspace_root, str):
+            continue
+        workspace_path = Path(workspace_root)
+        if not workspace_path.is_absolute():
+            workspace_path = directory / workspace_path
+        if workspace_path.name != "Cargo.toml":
+            workspace_path /= "Cargo.toml"
+        workspace_manifest = load_toml(workspace_path)
+        if workspace_manifest is not None and isinstance(
+            workspace_manifest.get("workspace"), dict
+        ):
+            return workspace_manifest
     return {}
 
 
@@ -373,7 +391,7 @@ def dependency_metadata(manifest: dict, workspace: dict) -> dict | None:
         )
 
     features.update(forwarded)
-    if default_features or "standard" in features:
+    if default_features or {"default", "standard"} & features:
         features.update(DEFAULT_FEATURES)
     features = expand_features(features)
     source = "path" if saw_path else "git" if saw_git else "unknown"
@@ -560,18 +578,25 @@ def matching_apps(text: str, mode: str) -> list[str]:
         ]
 
     text = text.replace("\\", "/")
+    raw_cwd = os.environ.get("PWD", str(Path.cwd())).replace("\\", "/")
+    windows_cwd = bool(re.match(r"(?i)^[a-z]:/", raw_cwd))
     text = re.sub(
         r"(?i)(?<![A-Za-z0-9])([a-z]):/",
         lambda match: f"/{match.group(1).lower()}/",
         text,
     )
-    logical_cwd = os.environ.get("PWD", str(Path.cwd())).replace("\\", "/")
+    logical_cwd = raw_cwd
     logical_cwd = re.sub(
         r"(?i)^([a-z]):/",
         lambda match: f"/{match.group(1).lower()}/",
         logical_cwd,
     ).rstrip("/")
-    text = text.replace(f"{logical_cwd}/src/apps/", "src/apps/")
+    text = re.sub(
+        re.escape(f"{logical_cwd}/src/apps/"),
+        "src/apps/",
+        text,
+        flags=re.IGNORECASE if windows_cwd else 0,
+    )
     text = text.replace("./src/apps/", "src/apps/")
     candidates = set(
         re.findall(

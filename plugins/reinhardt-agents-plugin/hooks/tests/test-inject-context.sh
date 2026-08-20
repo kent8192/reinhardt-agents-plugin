@@ -230,6 +230,21 @@ regression_workspace_default_features() {
   assert_contains "$output" ':reinhardt-version "0.4.1"'
 }
 
+regression_explicit_workspace_root() {
+  local workspace member output
+
+  workspace="$TEST_ROOT/final-explicit-workspace"
+  member="$TEST_ROOT/final-explicit-member"
+  mkdir -p "$workspace" "$member/src/bin" "$member/src/apps"
+  : > "$member/src/bin/manage.rs"
+  printf '%s\n' $'[workspace]\n[workspace.dependencies]\nframework = { package = "reinhardt-web", version = "0.4.0", default-features = false, features = ["auth-jwt"] }' > "$workspace/Cargo.toml"
+  printf '%s\n' $'[package]\nname = "final-explicit-member"\nversion = "0.1.0"\nworkspace = "../final-explicit-workspace"\n[dependencies]\nframework = { workspace = true, features = ["db-sqlite"] }' > "$member/Cargo.toml"
+  output="$(run_hook "$member" session-start)"
+  assert_contains "$output" ':reinhardt-version "0.4.0"'
+  assert_contains "$output" ':features "auth-jwt, db-sqlite"'
+  assert_contains "$output" ':db-backend "sqlite"'
+}
+
 regression_no_per_app_basename() {
   local app fake_bin output
   app="$(make_app final-no-basename $'[dependencies]\nreinhardt = "0.4.0"')"
@@ -267,6 +282,22 @@ regression_default_feature_preset() {
   explicit="$(make_app final-explicit-preset $'[dependencies]\nreinhardt = { version = "0.4.0", default-features = false, features = ["standard"] }')"
   output="$(run_hook "$explicit" session-start)"
   assert_contains "$output" ':default-features false'
+  assert_contains "$output" ':db-backend "postgres"'
+  assert_contains "$output" ':auth-method "auth (default)"'
+}
+
+regression_explicit_default_feature() {
+  local app output
+  app="$(make_app final-explicit-default-feature $'[dependencies]\nreinhardt = { version = "0.4.0", default-features = false, features = ["default"] }')"
+  output="$(run_hook "$app" session-start)"
+  assert_contains "$output" ':db-backend "postgres"'
+  assert_contains "$output" ':auth-method "auth (default)"'
+}
+
+regression_forwarded_default_feature() {
+  local app output
+  app="$(make_app final-forwarded-default-feature $'[features]\ndefault = ["framework/default"]\n[dependencies]\nframework = { package = "reinhardt-web", version = "0.4.0", default-features = false }')"
+  output="$(run_hook "$app" session-start)"
   assert_contains "$output" ':db-backend "postgres"'
   assert_contains "$output" ':auth-method "auth (default)"'
 }
@@ -479,9 +510,12 @@ for regression in \
   regression_bounded_text_boundaries \
   regression_tool_path_boundaries \
   regression_workspace_default_features \
+  regression_explicit_workspace_root \
   regression_no_per_app_basename \
   regression_prompt_value_only \
   regression_default_feature_preset \
+  regression_explicit_default_feature \
+  regression_forwarded_default_feature \
   regression_effective_facade_package \
   regression_one_pass_matching \
   regression_unbalanced_manifest \
