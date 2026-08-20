@@ -216,6 +216,16 @@ regression_workspace_default_features() {
   output="$(run_hook "$member" session-start)"
   assert_contains "$output" ':default-features true'
 
+  workspace="$TEST_ROOT/final-workspace-omitted"
+  member="$workspace/member"
+  mkdir -p "$member/src/bin" "$member/src/apps"
+  : > "$member/src/bin/manage.rs"
+  printf '%s\n' $'[workspace]\nmembers = ["member"]\n[workspace.dependencies]\nframework = { package = "reinhardt-web", version = "0.4.0" }' > "$workspace/Cargo.toml"
+  printf '%s\n' $'[dependencies]\nframework = { workspace = true, default-features = false }' > "$member/Cargo.toml"
+  output="$(run_hook "$member" session-start)"
+  assert_contains "$output" ':default-features true'
+  assert_contains "$output" ':db-backend "postgres"'
+
   workspace="$TEST_ROOT/final-workspace-root"
   mkdir -p "$workspace/src/bin" "$workspace/src/apps"
   : > "$workspace/src/bin/manage.rs"
@@ -266,6 +276,15 @@ regression_prompt_value_only() {
   assert_contains "$output" ':app "prompt"'
   output="$(run_hook "$app" prompt '{"session_id":"escaped-prompt","prompt":"inspect\n \u0070rompt"}')"
   assert_contains "$output" ':app "prompt"'
+}
+
+regression_unicode_prompt_boundaries() {
+  local app output
+  app="$(make_app final-unicode-prompt $'[dependencies]\nreinhardt = "0.4.0"')"
+  mkdir -p "$app/src/apps/β"
+  assert_empty "$(run_hook "$app" prompt '{"session_id":"unicode-boundary","prompt":"αβγ"}')"
+  output="$(run_hook "$app" prompt '{"session_id":"unicode-exact","prompt":"inspect β"}')"
+  assert_contains "$output" ':app "β"'
 }
 
 regression_default_feature_preset() {
@@ -391,7 +410,7 @@ regression_feature_implications() {
   assert_contains "$output" 'sessions'
   assert_contains "$output" 'middleware'
   assert_contains "$output" 'tasks'
-  assert_contains "$output" ':auth-method "jwt, auth (default)"'
+  assert_contains "$output" ':auth-method "jwt"'
 }
 
 regression_base_feature_implications() {
@@ -433,14 +452,42 @@ regression_configured_target() {
   assert_contains "$output" ':db-backend "sqlite"'
 }
 
+regression_configured_rustflags() {
+  local app output
+  app="$(make_app final-configured-rustflags $'[target.\'cfg(custom_flag)\'.dependencies]\nreinhardt = { version = "0.4.0", default-features = false, features = ["db-sqlite"] }')"
+  mkdir -p "$app/.cargo"
+  printf '%s\n' $'[build]\nrustflags = ["--cfg", "custom_flag"]' > "$app/.cargo/config.toml"
+  output="$(run_hook "$app" session-start)"
+  assert_contains "$output" ':db-backend "sqlite"'
+}
+
+regression_config_file_precedence() {
+  local app output host_target
+  host_target="$(rustc -vV | awk '/^host: / { print $2 }')"
+  app="$TEST_ROOT/final-config-file-precedence"
+  mkdir -p "$app/.cargo" "$app/src/bin" "$app/src/apps"
+  : > "$app/src/bin/manage.rs"
+  printf '%s\n' \
+    "[target.\"$host_target\".dependencies]" \
+    'reinhardt = { version = "0.4.0", default-features = false, features = ["db-postgres"] }' \
+    '[target.wasm32-unknown-unknown.dependencies]' \
+    'reinhardt = { version = "0.4.0", default-features = false, features = ["db-sqlite"] }' > "$app/Cargo.toml"
+  printf '%s\n' "[build]" "target = \"$host_target\"" > "$app/.cargo/config"
+  printf '%s\n' $'[build]\ntarget = "wasm32-unknown-unknown"' > "$app/.cargo/config.toml"
+  output="$(run_hook "$app" session-start)"
+  assert_contains "$output" ':db-backend "postgres"'
+}
+
 regression_windows_tool_path() {
-  local app output case_variant
+  local app output case_variant msys_variant
   app="$(make_app final-windows-path $'[dependencies]\nreinhardt = "0.4.0"')"
   mkdir -p "$app/src/apps/users/models"
   output="$(cd "$app" && PWD='C:/repo' PLUGIN_DATA="$STATE_ROOT" "$PYTHON_BIN" "$PY_HOOK" tool <<< '{"session_id":"windows-path","path":"C:\\repo\\src\\apps\\users\\models.rs","tool_response":{"exit_code":0}}')"
   assert_contains "$output" ':app \"users\"'
   case_variant="$(cd "$app" && PWD='C:/Repo' PLUGIN_DATA="$STATE_ROOT" "$PYTHON_BIN" "$PY_HOOK" tool <<< '{"session_id":"windows-case-variant","path":"c:\\repo\\src\\apps\\Users\\models.rs","tool_response":{"exit_code":0}}')"
   assert_contains "$case_variant" ':app \"users\"'
+  msys_variant="$(cd "$app" && PWD='/c/Repo' PLUGIN_DATA="$STATE_ROOT" "$PYTHON_BIN" "$PY_HOOK" tool <<< '{"session_id":"windows-msys-variant","path":"c:\\repo\\src\\apps\\Users\\models.rs","tool_response":{"exit_code":0}}')"
+  assert_contains "$msys_variant" ':app \"users\"'
 }
 
 regression_combined_dependency_defaults() {
@@ -455,7 +502,7 @@ regression_full_preset_auth() {
   local app output
   app="$(make_app final-full-preset $'[dependencies]\nreinhardt = { version = "0.4.0", default-features = false, features = ["full"] }')"
   output="$(run_hook "$app" session-start)"
-  assert_contains "$output" ':auth-method "jwt, session, oauth, token, auth (default)"'
+  assert_contains "$output" ':auth-method "jwt, session, oauth, token"'
 }
 
 regression_optional_dependency_activation() {
@@ -522,6 +569,7 @@ for regression in \
   regression_explicit_workspace_root \
   regression_no_per_app_basename \
   regression_prompt_value_only \
+  regression_unicode_prompt_boundaries \
   regression_default_feature_preset \
   regression_explicit_default_feature \
   regression_forwarded_default_feature \
@@ -535,6 +583,8 @@ for regression in \
   regression_forwarded_default_features \
   regression_active_target_only \
   regression_configured_target \
+  regression_configured_rustflags \
+  regression_config_file_precedence \
   regression_windows_tool_path \
   regression_combined_dependency_defaults \
   regression_full_preset_auth \
@@ -561,7 +611,7 @@ assert_contains "$output" ':reinhardt-version "0.4.0"'
 assert_contains "$output" ':default-features false'
 assert_contains "$output" ':features "auth, auth-session, database, db-sqlite"'
 assert_contains "$output" ':db-backend "sqlite"'
-assert_contains "$output" ':auth-method "session, auth (default)"'
+assert_contains "$output" ':auth-method "session"'
 
 generic="$(make_app generic $'[package]\nname = "generic"\nversion = "0.1.0"\n[dependencies]\nserde = "1"\n# reinhardt is mentioned only in a comment')"
 assert_empty "$(run_hook "$generic" session-start)"

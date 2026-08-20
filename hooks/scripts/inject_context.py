@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shlex
 import shutil
 import stat
 import subprocess
@@ -118,7 +119,7 @@ PRESET_FEATURES = {
     "tasks-durable": {"tasks"},
     "middleware-auth-jwt": {"auth-jwt"},
 }
-TOKEN_CHARACTER = r"A-Za-z0-9_-"
+TOKEN_CHARACTER = r"\w-"
 TOOL_PREFIX_CHARACTER = r"A-Za-z0-9_.\-/\\"
 
 
@@ -161,12 +162,38 @@ def configured_target(start: Path) -> str | None:
     if target:
         return target
     for directory in (start, *start.parents):
-        for name in ("config.toml", "config"):
+        for name in ("config", "config.toml"):
             config = load_toml(directory / ".cargo" / name)
             target = (config or {}).get("build", {}).get("target")
             if isinstance(target, str):
                 return target
     return None
+
+
+def configured_rustflags(start: Path) -> list[str]:
+    encoded = os.environ.get("CARGO_ENCODED_RUSTFLAGS")
+    if encoded:
+        return [flag for flag in encoded.split("\x1f") if flag]
+
+    raw = os.environ.get("RUSTFLAGS")
+    if raw:
+        try:
+            return shlex.split(raw)
+        except ValueError:
+            return []
+
+    for directory in (start, *start.parents):
+        for name in ("config", "config.toml"):
+            config = load_toml(directory / ".cargo" / name) or {}
+            rustflags = config.get("build", {}).get("rustflags")
+            if isinstance(rustflags, str):
+                try:
+                    return shlex.split(rustflags)
+                except ValueError:
+                    return []
+            if isinstance(rustflags, list):
+                return [flag for flag in rustflags if isinstance(flag, str)]
+    return []
 
 
 class CfgParser:
@@ -224,6 +251,7 @@ def rust_target() -> tuple[str, set[str], set[tuple[str, str]]] | None:
                 if line.startswith("host: ")
             )
             command = ["rustc", "--print", "cfg"]
+        command.extend(configured_rustflags(Path.cwd()))
         output = subprocess.run(
             command, check=True, capture_output=True, text=True
         ).stdout
@@ -299,10 +327,9 @@ def inherited_dependency(
     member_default = dependency.get(
         "default-features", dependency.get("default_features")
     )
-    if inherited_default is True or member_default is True:
-        effective["default-features"] = True
-    elif inherited_default is False or member_default is False:
-        effective["default-features"] = False
+    effective["default-features"] = (
+        member_default is True or inherited_default is not False
+    )
     return effective
 
 
@@ -534,10 +561,11 @@ def application_metadata() -> dict | None:
             ("auth-session", "session"),
             ("auth-oauth", "oauth"),
             ("auth-token", "token"),
-            ("auth", "auth (default)"),
         )
         if feature in features
     ]
+    if not auth and "auth" in features:
+        auth.append("auth (default)")
     metadata["auth"] = ", ".join(auth) or "none"
     metadata["app_count"] = len(list_apps())
     return metadata
@@ -587,7 +615,7 @@ def matching_apps(text: str, mode: str) -> list[str]:
 
     text = text.replace("\\", "/")
     raw_cwd = os.environ.get("PWD", str(Path.cwd())).replace("\\", "/")
-    windows_cwd = bool(re.match(r"(?i)^[a-z]:/", raw_cwd))
+    windows_cwd = bool(re.match(r"(?i)^(?:[a-z]:|/[a-z])/", raw_cwd))
     text = re.sub(
         r"(?i)(?<![A-Za-z0-9])([a-z]):/",
         lambda match: f"/{match.group(1).lower()}/",
