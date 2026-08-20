@@ -21,9 +21,10 @@ parse_dependency_manifest() {
 
   awk -v member="$member_manifest" -v workspace="$workspace_manifest" '
     function trim(s) { sub(/^[[:space:]]+/, "", s); sub(/[[:space:]]+$/, "", s); return s }
-    function strip_comment(s, i,c,out,quoted,escaped) { quoted=escaped=0; out=""; for (i=1; i<=length(s); i++) { c=substr(s,i,1); if (escaped) { out=out c; escaped=0; continue }; if (quoted && c=="\\") { out=out c; escaped=1; continue }; if (c=="\"") quoted=!quoted; if (!quoted && c=="#") break; out=out c }; return out }
-    function balance(s, i,c,quoted,escaped,n) { quoted=escaped=0; n=0; for (i=1; i<=length(s); i++) { c=substr(s,i,1); if (escaped) { escaped=0; continue }; if (quoted && c=="\\") { escaped=1; continue }; if (c=="\"") { quoted=!quoted; continue }; if (!quoted && (c=="{" || c=="[")) n++; if (!quoted && (c=="}" || c=="]")) n-- }; return n }
-    function unquote(s) { s=trim(s); if (substr(s,1,1)=="\"" && substr(s,length(s),1)=="\"") return substr(s,2,length(s)-2); return s }
+    function is_quote(c) { return c=="\"" || c==sprintf("%c",39) }
+    function strip_comment(s, i,c,out,quote,escaped) { quote=""; escaped=0; out=""; for (i=1; i<=length(s); i++) { c=substr(s,i,1); if (escaped) { out=out c; escaped=0; continue }; if (quote=="\"" && c=="\\") { out=out c; escaped=1; continue }; if (quote!="" && c==quote) { out=out c; quote=""; continue }; if (quote=="" && is_quote(c)) { out=out c; quote=c; continue }; if (quote=="" && c=="#") break; out=out c }; return out }
+    function balance(s, i,c,quote,escaped,n) { quote=""; escaped=0; n=0; for (i=1; i<=length(s); i++) { c=substr(s,i,1); if (escaped) { escaped=0; continue }; if (quote=="\"" && c=="\\") { escaped=1; continue }; if (quote!="" && c==quote) { quote=""; continue }; if (quote=="" && is_quote(c)) { quote=c; continue }; if (quote=="" && (c=="{" || c=="[")) n++; if (quote=="" && (c=="}" || c=="]")) n-- }; return n }
+    function unquote(s,first,last) { s=trim(s); first=substr(s,1,1); last=substr(s,length(s),1); if (is_quote(first) && first==last) return substr(s,2,length(s)-2); return s }
     function member_runtime(s) { gsub(/[[:space:]]/, "", s); if (s ~ /(^|\.)dev-dependencies(\.|$)/ || s ~ /(^|\.)build-dependencies(\.|$)/) return 0; return s=="dependencies" || s ~ /^dependencies\./ || s ~ /^target\..*\.dependencies(\.|$)/ }
     function workspace_runtime(s) { gsub(/[[:space:]]/, "", s); return s=="workspace.dependencies" || s ~ /^workspace\.dependencies\./ }
     function section_key(s, n,a) { n=split(s,a,"."); return unquote(a[n]) }
@@ -31,13 +32,13 @@ parse_dependency_manifest() {
     function flush_table() { if (table_active) add_record(table_kind,table_key,table_text); table_active=0; table_kind=""; table_key=""; table_text="" }
     function begin_section(raw,kind, section,is_table) { flush_table(); section=substr(raw,2,length(raw)-2); if ((kind=="member" && member_runtime(section)) || (kind=="workspace" && workspace_runtime(section))) { is_table=(kind=="member" ? (section ~ /\.dependencies\./ || section ~ /^dependencies\./) : section ~ /^workspace\.dependencies\./); if (is_table) { table_active=1; table_kind=kind; table_key=section_key(section); table_text="" }; active_kind=kind } else active_kind="" }
     function process_record(text, p,key,value) { p=index(text,"="); if (!p) return; key=unquote(trim(substr(text,1,p-1))); value=trim(substr(text,p+1)); if (table_active) table_text=table_text "\n" key "=" value; else if (active_kind!="") add_record(active_kind,key,value) }
-    function read_quoted(s,pos, i,c,out,escaped) { out=""; escaped=0; for (i=pos+1; i<=length(s); i++) { c=substr(s,i,1); if (escaped) { out=out c; escaped=0; continue }; if (c=="\\") { escaped=1; continue }; if (c=="\"") { QVAL=out; QEND=i+1; return 1 }; out=out c }; QVAL=out; QEND=i; return 0 }
+    function read_quoted(s,pos,quote, i,c,out,escaped) { quote=substr(s,pos,1); out=""; escaped=0; for (i=pos+1; i<=length(s); i++) { c=substr(s,i,1); if (escaped) { out=out c; escaped=0; continue }; if (quote=="\"" && c=="\\") { escaped=1; continue }; if (c==quote) { QVAL=out; QEND=i+1; return 1 }; out=out c }; QVAL=out; QEND=i; return 0 }
     function find_field(s,want,from, i,p,before,c) { if (from<1) from=1; for (i=from; i<=length(s)-length(want)+1; i++) { if (substr(s,i,length(want))!=want) continue; before=(i==1 ? "" : substr(s,i-1,1)); c=substr(s,i+length(want),1); if (before ~ /[[:alnum:]_-]/ || c ~ /[[:alnum:]_-]/) continue; p=i+length(want); while (substr(s,p,1) ~ /[[:space:]]/) p++; if (substr(s,p,1)!="=") continue; p++; while (substr(s,p,1) ~ /[[:space:]]/) p++; FPOS=p; return 1 }; return 0 }
-    function scalar(s,want, p,end) { if (!find_field(s,want,1)) return ""; p=FPOS; if (substr(s,p,1)=="\"") { read_quoted(s,p); return QVAL }; end=p; while (substr(s,end,1)!="" && substr(s,end,1)!~ /[,}\]\n[:space:]]/) end++; return substr(s,p,end-p) }
-    function direct_version(s, p) { p=1; while (substr(s,p,1) ~ /[[:space:]]/) p++; if (substr(s,p,1)=="\"") { read_quoted(s,p); return QVAL }; return "" }
+    function scalar(s,want, p,end) { if (!find_field(s,want,1)) return ""; p=FPOS; if (is_quote(substr(s,p,1))) { read_quoted(s,p); return QVAL }; end=p; while (substr(s,end,1)!="" && substr(s,end,1)!~ /[,}\]\n[:space:]]/) end++; return substr(s,p,end-p) }
+    function direct_version(s, p) { p=1; while (substr(s,p,1) ~ /[[:space:]]/) p++; if (is_quote(substr(s,p,1))) { read_quoted(s,p); return QVAL }; return "" }
     function collect_features(s, start,p,depth,c,quoted,escaped) { start=1; while (find_field(s,"features",start)) { p=FPOS; if (substr(s,p,1)!="[") { start=p+1; continue }; depth=0; quoted=escaped=0; for (; p<=length(s); p++) { c=substr(s,p,1); if (escaped) { escaped=0; continue }; if (quoted && c=="\\") { escaped=1; continue }; if (c=="\"") { if (!quoted) { read_quoted(s,p); feature[QVAL]=1; p=QEND-1 }; continue }; if (c=="[") depth++; if (c=="]") { depth--; if (!depth) break } }; start=p+1 } }
     function is_facade(key,text) { return key=="reinhardt" || scalar(text,"package")=="reinhardt-web" }
-    function process_member(key,text, effective,version,workspace_text) { workspace_text=""; if (scalar(text,"workspace")=="true") { if (!(key in workspace_record)) return; inherited="true"; workspace_text=workspace_record[key]; effective=text "\n" workspace_text } else effective=text; if (!is_facade(key,effective)) return; found="true"; version=scalar(effective,"version"); if (version=="") version=direct_version(effective); if (explicit_version=="" && version!="") explicit_version=version; if (!path_seen && scalar(effective,"path")!="") path_seen=1; if (!git_seen && scalar(effective,"git")!="") git_seen=1; if (scalar(text,"default-features")=="false" || (workspace_text!="" && scalar(workspace_text,"default-features")=="false")) defaults="false"; collect_features(effective) }
+    function process_member(key,text, effective,version,workspace_text,member_defaults,workspace_defaults) { workspace_text=""; if (scalar(text,"workspace")=="true") { if (!(key in workspace_record)) return; inherited="true"; workspace_text=workspace_record[key]; effective=text "\n" workspace_text } else effective=text; if (!is_facade(key,effective)) return; found="true"; version=scalar(effective,"version"); if (version=="") version=direct_version(effective); if (explicit_version=="" && version!="") explicit_version=version; if (!path_seen && scalar(effective,"path")!="") path_seen=1; if (!git_seen && scalar(effective,"git")!="") git_seen=1; member_defaults=scalar(text,"default-features"); workspace_defaults=scalar(workspace_text,"default-features"); if (member_defaults=="true" || workspace_defaults=="true") defaults="true"; else if (member_defaults=="false" || workspace_defaults=="false") defaults="false"; collect_features(effective) }
     {
       kind=(FILENAME==member ? "member" : (FILENAME==workspace ? "workspace" : "")); line=strip_comment($0); if (trim(line)=="") next
       if (line ~ /^[[:space:]]*\[[^][]+\][[:space:]]*$/) { begin_section(trim(line),kind); pending=""; pending_balance=0; next }
@@ -63,7 +64,7 @@ parse_dependency_manifest() {
 find_workspace_manifest() {
   local directory="$1" candidate
   directory="${directory%/}"; [ -n "$directory" ] || directory="/"
-  candidate="${directory%/*}"; [ -n "$candidate" ] || candidate="/"
+  candidate="$directory"
   while :; do
     if [ -f "$candidate/Cargo.toml" ] && awk '
       function stripped(s, i,c,q,e,out) { q=e=0; out=""; for (i=1;i<=length(s);i++) { c=substr(s,i,1); if (e) { out=out c; e=0; continue }; if (q && c=="\\") { out=out c; e=1; continue }; if (c=="\"") q=!q; if (!q && c=="#") break; out=out c }; return out }
@@ -392,7 +393,7 @@ display_app_name() {
 }
 
 render_app() {
-  local app="$1" directory="src/apps/$1" display categories="" summary
+  local app="$1" directory="src/apps/$1" display path categories="" summary
   { [ -f "$directory/models.rs" ] || [ -d "$directory/models" ]; } && categories="models"
   { [ -f "$directory/api.rs" ] || [ -d "$directory/api" ]; } && categories="${categories}${categories:+, }api"
   { [ -f "$directory/pages.rs" ] || [ -d "$directory/pages" ]; } && categories="${categories}${categories:+, }pages"
@@ -400,11 +401,12 @@ render_app() {
   [ -d "$directory/migrations" ] && categories="${categories}${categories:+, }migrations"
   { [ -f "$directory/config.rs" ] || [ -d "$directory/config" ] || [ -f "$directory/settings.rs" ] || [ -d "$directory/settings" ]; } && categories="${categories}${categories:+, }configuration"
   display="$(display_app_name "$app")"
+  path="$(printf '%s' "$directory" | sanitize_text)"
   summary="$(printf '%s\n' \
     '(reinhardt-application-context' \
     '  :kind "app"' \
     "  :app \"$display\"" \
-    "  :path \"src/apps/$display\"" \
+    "  :path \"$path\"" \
     "  :categories \"$categories\"" \
     '  :guidance "Inspect this app before editing and use the applicable bundled Reinhardt skills."' \
     ')')"
@@ -457,7 +459,8 @@ case "$MODE" in
     ;;
   prompt)
     if valid_object_input && load_reinhardt_metadata; then
-      render_matching_apps "$HOOK_INPUT" "$(extract_json_string session_id)" prompt
+      prompt_text="$(extract_json_string prompt)"
+      render_matching_apps "$prompt_text" "$(extract_json_string session_id)" prompt
     fi
     ;;
   tool)

@@ -195,7 +195,7 @@ regression_workspace_default_features() {
   printf '%s\n' $'[workspace]\nmembers = ["member"]\n[workspace.dependencies]\nframework = { package = "reinhardt-web", version = "0.4.0", default-features = false }' > "$workspace/Cargo.toml"
   printf '%s\n' $'[dependencies]\nframework = { workspace = true, default-features = true }' > "$member/Cargo.toml"
   output="$(run_hook "$member" session-start)"
-  assert_contains "$output" ':default-features false'
+  assert_contains "$output" ':default-features true'
 
   workspace="$TEST_ROOT/final-workspace-true"
   member="$workspace/member"
@@ -204,7 +204,20 @@ regression_workspace_default_features() {
   printf '%s\n' $'[workspace]\nmembers = ["member"]\n[workspace.dependencies]\nframework = { package = "reinhardt-web", version = "0.4.0", default-features = true }' > "$workspace/Cargo.toml"
   printf '%s\n' $'[dependencies]\nframework = { workspace = true, default-features = false }' > "$member/Cargo.toml"
   output="$(run_hook "$member" session-start)"
-  assert_contains "$output" ':default-features false'
+  assert_contains "$output" ':default-features true'
+
+  workspace="$TEST_ROOT/final-workspace-root"
+  mkdir -p "$workspace/src/bin" "$workspace/src/apps"
+  : > "$workspace/src/bin/manage.rs"
+  printf '%s\n' \
+    '[workspace]' \
+    'members = []' \
+    '[workspace.dependencies]' \
+    'framework = { package = "reinhardt-web", version = "0.4.1" }' \
+    '[dependencies]' \
+    'framework = { workspace = true }' > "$workspace/Cargo.toml"
+  output="$(run_hook "$workspace" session-start)"
+  assert_contains "$output" ':reinhardt-version "0.4.1"'
 }
 
 regression_no_per_app_basename() {
@@ -217,6 +230,15 @@ regression_no_per_app_basename() {
   chmod +x "$fake_bin/basename"
   output="$(cd "$app" && PATH="$fake_bin:$PATH" PLUGIN_DATA="$STATE_ROOT" /bin/bash "$HOOK" prompt <<< '{"session_id":"no-basename","prompt":"users"}')"
   assert_contains "$output" ':app "users"'
+}
+
+regression_prompt_value_only() {
+  local app output
+  app="$(make_app final-prompt-value $'[dependencies]\nreinhardt = "0.4.0"')"
+  mkdir -p "$app/src/apps/prompt" "$app/src/apps/session_id"
+  assert_empty "$(run_hook "$app" prompt '{"session_id":"abc","prompt":"do unrelated work"}')"
+  output="$(run_hook "$app" prompt '{"session_id":"abc","prompt":"open prompt"}')"
+  assert_contains "$output" ':app "prompt"'
 }
 
 trace_match_processes() {
@@ -288,6 +310,7 @@ for regression in \
   regression_tool_path_boundaries \
   regression_workspace_default_features \
   regression_no_per_app_basename \
+  regression_prompt_value_only \
   regression_one_pass_matching \
   regression_unbalanced_manifest \
   regression_top_level_json_fields
@@ -324,6 +347,10 @@ assert_contains "$(run_hook "$plain" session-start)" ':reinhardt-version "0.4.2"
 
 renamed="$(make_app renamed $'[dependencies]\nframework = { package = "reinhardt-web", version = "0.4.3" }')"
 assert_contains "$(run_hook "$renamed" session-start)" ':reinhardt-version "0.4.3"'
+
+literal="$(make_app literal $'[dependencies]')"
+printf '%s\n' "framework = { package = 'reinhardt-web', version = '0.4.4' }" >> "$literal/Cargo.toml"
+assert_contains "$(run_hook "$literal" session-start)" ':reinhardt-version "0.4.4"'
 
 path_dep="$(make_app path $'[dependencies.reinhardt]\npackage = "reinhardt-web"\npath = "../reinhardt"\nfeatures = ["db-postgres"]')"
 output="$(run_hook "$path_dep" session-start)"
@@ -530,21 +557,18 @@ secondary_root="$TEST_ROOT/plugin-secondary"
 
 unusable_root="$TEST_ROOT/unusable-root"
 fallback_root="$TEST_ROOT/fallback-root"
-mkdir "$unusable_root"
-chmod 500 "$unusable_root"
+: > "$unusable_root"
 fallback_one="$(cd "$app" && CLAUDE_PLUGIN_DATA="$unusable_root" PLUGIN_DATA="$fallback_root" "$HOOK" prompt <<< '{"session_id":"fallback-session","prompt":"users"}')"
 fallback_two="$(cd "$app" && CLAUDE_PLUGIN_DATA="$unusable_root" PLUGIN_DATA="$fallback_root" "$HOOK" prompt <<< '{"session_id":"fallback-session","prompt":"users"}')"
-chmod 700 "$unusable_root"
 assert_contains "$fallback_one" ':app "users"'
 assert_empty "$fallback_two"
 [ -d "$fallback_root/fallback-session" ] || fail "writable fallback state root was not selected"
 
 marker_failure_root="$TEST_ROOT/marker-failure-root"
-mkdir -p "$marker_failure_root/marker-failure-session"
-chmod 500 "$marker_failure_root/marker-failure-session"
+mkdir -p "$marker_failure_root"
+: > "$marker_failure_root/marker-failure-session"
 marker_failure_one="$(cd "$app" && CLAUDE_PLUGIN_DATA="$marker_failure_root" PLUGIN_DATA=/dev/null "$HOOK" prompt <<< '{"session_id":"marker-failure-session","prompt":"users"}')"
 marker_failure_two="$(cd "$app" && CLAUDE_PLUGIN_DATA="$marker_failure_root" PLUGIN_DATA=/dev/null "$HOOK" prompt <<< '{"session_id":"marker-failure-session","prompt":"users"}')"
-chmod 700 "$marker_failure_root/marker-failure-session"
 assert_contains "$marker_failure_one" ':app "users"'
 assert_contains "$marker_failure_two" ':app "users"'
 
@@ -576,6 +600,7 @@ long_name="$(awk 'BEGIN { for (i = 0; i < 200; i++) printf "a" }')"
 mkdir -p "$app/src/apps/$long_name/models"
 long_output="$(run_hook "$app" prompt "{\"session_id\":\"long-app\",\"prompt\":\"src/apps/$long_name/models\"}")"
 [ "$(printf '%s' "$long_output" | wc -c | tr -d ' ')" -le 512 ] || fail "app summary exceeded 512 bytes"
+assert_contains "$long_output" ":path \"src/apps/$long_name\""
 case "$long_output" in
   *')') ;;
   *) fail "app summary is not a closed S-expression" ;;
