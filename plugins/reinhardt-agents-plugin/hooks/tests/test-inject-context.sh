@@ -61,9 +61,9 @@ assert_hook_mapping() {
   fail "missing $event hook mapping: $command"
 }
 
-decode_tool_context() {
-  local json="$1"
-  local prefix='{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"'
+decode_context() {
+  local json="$1" event="$2"
+  local prefix="{\"hookSpecificOutput\":{\"hookEventName\":\"$event\",\"additionalContext\":\""
   local suffix='"}}'
   case "$json" in "$prefix"*"$suffix") ;; *) return 1 ;; esac
   json="${json#"$prefix"}"
@@ -84,6 +84,10 @@ decode_tool_context() {
       printf "%s", output
     }
   '
+}
+
+decode_tool_context() {
+  decode_context "$1" PostToolUse
 }
 
 directory_mode() {
@@ -622,7 +626,9 @@ case "$features_value" in
   *) fail 'expected escaped feature list to be truncated' ;;
 esac
 
-assert_contains "$(run_hook "$plain" subagent-start)" ':kind "baseline"'
+subagent_output="$(run_hook "$plain" subagent-start)"
+assert_contains "$subagent_output" '"hookEventName":"SubagentStart"'
+assert_contains "$(decode_context "$subagent_output" SubagentStart)" ':kind "baseline"'
 assert_empty "$(run_hook "$plain" unknown-mode)"
 
 app="$(make_app progressive $'[package]\nname = "progressive"\nversion = "0.1.0"\n[dependencies]\nreinhardt = { package = "reinhardt-web", version = "0.4.0", features = ["db-sqlite"] }')"
@@ -647,6 +653,9 @@ assert_contains "$output" ':categories "models, api, pages, admin, migrations, c
 
 assert_empty "$(run_hook "$app" prompt "$prompt_payload")"
 assert_empty "$(run_hook "$app" prompt '{"session_id":"partial-session","prompt":"Update endusers"}')"
+
+mkdir -p "$app/src/apps/Üsers/models"
+assert_contains "$(run_hook "$app" prompt '{"session_id":"unicode-session","prompt":"Update the üSERS flow"}')" ':app "Üsers"'
 
 path_output="$(run_hook "$app" prompt '{"session_id":"path-session","prompt":"Inspect src/apps/polls/pages"}')"
 assert_contains "$path_output" ':app "polls"'
@@ -701,7 +710,9 @@ run_hook "$app" session-start '{"session_id":"resume-session","source":"resume"}
 assert_empty "$(run_hook "$app" prompt '{"session_id":"resume-session","prompt":"users"}')"
 
 run_hook "$app" prompt '{"session_id":"subagent-session","prompt":"users"}' >/dev/null
-assert_contains "$(run_hook "$app" subagent-start '{"session_id":"subagent-session","agent_type":"Explore"}')" ':kind "baseline"'
+subagent_output="$(run_hook "$app" subagent-start '{"session_id":"subagent-session","agent_type":"Explore"}')"
+assert_contains "$subagent_output" '"hookEventName":"SubagentStart"'
+assert_contains "$(decode_context "$subagent_output" SubagentStart)" ':kind "baseline"'
 assert_empty "$(run_hook "$app" prompt '{"session_id":"subagent-session","prompt":"users"}')"
 
 run_hook "$app" prompt '{"session_id":"end-session","prompt":"users"}' >/dev/null
@@ -768,6 +779,15 @@ fallback_two="$(cd "$app" && CLAUDE_PLUGIN_DATA="$unusable_root" PLUGIN_DATA="$f
 assert_contains "$fallback_one" ':app "users"'
 assert_empty "$fallback_two"
 [ -d "$fallback_root/fallback-session" ] || fail "writable fallback state root was not selected"
+
+public_tmp="$TEST_ROOT/public-tmp"
+mkdir -p "$public_tmp/reinhardt-agents-plugin"
+chmod 777 "$public_tmp/reinhardt-agents-plugin"
+public_one="$(cd "$app" && unset CLAUDE_PLUGIN_DATA && PLUGIN_DATA=/dev/null TMPDIR="$public_tmp" "$HOOK" prompt <<< '{"session_id":"public-state","prompt":"users"}')"
+public_two="$(cd "$app" && unset CLAUDE_PLUGIN_DATA && PLUGIN_DATA=/dev/null TMPDIR="$public_tmp" "$HOOK" prompt <<< '{"session_id":"public-state","prompt":"users"}')"
+assert_contains "$public_one" ':app "users"'
+assert_contains "$public_two" ':app "users"'
+[ ! -e "$public_tmp/reinhardt-agents-plugin/public-state" ] || fail "public state root was used"
 
 marker_failure_root="$TEST_ROOT/marker-failure-root"
 mkdir -p "$marker_failure_root"

@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import stat
 import subprocess
 import sys
 
@@ -545,20 +546,14 @@ def list_apps() -> list[str]:
         return []
 
 
-def ascii_lower(value: str) -> str:
-    return value.translate(
-        str.maketrans("ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz")
-    )
-
-
 def matching_apps(text: str, mode: str) -> list[str]:
     if mode == "prompt":
-        text = ascii_lower(text)
+        text = text.casefold()
         return [
             app
             for app in list_apps()
             if re.search(
-                rf"(?<![{TOKEN_CHARACTER}]){re.escape(ascii_lower(app))}"
+                rf"(?<![{TOKEN_CHARACTER}]){re.escape(app.casefold())}"
                 rf"(?![{TOKEN_CHARACTER}])",
                 text,
             )
@@ -591,17 +586,30 @@ def matching_apps(text: str, mode: str) -> list[str]:
 
 def state_root() -> Path | None:
     candidates = (
-        os.environ.get("CLAUDE_PLUGIN_DATA"),
-        os.environ.get("PLUGIN_DATA"),
-        str(Path(os.environ.get("TMPDIR", "/tmp")) / "reinhardt-agents-plugin"),
+        (os.environ.get("CLAUDE_PLUGIN_DATA"), False),
+        (os.environ.get("PLUGIN_DATA"), False),
+        (
+            str(Path(os.environ.get("TMPDIR", "/tmp")) / "reinhardt-agents-plugin"),
+            True,
+        ),
     )
-    for value in candidates:
+    for value, require_private in candidates:
         if not value:
             continue
         root = Path(value)
         probe = root / f".reinhardt-context-probe-{os.getpid()}"
         try:
             root.mkdir(parents=True, exist_ok=True, mode=0o700)
+            root_stat = root.lstat()
+            getuid = getattr(os, "getuid", None)
+            if require_private:
+                if root.is_symlink() or not stat.S_ISDIR(root_stat.st_mode):
+                    continue
+                if getuid is not None and (
+                    root_stat.st_uid != getuid()
+                    or stat.S_IMODE(root_stat.st_mode) & 0o077
+                ):
+                    continue
             probe.mkdir(mode=0o700)
             probe.rmdir()
             return root
@@ -749,7 +757,18 @@ def main() -> None:
     elif mode == "subagent-start":
         metadata = application_metadata()
         if metadata is not None:
-            print(render_baseline(metadata))
+            print(
+                json.dumps(
+                    {
+                        "hookSpecificOutput": {
+                            "hookEventName": "SubagentStart",
+                            "additionalContext": render_baseline(metadata),
+                        }
+                    },
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                )
+            )
     elif mode == "session-end":
         clear_session(session_id)
 
