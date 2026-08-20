@@ -347,6 +347,18 @@ regression_all_presets_expand() {
   assert_contains "$output" ':auth-method "auth (default)"'
 }
 
+regression_feature_implications() {
+  local app output
+  app="$(make_app final-feature-implications $'[dependencies]\nreinhardt = { version = "0.4.0", default-features = false, features = ["api", "openapi-router", "session-redis", "tasks-durable", "middleware-auth-jwt"] }')"
+  output="$(run_hook "$app" session-start)"
+  assert_contains "$output" 'rest'
+  assert_contains "$output" 'openapi'
+  assert_contains "$output" 'sessions'
+  assert_contains "$output" 'middleware'
+  assert_contains "$output" 'tasks'
+  assert_contains "$output" ':auth-method "jwt"'
+}
+
 regression_forwarded_default_features() {
   local app output
   app="$(make_app final-forwarded-feature $'[features]\ndefault = ["framework/db-sqlite"]\n[dependencies]\nframework = { package = "reinhardt-web", version = "0.4.0", default-features = false }')"
@@ -458,6 +470,7 @@ for regression in \
   regression_unbalanced_manifest \
   regression_top_level_json_fields \
   regression_all_presets_expand \
+  regression_feature_implications \
   regression_forwarded_default_features \
   regression_active_target_only \
   regression_windows_tool_path \

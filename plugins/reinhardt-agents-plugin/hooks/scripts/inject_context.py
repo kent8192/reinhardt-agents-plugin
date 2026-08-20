@@ -103,6 +103,11 @@ PRESET_FEATURES = {
     "cli-tools": {"database", "migrations", "tasks", "mail"},
     "test-utils": {"test", "testcontainers", "database"},
     "full": FULL_FEATURES,
+    "api": {"rest"},
+    "openapi-router": {"openapi"},
+    "session-redis": {"sessions", "middleware"},
+    "tasks-durable": {"tasks"},
+    "middleware-auth-jwt": {"auth-jwt"},
 }
 TOKEN_CHARACTER = r"A-Za-z0-9_-"
 TOOL_PREFIX_CHARACTER = r"A-Za-z0-9_.\-/\\"
