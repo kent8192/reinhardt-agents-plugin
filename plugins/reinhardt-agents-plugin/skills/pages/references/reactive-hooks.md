@@ -21,7 +21,7 @@ count.set(5);
 count.update(|n| *n += 1);
 ```
 
-#### `Signal<T>: Send + Sync` on native (rc.25+)
+#### `Signal<T>: Send + Sync` on native (0.1.x–0.3.x, rc.25+)
 
 Since v0.1.0-rc.25, `Signal<T>` uses `Arc<RwLock<T>>` on native targets so it
 implements `Send + Sync`. On `wasm32` it stays `Rc<RefCell<T>>` to keep the
@@ -42,7 +42,7 @@ A side effect that reruns when dependencies change.
 let count = Signal::new(0);
 let name = Signal::new("Alice".to_string());
 
-Effect::new(move || {
+let _effect = Effect::new(move || {
     println!("{}: count = {}", name.get(), count.get());
 });
 // Prints: "Alice: count = 0"
@@ -73,7 +73,7 @@ use reinhardt::pages::prelude::*;
 
 // Provide context
 let theme = Signal::new("dark".to_string());
-provide_context("theme", theme.clone());
+provide_context("theme", theme);
 
 // Consume context (anywhere in the subtree)
 let theme: Signal<String> = get_context("theme").unwrap();
@@ -87,6 +87,13 @@ let theme: Signal<String> = get_context("theme").unwrap();
 | `remove_context(key)` | Remove a context |
 
 ## Hooks API
+
+Dependency macros are not part of the prelude; import the modes used by the
+component explicitly:
+
+```rust
+use reinhardt::pages::{deps, deps_auto};
+```
 
 ### State Hooks
 
@@ -163,7 +170,8 @@ when explicit guard ownership and early disposal are part of the design.
 `Signal`, `Memo`, `Effect`, `Callback`, `Action`, and `Resource` are `Copy`
 handles backed by a scope-owned generational arena. Remove clone ceremony for
 these reactive keys and create low-level nodes only while a `ReactiveScope` is
-active. The handle does not keep a disposed scope alive. Normal Pages SSR,
+active. These handles are thread-affine and are neither `Send` nor `Sync`. The
+handle does not keep a disposed scope alive. Normal Pages SSR,
 hydration, and client launcher entrypoints manage the scope automatically.
 
 `Callback::new` also requires an active scope. Use `Callback::new_in_scope` for
@@ -193,7 +201,7 @@ values and setter functions may still need ordinary `clone()` calls.
 |------|-----------|-------------|
 | `use_transition` | `use_transition() -> TransitionState` | Non-blocking state updates |
 | `use_action` | `use_action(action_fn) -> Action<T, E>` | Async action with loading/error state |
-| `use_action_state` | *(deprecated)* | Use `use_action` instead |
+| `use_action_state` | `use_action_state(action_fn) -> ActionStateBuilder<...>` | Configure an action with lifecycle callbacks |
 
 ```rust
 let save_action = use_action(|data: FormData| async move {
@@ -204,11 +212,23 @@ let save_action = use_action(|data: FormData| async move {
 save_action.dispatch(form_data);
 
 // Check state
-match save_action.phase().get() {
+match save_action.phase() {
     ActionPhase::Idle => { /* ready */ },
     ActionPhase::Pending => { /* loading */ },
-    ActionPhase::Resolved(result) => { /* done */ },
+    ActionPhase::Success(result) => { /* done */ },
+    ActionPhase::Error(error) => { /* failed */ },
 }
+```
+
+Use `use_action_state` when the mutation needs lifecycle callbacks:
+
+```rust
+let save_action = use_action_state(|data: FormData| async move {
+    save_to_server(data).await
+})
+.on_success(|result| log!("Saved: {result:?}"))
+.on_error(|error| log!("Save failed: {error}"))
+.build();
 ```
 
 ### Async UI Handler Patterns
@@ -241,8 +261,6 @@ let save_action = use_action(|input: SaveSettingsRequest| async move {
 
 let save_click = use_callback(
     {
-        let save_action = save_action.clone();
-        let project_id = project_id.clone();
         let form = form.clone();
         move |_| {
             save_action.dispatch(SaveSettingsRequest {
@@ -385,20 +403,22 @@ auth_state().update(AuthData {
 });
 ```
 
-## Effect-Based Reactive Rendering
+## Retained Effect-Based Reactive Rendering
 
-Use `Effect` to reactively re-render when Signals change:
+Use a retained effect for component-scoped registration that reacts to Signal
+changes:
 
 ```rust
-use reinhardt::pages::reactive::Effect;
+use reinhardt::pages::{deps, reactive::hooks::use_retained_effect};
 
-let path_signal = router::with_router(|r| r.current_path().clone());
-let effect = Effect::new(move || {
-    let path = path_signal.get();  // Subscribe to path changes
-    let page = router::with_router(|r| r.render_current());
-    app_el.set_inner_html(&page.render_to_string());
-});
-std::mem::forget(effect);  // Keep alive for page lifetime
+let path_signal = router::with_router(|r| *r.current_path());
+use_retained_effect(
+    move || {
+        let page = router::with_router(|r| r.render_current());
+        app_el.set_inner_html(&page.render_to_string());
+    },
+    deps![path_signal],
+);
 ```
 
 ## watch Blocks vs Hooks
@@ -454,7 +474,7 @@ page!({
 ### watch Best Practices
 
 - **Pass Signals directly** to `page!` — don't extract values before the macro
-- **Clone Signals freely** — `Signal::clone()` is cheap (Rc-based)
+- **Copy Signal handles directly** — the owning `ReactiveScope` controls their lifetime
 - **One expression per watch** — each block must contain exactly one `if`, `match`, or `for`
 - **Don't nest watch blocks** — use multiple sibling watch blocks instead
 
@@ -463,8 +483,8 @@ page!({
 - **Fine-grained reactivity**: Only DOM nodes depending on changed Signals update (not entire component trees)
 - **Pull-based model**: Signals track dependencies automatically via `.get()` calls
 - **Batching**: Multiple Signal changes batch into a single update cycle via micro-tasks
-- **Memory management**: All reactive nodes auto-cleanup when dropped
-- **`std::mem::forget`**: Use for Effects that should live for the entire page lifetime (e.g., routing)
+- **Memory management**: The owning `ReactiveScope` disposes its reactive nodes together
+- **Effect retention**: Keep the RAII guard for explicit ownership, or use `use_retained_effect` for component-scoped registration
 - **watch compiles to `Page::reactive()`**: The reactive closure is tracked by the runtime and re-evaluated on Signal changes
 
 ## Version Differences (0.2.x)
