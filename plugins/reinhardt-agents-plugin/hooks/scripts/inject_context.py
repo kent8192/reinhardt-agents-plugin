@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import subprocess
 import sys
 
 try:
@@ -32,6 +33,16 @@ DEFAULT_FEATURES = {
     "sessions",
     "pages",
 }
+PRESET_FEATURES = {
+    "minimal": {"core", "di", "server"},
+    "standard": DEFAULT_FEATURES,
+    "api-only": {"minimal", "rest", "auth", "pages"},
+    "graphql-server": {"minimal", "auth", "graphql", "database"},
+    "websocket-server": {"minimal", "auth", "websockets", "cache"},
+    "cli-tools": {"database", "migrations", "tasks", "mail"},
+    "test-utils": {"test", "testcontainers", "database"},
+}
+PRESET_FEATURES["full"] = set().union(*PRESET_FEATURES.values())
 TOKEN_CHARACTER = r"A-Za-z0-9_-"
 TOOL_PREFIX_CHARACTER = r"A-Za-z0-9_.\-/\\"
 
@@ -52,10 +63,91 @@ def find_workspace(start: Path) -> dict:
     return {}
 
 
+class CfgParser:
+    """Evaluate Cargo cfg expressions against rustc's active cfg values."""
+
+    def __init__(self, expression: str, flags: set[str], values: set[tuple[str, str]]):
+        self.tokens = re.findall(
+            r'[A-Za-z_][A-Za-z0-9_-]*|"[^"]*"|[(),=]', expression
+        )
+        self.position = 0
+        self.flags = flags
+        self.values = values
+
+    def take(self) -> str:
+        token = self.tokens[self.position]
+        self.position += 1
+        return token
+
+    def expression(self) -> bool:
+        name = self.take()
+        if self.position < len(self.tokens) and self.tokens[self.position] == "=":
+            self.take()
+            return (name, self.take().strip('"')) in self.values
+        if self.position >= len(self.tokens) or self.tokens[self.position] != "(":
+            return name in self.flags
+
+        self.take()
+        arguments = []
+        while self.tokens[self.position] != ")":
+            arguments.append(self.expression())
+            if self.tokens[self.position] == ",":
+                self.take()
+        self.take()
+        if name == "all":
+            return all(arguments)
+        if name == "any":
+            return any(arguments)
+        if name == "not" and len(arguments) == 1:
+            return not arguments[0]
+        return False
+
+
+def rust_target() -> tuple[str, set[str], set[tuple[str, str]]] | None:
+    try:
+        version = subprocess.run(
+            ["rustc", "-vV"], check=True, capture_output=True, text=True
+        ).stdout
+        host = next(
+            line.removeprefix("host: ")
+            for line in version.splitlines()
+            if line.startswith("host: ")
+        )
+        output = subprocess.run(
+            ["rustc", "--print", "cfg"], check=True, capture_output=True, text=True
+        ).stdout
+    except (OSError, subprocess.CalledProcessError, StopIteration):
+        return None
+
+    flags = set()
+    values = set()
+    for line in output.splitlines():
+        if "=" in line:
+            name, value = line.split("=", 1)
+            values.add((name, value.strip('"')))
+        else:
+            flags.add(line)
+    return host, flags, values
+
+
+def target_matches(target: str, platform) -> bool:
+    if platform is None:
+        return False
+    host, flags, values = platform
+    if not target.startswith("cfg("):
+        return target == host
+    try:
+        parser = CfgParser(target[4:-1], flags, values)
+        return parser.expression() and parser.position == len(parser.tokens)
+    except (IndexError, ValueError):
+        return False
+
+
 def runtime_dependencies(manifest: dict):
     yield from manifest.get("dependencies", {}).items()
-    for target in manifest.get("target", {}).values():
-        if isinstance(target, dict):
+    platform = rust_target()
+    for predicate, target in manifest.get("target", {}).items():
+        if isinstance(target, dict) and target_matches(predicate, platform):
             yield from target.get("dependencies", {}).items()
 
 
@@ -94,12 +186,49 @@ def inherited_dependency(
     return effective
 
 
+def forwarded_dependency_features(manifest: dict, aliases: set[str]) -> set[str]:
+    definitions = manifest.get("features", {})
+    if not isinstance(definitions, dict):
+        return set()
+
+    forwarded = set()
+    pending = list(definitions.get("default", []))
+    visited = set()
+    while pending:
+        feature = pending.pop()
+        if not isinstance(feature, str) or feature in visited:
+            continue
+        visited.add(feature)
+        if "/" in feature:
+            dependency, dependency_feature = feature.split("/", 1)
+            if dependency.removesuffix("?") in aliases:
+                forwarded.add(dependency_feature)
+        elif not feature.startswith("dep:"):
+            nested = definitions.get(feature, [])
+            if isinstance(nested, list):
+                pending.extend(nested)
+    return forwarded
+
+
+def expand_features(features: set[str]) -> set[str]:
+    expanded = set(features)
+    pending = list(features)
+    while pending:
+        feature = pending.pop()
+        additions = set(PRESET_FEATURES.get(feature, set()))
+        for addition in additions - expanded:
+            expanded.add(addition)
+            pending.append(addition)
+    return expanded
+
+
 def dependency_metadata(manifest: dict, workspace: dict) -> dict | None:
     version = None
     saw_path = False
     saw_git = False
     default_features = True
     features: set[str] = set()
+    aliases = set()
     found = False
 
     for name, raw_dependency in runtime_dependencies(manifest):
@@ -112,6 +241,7 @@ def dependency_metadata(manifest: dict, workspace: dict) -> dict | None:
             continue
 
         found = True
+        aliases.add(name)
         if version is None and isinstance(dependency.get("version"), str):
             version = dependency["version"]
         saw_path |= "path" in dependency
@@ -130,8 +260,10 @@ def dependency_metadata(manifest: dict, workspace: dict) -> dict | None:
 
     if not found:
         return None
+    features.update(forwarded_dependency_features(manifest, aliases))
     if default_features or "standard" in features:
         features.update(DEFAULT_FEATURES)
+    features = expand_features(features)
     source = "path" if saw_path else "git" if saw_git else "unknown"
     return {
         "version": version or source,
@@ -170,6 +302,17 @@ def number_field(payload: dict, name: str, parent: str | None = None):
     if isinstance(value, (int, float)) and not isinstance(value, bool):
         return value
     return None
+
+
+def string_values(value):
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, dict):
+        for nested in value.values():
+            yield from string_values(nested)
+    elif isinstance(value, list):
+        for nested in value:
+            yield from string_values(nested)
 
 
 def sanitized_pieces(value: str):
@@ -301,7 +444,18 @@ def matching_apps(text: str, mode: str) -> list[str]:
     if mode == "prompt":
         text = ascii_lower(text)
     else:
-        logical_cwd = os.environ.get("PWD", str(Path.cwd())).rstrip("/")
+        text = text.replace("\\", "/")
+        text = re.sub(
+            r"(?i)(?<![A-Za-z0-9])([a-z]):/",
+            lambda match: f"/{match.group(1).lower()}/",
+            text,
+        )
+        logical_cwd = os.environ.get("PWD", str(Path.cwd())).replace("\\", "/")
+        logical_cwd = re.sub(
+            r"(?i)^([a-z]):/",
+            lambda match: f"/{match.group(1).lower()}/",
+            logical_cwd,
+        ).rstrip("/")
         text = text.replace(f"{logical_cwd}/src/apps/", "src/apps/")
         text = text.replace("./src/apps/", "src/apps/")
 
@@ -394,17 +548,24 @@ def app_categories(directory: Path) -> str:
 
 def render_app(app: str) -> str | None:
     directory = Path("src/apps") / app
-    summary = "\n".join(
-        (
-            "(reinhardt-application-context",
-            '  :kind "app"',
-            f'  :app "{sanitize_bounded(app, 96)}"',
-            f'  :path "{sanitize(directory.as_posix())}"',
-            f'  :categories "{app_categories(directory)}"',
-            '  :guidance "Inspect this app before editing and use the applicable bundled Reinhardt skills."',
-            ")",
+    def build(display: str) -> str:
+        return "\n".join(
+            (
+                "(reinhardt-application-context",
+                '  :kind "app"',
+                f'  :app "{display}"',
+                f'  :path "{sanitize(directory.as_posix())}"',
+                f'  :categories "{app_categories(directory)}"',
+                '  :guidance "Inspect this app before editing and use the applicable bundled Reinhardt skills."',
+                ")",
+            )
         )
-    )
+
+    empty_summary = build("")
+    display_budget = min(96, 512 - len(empty_summary.encode()))
+    if display_budget < 3:
+        return None
+    summary = build(sanitize_bounded(app, display_budget))
     return summary if len(summary.encode()) <= 512 else None
 
 
@@ -413,11 +574,10 @@ def render_matching_apps(text: str, session_id: str, mode: str) -> None:
     for app in matching_apps(text, mode):
         if len(summaries) == 5:
             break
-        if not claim_app(session_id, app):
-            continue
         summary = render_app(app)
-        if summary is not None:
-            summaries.append(summary)
+        if summary is None or not claim_app(session_id, app):
+            continue
+        summaries.append(summary)
 
     if not summaries:
         return
@@ -464,7 +624,8 @@ def main() -> None:
         if exit_code is None:
             exit_code = number_field(payload, "exit_code", "tool_response")
         if exit_code in {None, 0} and application_metadata() is not None:
-            render_matching_apps(raw_input, session_id, "tool")
+            tool_text = "\n".join(string_values(payload))
+            render_matching_apps(tool_text, session_id, "tool")
     elif mode == "subagent-start":
         metadata = application_metadata()
         if metadata is not None:

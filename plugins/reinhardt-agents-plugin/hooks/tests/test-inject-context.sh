@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 HOOK="$ROOT/hooks/scripts/inject-context.sh"
+PY_HOOK="$ROOT/hooks/scripts/inject_context.py"
 TEST_ROOT="$(mktemp -d)"
 STATE_ROOT="$TEST_ROOT/state"
 trap 'rm -rf "$TEST_ROOT"' EXIT
@@ -337,6 +338,51 @@ regression_top_level_json_fields() {
   assert_empty "$output"
 }
 
+regression_all_presets_expand() {
+  local app output
+  app="$(make_app final-graphql-preset $'[dependencies]\nreinhardt = { version = "0.4.0", default-features = false, features = ["graphql-server"] }')"
+  output="$(run_hook "$app" session-start)"
+  assert_contains "$output" 'database'
+  assert_contains "$output" ':auth-method "auth (default)"'
+}
+
+regression_forwarded_default_features() {
+  local app output
+  app="$(make_app final-forwarded-feature $'[features]\ndefault = ["framework/db-sqlite"]\n[dependencies]\nframework = { package = "reinhardt-web", version = "0.4.0", default-features = false }')"
+  output="$(run_hook "$app" session-start)"
+  assert_contains "$output" 'db-sqlite'
+  assert_contains "$output" ':db-backend "sqlite"'
+}
+
+regression_active_target_only() {
+  local app output
+  app="$(make_app final-active-target $'[target.\'cfg(windows)\'.dependencies]\nreinhardt = { version = "0.4.0", default-features = false, features = ["db-postgres"] }\n[target.\'cfg(unix)\'.dependencies]\nreinhardt = { version = "0.4.0", default-features = false, features = ["db-sqlite"] }')"
+  output="$(run_hook "$app" session-start)"
+  if rustc --print cfg | grep -qx unix; then
+    assert_contains "$output" ':db-backend "sqlite"'
+  else
+    assert_contains "$output" ':db-backend "postgres"'
+  fi
+}
+
+regression_windows_tool_path() {
+  local app output
+  app="$(make_app final-windows-path $'[dependencies]\nreinhardt = "0.4.0"')"
+  mkdir -p "$app/src/apps/users/models"
+  output="$(cd "$app" && PWD='C:/repo' PLUGIN_DATA="$STATE_ROOT" python3 "$PY_HOOK" tool <<< '{"session_id":"windows-path","path":"C:\\repo\\src\\apps\\users\\models.rs","tool_response":{"exit_code":0}}')"
+  assert_contains "$output" ':app \"users\"'
+}
+
+regression_maximal_app_name() {
+  local app name output
+  app="$(make_app final-maximal-name $'[dependencies]\nreinhardt = "0.4.0"')"
+  name="$(awk 'BEGIN { for (i=0; i<255; i++) printf "m" }')"
+  mkdir -p "$app/src/apps/$name/models"
+  output="$(run_hook "$app" prompt "{\"session_id\":\"maximal-name\",\"prompt\":\"src/apps/$name/models\"}")"
+  [ "$(printf '%s' "$output" | wc -c | tr -d ' ')" -le 512 ] || fail "maximal app summary exceeded 512 bytes"
+  assert_contains "$output" ":path \"src/apps/$name\""
+}
+
 final_review_failures=0
 for regression in \
   regression_categoryless_app \
@@ -349,7 +395,12 @@ for regression in \
   regression_effective_facade_package \
   regression_one_pass_matching \
   regression_unbalanced_manifest \
-  regression_top_level_json_fields
+  regression_top_level_json_fields \
+  regression_all_presets_expand \
+  regression_forwarded_default_features \
+  regression_active_target_only \
+  regression_windows_tool_path \
+  regression_maximal_app_name
 do
   if ( "$regression" ); then
     :
