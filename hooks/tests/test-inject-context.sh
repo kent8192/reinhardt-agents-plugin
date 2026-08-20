@@ -241,7 +241,7 @@ regression_explicit_workspace_root() {
   printf '%s\n' $'[package]\nname = "final-explicit-member"\nversion = "0.1.0"\nworkspace = "../final-explicit-workspace"\n[dependencies]\nframework = { workspace = true, features = ["db-sqlite"] }' > "$member/Cargo.toml"
   output="$(run_hook "$member" session-start)"
   assert_contains "$output" ':reinhardt-version "0.4.0"'
-  assert_contains "$output" ':features "auth-jwt, db-sqlite"'
+  assert_contains "$output" ':features "auth, auth-jwt, database, db-sqlite"'
   assert_contains "$output" ':db-backend "sqlite"'
 }
 
@@ -391,7 +391,14 @@ regression_feature_implications() {
   assert_contains "$output" 'sessions'
   assert_contains "$output" 'middleware'
   assert_contains "$output" 'tasks'
-  assert_contains "$output" ':auth-method "jwt"'
+  assert_contains "$output" ':auth-method "jwt, auth (default)"'
+}
+
+regression_base_feature_implications() {
+  local app output
+  app="$(make_app final-base-feature-implications $'[dependencies]\nreinhardt = { version = "0.4.0", default-features = false, features = ["db-sqlite", "auth-jwt"] }')"
+  output="$(run_hook "$app" session-start)"
+  assert_contains "$output" ':features "auth, auth-jwt, database, db-sqlite"'
 }
 
 regression_forwarded_default_features() {
@@ -427,11 +434,13 @@ regression_configured_target() {
 }
 
 regression_windows_tool_path() {
-  local app output
+  local app output case_variant
   app="$(make_app final-windows-path $'[dependencies]\nreinhardt = "0.4.0"')"
   mkdir -p "$app/src/apps/users/models"
   output="$(cd "$app" && PWD='C:/repo' PLUGIN_DATA="$STATE_ROOT" "$PYTHON_BIN" "$PY_HOOK" tool <<< '{"session_id":"windows-path","path":"C:\\repo\\src\\apps\\users\\models.rs","tool_response":{"exit_code":0}}')"
   assert_contains "$output" ':app \"users\"'
+  case_variant="$(cd "$app" && PWD='C:/Repo' PLUGIN_DATA="$STATE_ROOT" "$PYTHON_BIN" "$PY_HOOK" tool <<< '{"session_id":"windows-case-variant","path":"c:\\repo\\src\\apps\\Users\\models.rs","tool_response":{"exit_code":0}}')"
+  assert_contains "$case_variant" ':app \"users\"'
 }
 
 regression_combined_dependency_defaults() {
@@ -522,6 +531,7 @@ for regression in \
   regression_top_level_json_fields \
   regression_all_presets_expand \
   regression_feature_implications \
+  regression_base_feature_implications \
   regression_forwarded_default_features \
   regression_active_target_only \
   regression_configured_target \
@@ -549,9 +559,9 @@ output="$(run_hook "$direct" session-start)"
 assert_contains "$output" ':kind "baseline"'
 assert_contains "$output" ':reinhardt-version "0.4.0"'
 assert_contains "$output" ':default-features false'
-assert_contains "$output" ':features "auth-session, db-sqlite"'
+assert_contains "$output" ':features "auth, auth-session, database, db-sqlite"'
 assert_contains "$output" ':db-backend "sqlite"'
-assert_contains "$output" ':auth-method "session"'
+assert_contains "$output" ':auth-method "session, auth (default)"'
 
 generic="$(make_app generic $'[package]\nname = "generic"\nversion = "0.1.0"\n[dependencies]\nserde = "1"\n# reinhardt is mentioned only in a comment')"
 assert_empty "$(run_hook "$generic" session-start)"
@@ -615,7 +625,7 @@ printf '%s\n' $'[dependencies]\nreinhardt = "0.4.8"' > "$workspace_root/sibling/
 output="$(run_hook "$member" session-start)"
 assert_contains "$output" ':reinhardt-version "0.4.1"'
 assert_contains "$output" ':default-features false'
-assert_contains "$output" ':features "auth-jwt, db-sqlite"'
+assert_contains "$output" ':features "auth, auth-jwt, database, db-sqlite"'
 
 mkdir -p "$TEST_ROOT/src/bin"
 : > "$TEST_ROOT/src/bin/manage.rs"

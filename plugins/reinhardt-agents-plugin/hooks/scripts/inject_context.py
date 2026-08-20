@@ -105,6 +105,14 @@ PRESET_FEATURES = {
     "test-utils": {"test", "testcontainers", "database"},
     "full": FULL_FEATURES,
     "api": {"rest"},
+    "auth-jwt": {"auth"},
+    "auth-oauth": {"auth"},
+    "auth-session": {"auth"},
+    "auth-token": {"auth"},
+    "db-cockroachdb": {"database"},
+    "db-mysql": {"database"},
+    "db-postgres": {"database"},
+    "db-sqlite": {"database"},
     "openapi-router": {"openapi"},
     "session-redis": {"sessions", "middleware"},
     "tasks-durable": {"tasks"},
@@ -606,6 +614,9 @@ def matching_apps(text: str, mode: str) -> list[str]:
             text,
         )
     )
+    if windows_cwd:
+        folded_candidates = {candidate.casefold() for candidate in candidates}
+        return [app for app in list_apps() if app.casefold() in folded_candidates]
     return [app for app in list_apps() if app in candidates]
 
 
