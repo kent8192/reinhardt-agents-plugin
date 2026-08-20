@@ -129,6 +129,19 @@ def find_workspace(start: Path) -> dict:
     return {}
 
 
+def configured_target(start: Path) -> str | None:
+    target = os.environ.get("CARGO_BUILD_TARGET")
+    if target:
+        return target
+    for directory in (start, *start.parents):
+        for name in ("config.toml", "config"):
+            config = load_toml(directory / ".cargo" / name)
+            target = (config or {}).get("build", {}).get("target")
+            if isinstance(target, str):
+                return target
+    return None
+
+
 class CfgParser:
     """Evaluate Cargo cfg expressions against rustc's active cfg values."""
 
@@ -171,16 +184,21 @@ class CfgParser:
 
 def rust_target() -> tuple[str, set[str], set[tuple[str, str]]] | None:
     try:
-        version = subprocess.run(
-            ["rustc", "-vV"], check=True, capture_output=True, text=True
-        ).stdout
-        host = next(
-            line.removeprefix("host: ")
-            for line in version.splitlines()
-            if line.startswith("host: ")
-        )
+        target = configured_target(Path.cwd())
+        if target is not None:
+            command = ["rustc", "--print", "cfg", "--target", target]
+        else:
+            version = subprocess.run(
+                ["rustc", "-vV"], check=True, capture_output=True, text=True
+            ).stdout
+            target = next(
+                line.removeprefix("host: ")
+                for line in version.splitlines()
+                if line.startswith("host: ")
+            )
+            command = ["rustc", "--print", "cfg"]
         output = subprocess.run(
-            ["rustc", "--print", "cfg"], check=True, capture_output=True, text=True
+            command, check=True, capture_output=True, text=True
         ).stdout
     except (OSError, subprocess.CalledProcessError, StopIteration):
         return None
@@ -193,7 +211,7 @@ def rust_target() -> tuple[str, set[str], set[tuple[str, str]]] | None:
             values.add((name, value.strip('"')))
         else:
             flags.add(line)
-    return host, flags, values
+    return target, flags, values
 
 
 def target_matches(target: str, platform) -> bool:

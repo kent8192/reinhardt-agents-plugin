@@ -378,6 +378,19 @@ regression_active_target_only() {
   fi
 }
 
+regression_configured_target() {
+  local app output
+  app="$(make_app final-configured-target $'[target.\'cfg(target_arch = "wasm32")\'.dependencies]\nreinhardt = { version = "0.4.0", default-features = false, features = ["db-sqlite"] }')"
+  mkdir -p "$app/.cargo"
+  printf '%s\n' $'[build]\ntarget = "wasm32-unknown-unknown"' > "$app/.cargo/config.toml"
+  output="$(run_hook "$app" session-start)"
+  assert_contains "$output" ':db-backend "sqlite"'
+
+  app="$(make_app final-env-target $'[target.wasm32-unknown-unknown.dependencies]\nreinhardt = { version = "0.4.0", default-features = false, features = ["db-sqlite"] }')"
+  output="$(cd "$app" && CARGO_BUILD_TARGET=wasm32-unknown-unknown PLUGIN_DATA="$STATE_ROOT" "$HOOK" session-start <<< '{}')"
+  assert_contains "$output" ':db-backend "sqlite"'
+}
+
 regression_windows_tool_path() {
   local app output
   app="$(make_app final-windows-path $'[dependencies]\nreinhardt = "0.4.0"')"
@@ -473,6 +486,7 @@ for regression in \
   regression_feature_implications \
   regression_forwarded_default_features \
   regression_active_target_only \
+  regression_configured_target \
   regression_windows_tool_path \
   regression_combined_dependency_defaults \
   regression_full_preset_auth \
