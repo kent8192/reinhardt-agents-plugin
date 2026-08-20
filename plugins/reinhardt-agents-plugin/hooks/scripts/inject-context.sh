@@ -28,17 +28,19 @@ parse_dependency_manifest() {
     function member_runtime(s) { gsub(/[[:space:]]/, "", s); if (s ~ /(^|\.)dev-dependencies(\.|$)/ || s ~ /(^|\.)build-dependencies(\.|$)/) return 0; return s=="dependencies" || s ~ /^dependencies\./ || s ~ /^target\..*\.dependencies(\.|$)/ }
     function workspace_runtime(s) { gsub(/[[:space:]]/, "", s); return s=="workspace.dependencies" || s ~ /^workspace\.dependencies\./ }
     function section_key(s, n,a) { n=split(s,a,"."); return unquote(a[n]) }
-    function add_record(kind,key,text) { if (key=="") return; record_count++; record_kind[record_count]=kind; record_key[record_count]=key; record_text[record_count]=text }
+    function add_record(kind,key,text, i) { if (key=="") return; for (i=1; i<=record_count; i++) if (record_kind[i]==kind && record_key[i]==key) { record_text[i]=record_text[i] "\n" text; return }; record_count++; record_kind[record_count]=kind; record_key[record_count]=key; record_text[record_count]=text }
     function flush_table() { if (table_active) add_record(table_kind,table_key,table_text); table_active=0; table_kind=""; table_key=""; table_text="" }
     function begin_section(raw,kind, section,is_table) { flush_table(); section=substr(raw,2,length(raw)-2); if ((kind=="member" && member_runtime(section)) || (kind=="workspace" && workspace_runtime(section))) { is_table=(kind=="member" ? (section ~ /\.dependencies\./ || section ~ /^dependencies\./) : section ~ /^workspace\.dependencies\./); if (is_table) { table_active=1; table_kind=kind; table_key=section_key(section); table_text="" }; active_kind=kind } else active_kind="" }
-    function process_record(text, p,key,value) { p=index(text,"="); if (!p) return; key=unquote(trim(substr(text,1,p-1))); value=trim(substr(text,p+1)); if (table_active) table_text=table_text "\n" key "=" value; else if (active_kind!="") add_record(active_kind,key,value) }
+    function process_record(text, p,key,value,dot) { p=index(text,"="); if (!p) return; key=unquote(trim(substr(text,1,p-1))); value=trim(substr(text,p+1)); if (table_active) table_text=table_text "\n" key "=" value; else if (active_kind!="") { dot=index(key,"."); if (dot) add_record(active_kind,substr(key,1,dot-1),substr(key,dot+1) "=" value); else add_record(active_kind,key,value) } }
     function read_quoted(s,pos,quote, i,c,out,escaped) { quote=substr(s,pos,1); out=""; escaped=0; for (i=pos+1; i<=length(s); i++) { c=substr(s,i,1); if (escaped) { out=out c; escaped=0; continue }; if (quote=="\"" && c=="\\") { escaped=1; continue }; if (c==quote) { QVAL=out; QEND=i+1; return 1 }; out=out c }; QVAL=out; QEND=i; return 0 }
     function find_field(s,want,from, i,p,before,c) { if (from<1) from=1; for (i=from; i<=length(s)-length(want)+1; i++) { if (substr(s,i,length(want))!=want) continue; before=(i==1 ? "" : substr(s,i-1,1)); c=substr(s,i+length(want),1); if (before ~ /[[:alnum:]_-]/ || c ~ /[[:alnum:]_-]/) continue; p=i+length(want); while (substr(s,p,1) ~ /[[:space:]]/) p++; if (substr(s,p,1)!="=") continue; p++; while (substr(s,p,1) ~ /[[:space:]]/) p++; FPOS=p; return 1 }; return 0 }
     function scalar(s,want, p,end) { if (!find_field(s,want,1)) return ""; p=FPOS; if (is_quote(substr(s,p,1))) { read_quoted(s,p); return QVAL }; end=p; while (substr(s,end,1)!="" && substr(s,end,1)!~ /[,}\]\n[:space:]]/) end++; return substr(s,p,end-p) }
     function direct_version(s, p) { p=1; while (substr(s,p,1) ~ /[[:space:]]/) p++; if (is_quote(substr(s,p,1))) { read_quoted(s,p); return QVAL }; return "" }
-    function collect_features(s, start,p,depth,c,quoted,escaped) { start=1; while (find_field(s,"features",start)) { p=FPOS; if (substr(s,p,1)!="[") { start=p+1; continue }; depth=0; quoted=escaped=0; for (; p<=length(s); p++) { c=substr(s,p,1); if (escaped) { escaped=0; continue }; if (quoted && c=="\\") { escaped=1; continue }; if (c=="\"") { if (!quoted) { read_quoted(s,p); feature[QVAL]=1; p=QEND-1 }; continue }; if (c=="[") depth++; if (c=="]") { depth--; if (!depth) break } }; start=p+1 } }
+    function collect_features(s, start,p,depth,c) { start=1; while (find_field(s,"features",start)) { p=FPOS; if (substr(s,p,1)!="[") { start=p+1; continue }; depth=0; for (; p<=length(s); p++) { c=substr(s,p,1); if (is_quote(c)) { read_quoted(s,p); feature[QVAL]=1; p=QEND-1; continue }; if (c=="[") depth++; if (c=="]") { depth--; if (!depth) break } }; start=p+1 } }
+    function default_features(s, value) { value=scalar(s,"default-features"); if (value=="") value=scalar(s,"default_features"); return value }
+    function add_default_preset() { feature["standard"]=1; feature["minimal"]=1; feature["core"]=1; feature["routing"]=1; feature["di"]=1; feature["server"]=1; feature["database"]=1; feature["db-postgres"]=1; feature["rest"]=1; feature["auth"]=1; feature["middleware"]=1; feature["sessions"]=1; feature["pages"]=1 }
     function is_facade(key,text) { return key=="reinhardt" || scalar(text,"package")=="reinhardt-web" }
-    function process_member(key,text, effective,version,workspace_text,member_defaults,workspace_defaults) { workspace_text=""; if (scalar(text,"workspace")=="true") { if (!(key in workspace_record)) return; inherited="true"; workspace_text=workspace_record[key]; effective=text "\n" workspace_text } else effective=text; if (!is_facade(key,effective)) return; found="true"; version=scalar(effective,"version"); if (version=="") version=direct_version(effective); if (explicit_version=="" && version!="") explicit_version=version; if (!path_seen && scalar(effective,"path")!="") path_seen=1; if (!git_seen && scalar(effective,"git")!="") git_seen=1; member_defaults=scalar(text,"default-features"); workspace_defaults=scalar(workspace_text,"default-features"); if (member_defaults=="true" || workspace_defaults=="true") defaults="true"; else if (member_defaults=="false" || workspace_defaults=="false") defaults="false"; collect_features(effective) }
+    function process_member(key,text, effective,version,workspace_text,member_defaults,workspace_defaults) { workspace_text=""; if (scalar(text,"workspace")=="true") { if (!(key in workspace_record)) return; inherited="true"; workspace_text=workspace_record[key]; effective=text "\n" workspace_text } else effective=text; if (!is_facade(key,effective)) return; found="true"; version=scalar(effective,"version"); if (version=="") version=direct_version(effective); if (explicit_version=="" && version!="") explicit_version=version; if (!path_seen && scalar(effective,"path")!="") path_seen=1; if (!git_seen && scalar(effective,"git")!="") git_seen=1; member_defaults=default_features(text); workspace_defaults=default_features(workspace_text); if (member_defaults=="true" || workspace_defaults=="true") defaults="true"; else if (member_defaults=="false" || workspace_defaults=="false") defaults="false"; collect_features(effective) }
     {
       kind=(FILENAME==member ? "member" : (FILENAME==workspace ? "workspace" : "")); line=strip_comment($0); if (trim(line)=="") next
       if (line ~ /^[[:space:]]*\[[^][]+\][[:space:]]*$/) { begin_section(trim(line),kind); pending=""; pending_balance=0; next }
@@ -54,6 +56,7 @@ parse_dependency_manifest() {
       for (i=1; i<=record_count; i++) if (record_kind[i]=="workspace") workspace_record[record_key[i]]=record_text[i]
       found="false"; inherited="false"; defaults="true"; explicit_version=""; path_seen=git_seen=0
       for (i=1; i<=record_count; i++) if (record_kind[i]=="member") process_member(record_key[i],record_text[i])
+      if (defaults=="true") add_default_preset()
       feature_csv=""; for (name in feature) feature_csv=feature_csv (feature_csv=="" ? "" : ",") name
       if (explicit_version!="") source=explicit_version; else if (path_seen) source="path"; else if (git_seen) source="git"; else source="unknown"
       print found "\t" inherited "\t" source "\t" defaults "\t" feature_csv
@@ -143,17 +146,33 @@ parse_hook_json() {
   printf '%s' "$HOOK_INPUT" | LC_ALL=C awk \
     -v wanted_field="$wanted_field" -v wanted_type="$wanted_type" -v wanted_parent="$wanted_parent" '
     function skip() { while (substr(input,position,1) ~ /[[:space:]]/) position++ }
-    function parse_string(    character,escaped,count) {
+    function hex_digit(character) { return index("0123456789abcdef", tolower(character))-1 }
+    function hex_value(text, cursor,value) { value=0; for (cursor=1; cursor<=length(text); cursor++) value=value*16+hex_digit(substr(text,cursor,1)); return value }
+    function utf8(codepoint) { if (codepoint<128) return sprintf("%c",codepoint); if (codepoint<2048) return sprintf("%c%c",192+int(codepoint/64),128+(codepoint%64)); if (codepoint<65536) return sprintf("%c%c%c",224+int(codepoint/4096),128+(int(codepoint/64)%64),128+(codepoint%64)); return sprintf("%c%c%c%c",240+int(codepoint/262144),128+(int(codepoint/4096)%64),128+(int(codepoint/64)%64),128+(codepoint%64)) }
+    function parse_string(    character,escaped,count,codepoint,low) {
       if (substr(input,position,1) != "\"") return 0
       position++; escaped=0; string_value=""; string_extractable=1
       while (position <= input_length) {
         character=substr(input,position,1)
         if (escaped) {
           if (character ~ /["\\\\\/]/) { string_value=string_value character; position++; escaped=0; continue }
-          if (character ~ /[bfnrt]/) { string_extractable=0; position++; escaped=0; continue }
+          if (character=="b") string_value=string_value sprintf("%c",8)
+          else if (character=="f") string_value=string_value sprintf("%c",12)
+          else if (character=="n") string_value=string_value "\n"
+          else if (character=="r") string_value=string_value "\r"
+          else if (character=="t") string_value=string_value "\t"
+          else if (character ~ /[bfnrt]/) { return 0 }
+          if (character ~ /[bfnrt]/) { position++; escaped=0; continue }
           if (character == "u") {
             for (count=1; count<=4; count++) if (substr(input,position+count,1) !~ /[[:xdigit:]]/) return 0
-            string_extractable=0; position+=5; escaped=0; continue
+            codepoint=hex_value(substr(input,position+1,4))
+            if (codepoint>=55296 && codepoint<=56319 && substr(input,position+5,1)==sprintf("%c",92) && substr(input,position+6,1)=="u") {
+              for (count=1; count<=4; count++) if (substr(input,position+6+count,1) !~ /[[:xdigit:]]/) return 0
+              low=hex_value(substr(input,position+7,4))
+              if (low>=56320 && low<=57343) { codepoint=65536+(codepoint-55296)*1024+low-56320; string_value=string_value utf8(codepoint); position+=11 }
+              else { string_value=string_value utf8(65533); position+=5 }
+            } else { if (codepoint>=56320 && codepoint<=57343) codepoint=65533; string_value=string_value utf8(codepoint); position+=5 }
+            escaped=0; continue
           }
           return 0
         }
@@ -318,12 +337,14 @@ payload_matches_app() {
 }
 
 matching_apps() {
-  local payload="$1" mode="$2" normalized_payload app normalized_app
+  local payload="$1" mode="$2" normalized_payload app normalized_app project_prefix
   if [ "$mode" = "prompt" ]; then
     ascii_lower "$payload"
     normalized_payload="$LOWERED_VALUE"
   else
     normalized_payload="$payload"
+    project_prefix="${PWD%/}/src/apps/"
+    normalized_payload="${normalized_payload//"$project_prefix"/src/apps/}"
   fi
   while IFS= read -r app; do
     if [ "$mode" = "prompt" ]; then

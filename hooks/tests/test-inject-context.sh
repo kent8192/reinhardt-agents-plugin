@@ -164,7 +164,7 @@ regression_bounded_text_boundaries() {
 }
 
 regression_tool_path_boundaries() {
-  local app invalid invalid_payload valid valid_payload session
+  local app invalid invalid_payload valid valid_payload absolute_payload session
   app="$(make_app final-tool-boundaries $'[dependencies]\nreinhardt = "0.4.0"')"
   mkdir -p "$app/src/apps/users/models"
 
@@ -183,6 +183,9 @@ regression_tool_path_boundaries() {
     valid="$(run_hook "$app" tool "$valid_payload")"
     assert_contains "$valid" ':app \"users\"'
   done
+
+  absolute_payload="$(printf '{"session_id":"boundary-absolute-inside","path":"%s/src/apps/users/models.rs","tool_response":{"exit_code":0}}' "$app")"
+  assert_contains "$(run_hook "$app" tool "$absolute_payload")" ':app \"users\"'
 }
 
 regression_workspace_default_features() {
@@ -239,6 +242,20 @@ regression_prompt_value_only() {
   assert_empty "$(run_hook "$app" prompt '{"session_id":"abc","prompt":"do unrelated work"}')"
   output="$(run_hook "$app" prompt '{"session_id":"abc","prompt":"open prompt"}')"
   assert_contains "$output" ':app "prompt"'
+  output="$(run_hook "$app" prompt '{"session_id":"escaped-prompt","prompt":"inspect\n \u0070rompt"}')"
+  assert_contains "$output" ':app "prompt"'
+}
+
+regression_default_feature_preset() {
+  local app output
+  app="$(make_app final-default-preset $'[dependencies]\nreinhardt = "0.4.0"')"
+  output="$(run_hook "$app" session-start)"
+  assert_contains "$output" ':default-features true'
+  assert_contains "$output" 'standard'
+  assert_contains "$output" 'database'
+  assert_contains "$output" 'db-postgres'
+  assert_contains "$output" ':db-backend "postgres"'
+  assert_contains "$output" ':auth-method "auth (default)"'
 }
 
 trace_match_processes() {
@@ -311,6 +328,7 @@ for regression in \
   regression_workspace_default_features \
   regression_no_per_app_basename \
   regression_prompt_value_only \
+  regression_default_feature_preset \
   regression_one_pass_matching \
   regression_unbalanced_manifest \
   regression_top_level_json_fields
@@ -357,10 +375,33 @@ output="$(run_hook "$path_dep" session-start)"
 assert_contains "$output" ':reinhardt-version "path"'
 assert_contains "$output" ':db-backend "postgres"'
 
+dotted="$(make_app dotted $'[dependencies]')"
+printf '%s\n' \
+  'reinhardt.package = "reinhardt-web"' \
+  'reinhardt.path = "../reinhardt"' \
+  'reinhardt.default-features = false' \
+  'reinhardt.features = ["db-sqlite"]' >> "$dotted/Cargo.toml"
+output="$(run_hook "$dotted" session-start)"
+assert_contains "$output" ':reinhardt-version "path"'
+assert_contains "$output" ':db-backend "sqlite"'
+
+single_feature="$(make_app single-feature $'[dependencies]')"
+printf '%s\n' "reinhardt = { version = '0.4.0', default-features = false, features = ['db-sqlite'] }" >> "$single_feature/Cargo.toml"
+assert_contains "$(run_hook "$single_feature" session-start)" ':db-backend "sqlite"'
+
+underscore_default="$(make_app underscore-default $'[dependencies]')"
+printf '%s\n' "reinhardt = { version = '0.4.0', default_features = false, features = ['db-sqlite'] }" >> "$underscore_default/Cargo.toml"
+output="$(run_hook "$underscore_default" session-start)"
+assert_contains "$output" ':default-features false'
+assert_contains "$output" ':db-backend "sqlite"'
+
 target="$(make_app target $'[target.\'cfg(not(target_arch = "wasm32"))\'.dependencies]\nreinhardt = { package = "reinhardt-web", git = "https://example.invalid/reinhardt", features = [\n  "pages",\n  "auth-session",\n] }')"
 output="$(run_hook "$target" session-start)"
 assert_contains "$output" ':reinhardt-version "git"'
-assert_contains "$output" ':features "auth-session, pages"'
+assert_contains "$output" ':features "'
+assert_contains "$output" 'auth-session'
+assert_contains "$output" 'pages'
+assert_contains "$output" 'db-postgres'
 
 workspace_root="$TEST_ROOT/workspace"
 member="$workspace_root/member"
@@ -572,7 +613,7 @@ marker_failure_two="$(cd "$app" && CLAUDE_PLUGIN_DATA="$marker_failure_root" PLU
 assert_contains "$marker_failure_one" ':app "users"'
 assert_contains "$marker_failure_two" ':app "users"'
 
-feature_manifest=$'[package]\nname = "bounded"\nversion = "0.1.0"\n[dependencies]\nreinhardt = { package = "reinhardt-web", version = "0.4.0", features = [\n  "00-quote\\\"feature",\n  "01-slash\\\\feature",\n'
+feature_manifest=$'[package]\nname = "bounded"\nversion = "0.1.0"\n[dependencies]\nreinhardt = { package = "reinhardt-web", version = "0.4.0", default-features = false, features = [\n  "00-quote\\\"feature",\n  "01-slash\\\\feature",\n'
 for number in $(awk 'BEGIN { for (i = 2; i < 27; i++) print i }'); do
   feature_manifest+="  \"feature-$number\","
   feature_manifest+=$'\n'
