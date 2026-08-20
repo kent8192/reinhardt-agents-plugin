@@ -456,7 +456,7 @@ assert_empty "$(run_hook "$metadata" session-start)"
 
 assert_empty "$(run_hook "$plain" session-start '{"session_id":')"
 
-escaped_features="$(make_app escaped-features $'[dependencies]\nreinhardt = "0.4.2"')"
+escaped_features="$(make_app escaped-features '[dependencies]')"
 {
   printf '%s' 'reinhardt = { version = "0.4.2", features = ['
   for index in $(seq 1 20); do

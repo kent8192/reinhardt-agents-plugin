@@ -126,6 +126,8 @@ The context hook recognizes an application only when the current directory has
 Reinhardt facade. Direct, table, path, Git, target-specific, and nearest-parent
 workspace dependency declarations are supported. Comments, dev/build-only
 dependencies, component crates, and workspace declarations alone do not match.
+The hook uses Python 3.11 or newer and only its standard `json` and `tomllib`
+parsers; when that runtime is unavailable, it exits without injecting context.
 
 `SessionStart` injects bounded project metadata and the available skill list.
 `UserPromptSubmit` injects an explicitly named app, while `PostToolUse` injects
