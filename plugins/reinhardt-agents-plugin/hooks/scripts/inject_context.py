@@ -170,29 +170,61 @@ def configured_target(start: Path) -> str | None:
     return None
 
 
-def configured_rustflags(start: Path) -> list[str]:
-    encoded = os.environ.get("CARGO_ENCODED_RUSTFLAGS")
-    if encoded:
-        return [flag for flag in encoded.split("\x1f") if flag]
-
-    raw = os.environ.get("RUSTFLAGS")
-    if raw:
+def parse_rustflags(value) -> list[str] | None:
+    if isinstance(value, str):
         try:
-            return shlex.split(raw)
+            return shlex.split(value)
         except ValueError:
             return []
+    if isinstance(value, list):
+        return [flag for flag in value if isinstance(flag, str)]
+    return None
+
+
+def configured_rustflags(
+    start: Path, target: str, platform
+) -> list[str]:
+    if "CARGO_ENCODED_RUSTFLAGS" in os.environ:
+        return [
+            flag
+            for flag in os.environ["CARGO_ENCODED_RUSTFLAGS"].split("\x1f")
+            if flag
+        ]
+
+    if "RUSTFLAGS" in os.environ:
+        return parse_rustflags(os.environ["RUSTFLAGS"]) or []
 
     for directory in (start, *start.parents):
         for name in ("config", "config.toml"):
-            config = load_toml(directory / ".cargo" / name) or {}
-            rustflags = config.get("build", {}).get("rustflags")
-            if isinstance(rustflags, str):
-                try:
-                    return shlex.split(rustflags)
-                except ValueError:
-                    return []
-            if isinstance(rustflags, list):
-                return [flag for flag in rustflags if isinstance(flag, str)]
+            config = load_toml(directory / ".cargo" / name)
+            if config is None:
+                continue
+
+            target_config = config.get("target", {})
+            if isinstance(target_config, dict):
+                exact = target_config.get(target)
+                if isinstance(exact, dict) and "rustflags" in exact:
+                    rustflags = parse_rustflags(exact["rustflags"])
+                    if rustflags is not None:
+                        return rustflags
+
+                for predicate, settings in target_config.items():
+                    if predicate == target or not isinstance(settings, dict):
+                        continue
+                    if isinstance(predicate, str) and predicate.startswith("cfg("):
+                        if (
+                            target_matches(predicate, platform)
+                            and "rustflags" in settings
+                        ):
+                            rustflags = parse_rustflags(settings["rustflags"])
+                            if rustflags is not None:
+                                return rustflags
+
+            build = config.get("build", {})
+            if isinstance(build, dict) and "rustflags" in build:
+                rustflags = parse_rustflags(build["rustflags"])
+                if rustflags is not None:
+                    return rustflags
     return []
 
 
@@ -236,26 +268,15 @@ class CfgParser:
         return False
 
 
-def rust_target() -> tuple[str, set[str], set[tuple[str, str]]] | None:
+def rustc_cfg(
+    target: str, rustflags: list[str]
+) -> tuple[str, set[str], set[tuple[str, str]]] | None:
+    command = ["rustc", "--print", "cfg", "--target", target, *rustflags]
     try:
-        target = configured_target(Path.cwd())
-        if target is not None:
-            command = ["rustc", "--print", "cfg", "--target", target]
-        else:
-            version = subprocess.run(
-                ["rustc", "-vV"], check=True, capture_output=True, text=True
-            ).stdout
-            target = next(
-                line.removeprefix("host: ")
-                for line in version.splitlines()
-                if line.startswith("host: ")
-            )
-            command = ["rustc", "--print", "cfg"]
-        command.extend(configured_rustflags(Path.cwd()))
         output = subprocess.run(
             command, check=True, capture_output=True, text=True
         ).stdout
-    except (OSError, subprocess.CalledProcessError, StopIteration):
+    except (OSError, subprocess.CalledProcessError):
         return None
 
     flags = set()
@@ -267,6 +288,29 @@ def rust_target() -> tuple[str, set[str], set[tuple[str, str]]] | None:
         else:
             flags.add(line)
     return target, flags, values
+
+
+def rust_target() -> tuple[str, set[str], set[tuple[str, str]]] | None:
+    start = Path.cwd()
+    try:
+        target = configured_target(start)
+        if target is None:
+            version = subprocess.run(
+                ["rustc", "-vV"], check=True, capture_output=True, text=True
+            ).stdout
+            target = next(
+                line.removeprefix("host: ")
+                for line in version.splitlines()
+                if line.startswith("host: ")
+            )
+    except (OSError, subprocess.CalledProcessError, StopIteration):
+        return None
+
+    base_platform = rustc_cfg(target, [])
+    if base_platform is None:
+        return None
+    rustflags = configured_rustflags(start, target, base_platform)
+    return rustc_cfg(target, rustflags)
 
 
 def target_matches(target: str, platform) -> bool:

@@ -453,12 +453,32 @@ regression_configured_target() {
 }
 
 regression_configured_rustflags() {
-  local app output
+  local app output host_target host_arch
   app="$(make_app final-configured-rustflags $'[target.\'cfg(custom_flag)\'.dependencies]\nreinhardt = { version = "0.4.0", default-features = false, features = ["db-sqlite"] }')"
   mkdir -p "$app/.cargo"
   printf '%s\n' $'[build]\nrustflags = ["--cfg", "custom_flag"]' > "$app/.cargo/config.toml"
   output="$(run_hook "$app" session-start)"
   assert_contains "$output" ':db-backend "sqlite"'
+
+  host_target="$(rustc -vV | awk '/^host: / { print $2 }')"
+  app="$(make_app final-target-rustflags $'[target.\'cfg(custom_flag)\'.dependencies]\nreinhardt = { version = "0.4.0", default-features = false, features = ["db-sqlite"] }')"
+  mkdir -p "$app/.cargo"
+  printf '%s\n' "[target.\"$host_target\"]" 'rustflags = ["--cfg", "custom_flag"]' > "$app/.cargo/config"
+  output="$(run_hook "$app" session-start)"
+  assert_contains "$output" ':db-backend "sqlite"'
+
+  host_arch="$(rustc --print cfg | sed -n 's/^target_arch="\(.*\)"$/\1/p')"
+  app="$(make_app final-cfg-rustflags $'[target.\'cfg(custom_flag)\'.dependencies]\nreinhardt = { version = "0.4.0", default-features = false, features = ["db-sqlite"] }')"
+  mkdir -p "$app/.cargo"
+  printf '%s\n' "[target.'cfg(target_arch = \"$host_arch\")']" 'rustflags = ["--cfg", "custom_flag"]' > "$app/.cargo/config"
+  output="$(run_hook "$app" session-start)"
+  assert_contains "$output" ':db-backend "sqlite"'
+
+  app="$(make_app final-empty-rustflags $'[target.\'cfg(custom_flag)\'.dependencies]\nreinhardt = { version = "0.4.0", default-features = false, features = ["db-sqlite"] }')"
+  mkdir -p "$app/.cargo"
+  printf '%s\n' $'[build]\nrustflags = ["--cfg", "custom_flag"]' > "$app/.cargo/config"
+  output="$(cd "$app" && CARGO_ENCODED_RUSTFLAGS= PLUGIN_DATA="$STATE_ROOT" "$HOOK" session-start <<< '{}')"
+  assert_empty "$output"
 }
 
 regression_config_file_precedence() {
