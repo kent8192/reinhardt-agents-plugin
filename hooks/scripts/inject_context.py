@@ -157,16 +157,31 @@ def find_workspace(start: Path) -> dict:
     return {}
 
 
-def configured_target(start: Path) -> str | None:
+def cargo_configs(start: Path) -> list[dict]:
+    configs = []
+    for directory in (start, *start.parents):
+        for name in ("config", "config.toml"):
+            path = directory / ".cargo" / name
+            if not path.is_file():
+                continue
+            config = load_toml(path)
+            if config is not None:
+                configs.append(config)
+            break
+    return configs
+
+
+def configured_target(start: Path) -> str | list[str] | None:
     target = os.environ.get("CARGO_BUILD_TARGET")
     if target:
         return target
-    for directory in (start, *start.parents):
-        for name in ("config", "config.toml"):
-            config = load_toml(directory / ".cargo" / name)
-            target = (config or {}).get("build", {}).get("target")
-            if isinstance(target, str):
-                return target
+    for config in cargo_configs(start):
+        build = config.get("build", {})
+        target = build.get("target") if isinstance(build, dict) else None
+        if isinstance(target, str):
+            return target
+        if isinstance(target, list) and all(isinstance(item, str) for item in target):
+            return target
     return None
 
 
@@ -194,20 +209,20 @@ def configured_rustflags(
     if "RUSTFLAGS" in os.environ:
         return parse_rustflags(os.environ["RUSTFLAGS"]) or []
 
-    for directory in (start, *start.parents):
-        for name in ("config", "config.toml"):
-            config = load_toml(directory / ".cargo" / name)
-            if config is None:
-                continue
+    target_rustflags = []
+    build_rustflags = []
+    for config in reversed(cargo_configs(start)):
+        matched_target = False
+        target_config = config.get("target", {})
+        if isinstance(target_config, dict):
+            exact = target_config.get(target)
+            if isinstance(exact, dict) and "rustflags" in exact:
+                rustflags = parse_rustflags(exact["rustflags"])
+                if rustflags is not None:
+                    target_rustflags.extend(rustflags)
+                    matched_target = True
 
-            target_config = config.get("target", {})
-            if isinstance(target_config, dict):
-                exact = target_config.get(target)
-                if isinstance(exact, dict) and "rustflags" in exact:
-                    rustflags = parse_rustflags(exact["rustflags"])
-                    if rustflags is not None:
-                        return rustflags
-
+            if not matched_target:
                 for predicate, settings in target_config.items():
                     if predicate == target or not isinstance(settings, dict):
                         continue
@@ -218,14 +233,15 @@ def configured_rustflags(
                         ):
                             rustflags = parse_rustflags(settings["rustflags"])
                             if rustflags is not None:
-                                return rustflags
+                                target_rustflags.extend(rustflags)
+                                matched_target = True
 
-            build = config.get("build", {})
-            if isinstance(build, dict) and "rustflags" in build:
-                rustflags = parse_rustflags(build["rustflags"])
-                if rustflags is not None:
-                    return rustflags
-    return []
+        build = config.get("build", {})
+        if isinstance(build, dict) and "rustflags" in build:
+            rustflags = parse_rustflags(build["rustflags"])
+            if rustflags is not None:
+                build_rustflags.extend(rustflags)
+    return target_rustflags or build_rustflags
 
 
 class CfgParser:
@@ -290,40 +306,55 @@ def rustc_cfg(
     return target, flags, values
 
 
-def rust_target() -> tuple[str, set[str], set[tuple[str, str]]] | None:
+def rust_target() -> list[tuple[str, set[str], set[tuple[str, str]]]] | None:
     start = Path.cwd()
     try:
-        target = configured_target(start)
-        if target is None:
+        configured = configured_target(start)
+        if configured is None:
             version = subprocess.run(
                 ["rustc", "-vV"], check=True, capture_output=True, text=True
             ).stdout
-            target = next(
+            targets = [next(
                 line.removeprefix("host: ")
                 for line in version.splitlines()
                 if line.startswith("host: ")
-            )
+            )]
+        elif isinstance(configured, list):
+            targets = configured
+        else:
+            targets = [configured]
     except (OSError, subprocess.CalledProcessError, StopIteration):
         return None
 
-    base_platform = rustc_cfg(target, [])
-    if base_platform is None:
-        return None
-    rustflags = configured_rustflags(start, target, base_platform)
-    return rustc_cfg(target, rustflags)
+    platforms = []
+    for target in targets:
+        base_platform = rustc_cfg(target, [])
+        if base_platform is None:
+            continue
+        rustflags = configured_rustflags(start, target, base_platform)
+        platform = rustc_cfg(target, rustflags)
+        if platform is not None:
+            platforms.append(platform)
+    return platforms or None
 
 
 def target_matches(target: str, platform) -> bool:
     if platform is None:
         return False
-    host, flags, values = platform
-    if not target.startswith("cfg("):
-        return target == host
-    try:
-        parser = CfgParser(target[4:-1], flags, values)
-        return parser.expression() and parser.position == len(parser.tokens)
-    except (IndexError, ValueError):
-        return False
+    platforms = platform if isinstance(platform, list) else [platform]
+    for candidate in platforms:
+        host, flags, values = candidate
+        if not target.startswith("cfg("):
+            if target == host:
+                return True
+            continue
+        try:
+            parser = CfgParser(target[4:-1], flags, values)
+            if parser.expression() and parser.position == len(parser.tokens):
+                return True
+        except (IndexError, ValueError):
+            continue
+    return False
 
 
 def runtime_dependencies(manifest: dict):

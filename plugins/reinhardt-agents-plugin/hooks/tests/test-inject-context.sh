@@ -440,7 +440,7 @@ regression_active_target_only() {
 }
 
 regression_configured_target() {
-  local app output
+  local app output host_target
   app="$(make_app final-configured-target $'[target.\'cfg(target_arch = "wasm32")\'.dependencies]\nreinhardt = { version = "0.4.0", default-features = false, features = ["db-sqlite"] }')"
   mkdir -p "$app/.cargo"
   printf '%s\n' $'[build]\ntarget = "wasm32-unknown-unknown"' > "$app/.cargo/config.toml"
@@ -450,6 +450,20 @@ regression_configured_target() {
   app="$(make_app final-env-target $'[target.wasm32-unknown-unknown.dependencies]\nreinhardt = { version = "0.4.0", default-features = false, features = ["db-sqlite"] }')"
   output="$(cd "$app" && CARGO_BUILD_TARGET=wasm32-unknown-unknown PLUGIN_DATA="$STATE_ROOT" "$HOOK" session-start <<< '{}')"
   assert_contains "$output" ':db-backend "sqlite"'
+
+  host_target="$(rustc -vV | awk '/^host: / { print $2 }')"
+  app="$TEST_ROOT/final-array-target"
+  mkdir -p "$app/.cargo" "$app/src/bin" "$app/src/apps"
+  : > "$app/src/bin/manage.rs"
+  printf '%s\n' \
+    '[target.wasm32-unknown-unknown.dependencies]' \
+    'reinhardt = { version = "0.4.0", default-features = false, features = ["db-sqlite"] }' \
+    "[target.\"$host_target\".dependencies]" \
+    'reinhardt = { version = "0.4.0", default-features = false, features = ["db-postgres"] }' > "$app/Cargo.toml"
+  printf '%s\n' '[build]' "target = [\"wasm32-unknown-unknown\", \"$host_target\"]" > "$app/.cargo/config.toml"
+  output="$(run_hook "$app" session-start)"
+  assert_contains "$output" 'db-sqlite'
+  assert_contains "$output" 'db-postgres'
 }
 
 regression_configured_rustflags() {
@@ -496,6 +510,36 @@ regression_config_file_precedence() {
   printf '%s\n' $'[build]\ntarget = "wasm32-unknown-unknown"' > "$app/.cargo/config.toml"
   output="$(run_hook "$app" session-start)"
   assert_contains "$output" ':db-backend "postgres"'
+}
+
+regression_config_file_selection() {
+  local app output host_target
+  host_target="$(rustc -vV | awk '/^host: / { print $2 }')"
+  app="$TEST_ROOT/final-config-file-selection"
+  mkdir -p "$app/.cargo" "$app/src/bin" "$app/src/apps"
+  : > "$app/src/bin/manage.rs"
+  printf '%s\n' \
+    "[target.\"$host_target\".dependencies]" \
+    'reinhardt = { version = "0.4.0", default-features = false, features = ["db-postgres"] }' \
+    '[target.wasm32-unknown-unknown.dependencies]' \
+    'reinhardt = { version = "0.4.0", default-features = false, features = ["db-sqlite"] }' > "$app/Cargo.toml"
+  printf '%s\n' '[net]' 'git-fetch-with-cli = true' > "$app/.cargo/config"
+  printf '%s\n' $'[build]\ntarget = "wasm32-unknown-unknown"' > "$app/.cargo/config.toml"
+  output="$(run_hook "$app" session-start)"
+  assert_contains "$output" ':db-backend "postgres"'
+}
+
+regression_ancestor_rustflags() {
+  local root app output
+  root="$TEST_ROOT/final-ancestor-rustflags"
+  app="$root/project/app"
+  mkdir -p "$root/.cargo" "$app/.cargo" "$app/src/bin" "$app/src/apps"
+  : > "$app/src/bin/manage.rs"
+  printf '%s\n' $'[target.\'cfg(custom_flag)\'.dependencies]\nreinhardt = { version = "0.4.0", default-features = false, features = ["db-sqlite"] }' > "$app/Cargo.toml"
+  printf '%s\n' $'[build]\nrustflags = ["--cfg", "custom_flag"]' > "$root/.cargo/config"
+  printf '%s\n' $'[build]\nrustflags = ["--cfg", "ancestor_child_flag"]' > "$app/.cargo/config"
+  output="$(run_hook "$app" session-start)"
+  assert_contains "$output" ':db-backend "sqlite"'
 }
 
 regression_windows_tool_path() {
@@ -605,6 +649,8 @@ for regression in \
   regression_configured_target \
   regression_configured_rustflags \
   regression_config_file_precedence \
+  regression_config_file_selection \
+  regression_ancestor_rustflags \
   regression_windows_tool_path \
   regression_combined_dependency_defaults \
   regression_full_preset_auth \
