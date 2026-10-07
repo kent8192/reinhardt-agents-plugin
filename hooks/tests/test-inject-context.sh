@@ -625,7 +625,7 @@ regression_full_preset_auth() {
   local app output
   app="$(make_app final-full-preset $'[dependencies]\nreinhardt = { version = "0.4.0", default-features = false, features = ["full"] }')"
   output="$(run_hook "$app" session-start)"
-  assert_contains "$output" ':auth-method "jwt, session, oauth, token"'
+  assert_contains "$output" ':auth-method "jwt, session, oauth, social/oauth, token"'
 }
 
 regression_optional_dependency_activation() {
