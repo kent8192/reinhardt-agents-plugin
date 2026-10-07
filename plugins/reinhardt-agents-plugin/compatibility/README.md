@@ -14,8 +14,11 @@ instructions for a 0.4 application. Read the project's manifest first.
 `reinhardt-web-alpha20.json` contains the release's facade feature definitions.
 The context hook expands local feature edges for 0.4 declarations from this
 graph and reports `:feature-baseline "0.4.0-alpha.20"`. Cargo requirements are
-intersected with the 0.4 family: shortened requirements such as `0.4` are
-recognized, while ranges ending below `0.4.0` retain their legacy graph.
+intersected with stable 0.4 releases, and prerelease requirements are checked
+against the pinned alpha.20 release using SemVer ordering and Cargo's prerelease
+compatibility rule. Shortened requirements such as `0.4` and bounded alpha.20
+ranges are recognized; ranges selecting only older releases retain their legacy
+graph. Exact other prereleases do not establish compatibility with this snapshot.
 Forwarded dependency features infer authentication capabilities and are not
 mislabeled as facade flags. Availability does not prove that the application
 configured a particular authentication method. Unversioned path/git dependencies
@@ -37,7 +40,8 @@ scripts/sync-packaged-plugin.sh --check
 ```
 
 These checks cover edit-hook dispatch, context injection, feature expansion,
-and scaffolding manifest parsing. They do not compile the Rust documentation
+scaffolding manifest parsing, and inline/subtable workspace test dependencies.
+They do not compile the Rust documentation
 examples or execute application behavior.
 
 To compare a verified release checkout/archive:

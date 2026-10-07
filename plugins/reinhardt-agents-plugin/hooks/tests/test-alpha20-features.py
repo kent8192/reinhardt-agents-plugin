@@ -52,6 +52,16 @@ class Alpha20Features(unittest.TestCase):
             ">0.4": False, "^0.0": False, "=0.4": True,
             ">=0.5, <0.6": False, ">=0.5, <0.4.0": False,
             "0.3": False, "~0.3": False,
+            ">=0.4.0-alpha.20, <0.4.0-alpha.21": True,
+            ">=0.4.0-alpha.2, <0.4.0-alpha.11": False,
+            ">=0.4.0-alpha.2, <0.4.0-alpha.100": True,
+            ">0.4.0-alpha.20, <0.4.0-alpha.21": False,
+            ">=0.4.0-alpha.20, <0.4.0-alpha.20": False,
+            "=0.4.0-alpha.20+build.1": True,
+            "=0.4.0-alpha.19": False,
+            ">=0.4.0-alpha.19, <0.4.0-alpha.20": False,
+            ">=0.4.0-alpha.20, <0.4.0-alpha.20.1": True,
+            ">=0.4, <0.4.0-alpha.21": False,
         }
         for requirement, current in requirements.items():
             with self.subTest(requirement=requirement):

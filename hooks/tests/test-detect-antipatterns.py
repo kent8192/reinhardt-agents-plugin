@@ -135,6 +135,39 @@ class EditHookTests(unittest.TestCase):
                 self.assertEqual(result.stdout, "")
                 self.assertEqual(rule in "".join(result.stderr.split()), True, result.stderr)
 
+    @unittest.skipUnless(shutil.which("semgrep"), "Requires the optional local semgrep scanner")
+    def test_real_scanner_covers_cargo_dependency_tables(self):
+        cases = {
+            "subtable": ('[dev-dependencies.reinhardt-test]\nworkspace = true\n', True),
+            "quoted-target": (
+                '[target.\'cfg(unix)\'.dev-dependencies."reinhardt-test"]\n'
+                '# Extra dependency properties are allowed before workspace.\n'
+                'features = ["test-utils"]\nworkspace = true\n', True),
+            "different-table": (
+                '[dev-dependencies.reinhardt-test]\npath = "../test"\n'
+                '[dependencies.other]\nworkspace = true\n', False),
+            "disabled": ('[dev-dependencies.reinhardt-test]\nworkspace = false\n', False),
+            "runtime": ('[dependencies.reinhardt-test]\nworkspace = true\n', False),
+        }
+        expected = set()
+        for name, (text, finding) in cases.items():
+            path = self.file(f"{name}/Cargo.toml")
+            path.write_text(text)
+            if finding:
+                expected.add(path.resolve())
+        result = subprocess.run(
+            [shutil.which("semgrep"), "scan", "--config",
+             str(ROOT / "hooks/semgrep/reinhardt-antipatterns.yml"),
+             "--json", "--metrics", "off", "--quiet", "--no-git-ignore", str(self.root)],
+            cwd=self.root, capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        report = json.loads(result.stdout)
+        self.assertEqual(report["errors"], [])
+        actual = {Path(finding["path"]).resolve() for finding in report["results"]
+                  if finding["check_id"].endswith("reinhardt-no-workspace-test-dep")}
+        self.assertEqual(actual, expected)
+
 
 if __name__ == "__main__":
     unittest.main()

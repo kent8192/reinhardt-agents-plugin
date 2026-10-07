@@ -498,9 +498,59 @@ def default_feature_graph(
 
 
 def allows_04_family(requirement: str) -> bool:
-    """Intersect Cargo comparator ranges with the 0.4 release family."""
+    """Recognize stable 0.4 ranges and ranges selecting the pinned alpha.20."""
     lower, lower_inclusive = (0, 4, 0), True
     upper, upper_inclusive = (0, 5, 0), False
+    stable_possible = True
+    pinned_core = (0, 4, 0)
+    pinned_pre = (0, ((1, "alpha"), (0, 20)))
+    pinned_matches = True
+    prerelease_compatible = False
+
+    def prerelease_key(value):
+        if value is None:
+            return (1, ())  # A stable release sorts after every prerelease.
+        return (0, tuple((0, int(part)) if part.isdigit() else (1, part)
+                         for part in value.split(".")))
+
+    def matches_pinned(operator, numeric, pre):
+        prefix_matches = pinned_core[:len(numeric)] == tuple(numeric)
+        exact = prefix_matches and pinned_pre == pre
+        if operator in {"=", "wildcard"}:
+            return exact
+        if operator in {">", ">=", "<", "<="}:
+            prefix = pinned_core[:len(numeric)]
+            value = tuple(numeric)
+            greater = prefix > value or (prefix == value and len(numeric) == 3
+                                        and pinned_pre > pre)
+            less = prefix < value or (prefix == value and len(numeric) == 3
+                                     and pinned_pre < pre)
+            return {">": greater, ">=": exact or greater,
+                    "<": less, "<=": exact or less}[operator]
+        if pinned_core[0] != numeric[0]:
+            return False
+        if operator == "~":
+            if len(numeric) > 1 and pinned_core[1] != numeric[1]:
+                return False
+            if len(numeric) == 3 and pinned_core[2] != numeric[2]:
+                return pinned_core[2] > numeric[2]
+            return pinned_pre >= pre
+        if len(numeric) == 1:
+            return True
+        if len(numeric) == 2:
+            return (pinned_core[1] >= numeric[1] if numeric[0] > 0
+                    else pinned_core[1] == numeric[1])
+        if numeric[0] > 0:
+            if pinned_core[1:] != tuple(numeric[1:]):
+                return pinned_core[1:] > tuple(numeric[1:])
+        elif numeric[1] > 0:
+            if pinned_core[1] != numeric[1]:
+                return False
+            if pinned_core[2] != numeric[2]:
+                return pinned_core[2] > numeric[2]
+        elif pinned_core[1:] != tuple(numeric[1:]):
+            return False
+        return pinned_pre >= pre
 
     def restrict(low=None, low_inclusive=True, high=None, high_inclusive=False):
         nonlocal lower, lower_inclusive, upper, upper_inclusive
@@ -519,12 +569,13 @@ def allows_04_family(requirement: str) -> bool:
         match = re.fullmatch(
             r"\s*(>=|<=|>|<|=|\^|~)?\s*"
             r"([0-9]+|[xX*])(?:\.([0-9]+|[xX*]))?"
-            r"(?:\.([0-9]+|[xX*]))?(?:-[0-9A-Za-z.-]+)?"
+            r"(?:\.([0-9]+|[xX*]))?(?:-([0-9A-Za-z.-]+))?"
             r"(?:\+[0-9A-Za-z.-]+)?\s*", comparator
         )
         if match is None:
             return False
-        operator, *parts = match.groups()
+        operator, major, minor, patch, prerelease = match.groups()
+        parts = (major, minor, patch)
         numeric = []
         wildcard = False
         for index, part in enumerate(parts):
@@ -535,6 +586,16 @@ def allows_04_family(requirement: str) -> bool:
                 return False
             else:
                 numeric.append(int(part))
+        if prerelease is not None and (
+            len(numeric) != 3 or wildcard
+            or any(not part or (part.isdigit() and len(part) > 1 and part.startswith("0"))
+                   for part in prerelease.split("."))
+        ):
+            return False
+        pre = prerelease_key(prerelease)
+        pinned_matches &= matches_pinned("wildcard" if wildcard else operator or "^",
+                                         numeric, pre) if numeric else False
+        prerelease_compatible |= tuple(numeric) == pinned_core and prerelease is not None
         if not numeric:
             if operator is not None:
                 return False
@@ -555,24 +616,26 @@ def allows_04_family(requirement: str) -> bool:
             ceiling = (value[0] + 1, 0, 0) if len(numeric) == 1 else (value[0], value[1] + 1, 0)
             restrict(value, high=ceiling)
         elif operator == "=":
+            stable_possible &= prerelease is None
             restrict(value, high=value if len(numeric) == 3 else next_prefix,
                      high_inclusive=len(numeric) == 3)
         elif operator == ">=":
             restrict(value)
         elif operator == ">":
             restrict(value if len(numeric) == 3 else next_prefix,
-                     low_inclusive=len(numeric) != 3)
+                     low_inclusive=len(numeric) != 3 or prerelease is not None)
         elif operator == "<":
             restrict(high=value)
         elif operator == "<=":
             restrict(high=value if len(numeric) == 3 else next_prefix,
-                     high_inclusive=len(numeric) == 3)
+                     high_inclusive=len(numeric) == 3 and prerelease is None)
     first = lower if lower_inclusive else (lower[0], lower[1], lower[2] + 1)
-    return first < upper or (first == upper and upper_inclusive)
+    stable_matches = stable_possible and (first < upper or (first == upper and upper_inclusive))
+    return stable_matches or (pinned_matches and prerelease_compatible)
 
 
 def alpha20_features(version: str | None) -> dict[str, list[str]] | None:
-    # A pinned graph describes the 0.4 family, including explicit alpha versions.
+    # Use the snapshot for stable 0.4 ranges or ranges that allow its pinned alpha.
     if version is None or not allows_04_family(version):
         return None
     snapshot = Path(__file__).resolve().parents[2] / "compatibility/reinhardt-web-alpha20.json"

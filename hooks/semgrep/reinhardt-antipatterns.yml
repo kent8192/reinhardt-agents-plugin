@@ -16,9 +16,12 @@ rules:
   # ERROR: reinhardt-test must not use workspace = true in dev-dependencies
   - id: reinhardt-no-workspace-test-dep
     patterns:
-      - pattern-regex: 'reinhardt-test\s*=\s*\{[^}]*workspace\s*=\s*true'
+      - pattern-either:
+          - pattern-regex: 'reinhardt-test\s*=\s*\{[^}]*workspace\s*=\s*true'
+          - pattern-regex: >-
+              (?m)^[\t ]*\[(?:target\.[^\]\r\n]+\.)?dev-dependencies\.(?:reinhardt-test|"reinhardt-test"|'reinhardt-test')\][\t ]*(?:#[^\r\n]*)?\r?\n(?:(?![\t ]*\[)[^\r\n]*(?:\r?\n|$))*?[\t ]*workspace[\t ]*=[\t ]*true\b
     message: >-
-      `reinhardt-test = { workspace = true }` in dev-dependencies is forbidden
+      Workspace-inherited `reinhardt-test` in dev-dependencies is forbidden
       in functional crates. Use an optional dependency or path-only dev-dependency
       instead (see KI-2).
     languages: [generic]
