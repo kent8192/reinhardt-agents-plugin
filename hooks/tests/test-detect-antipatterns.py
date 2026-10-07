@@ -210,5 +210,41 @@ class EditHookTests(unittest.TestCase):
         self.assertEqual(actual, expected)
 
 
+    @unittest.skipUnless(shutil.which("semgrep") and shutil.which("cargo"), "Requires actual Semgrep and Cargo manifest parser")
+    def test_real_scanner_ignores_toml_11_comments_and_strings(self):
+        dependency = self.root / "stubdep"
+        (dependency / "src").mkdir(parents=True)
+        (dependency / "Cargo.toml").write_text('[package]\nname="reinhardt-test"\nversion="0.1.0"\nedition="2024"\n')
+        (dependency / "src/lib.rs").write_text("")
+        shutil.copytree(dependency, self.root / "workspace = true")
+        cases = {
+            "quoted-workspace-text": ('reinhardt-test = { path = "../workspace = true" }\n', False),
+            "literal-workspace-text": ("reinhardt-test = { path = '../workspace = true' }\n", False),
+            "comment": ('reinhardt-test = {\n# workspace = true\npath = "../stubdep",\n}\n', False),
+            "trailing-comment": ('reinhardt-test = { path = "../stubdep", # workspace = true\n}\n', False),
+            "quoted-text": ('reinhardt-test = { path = "../stubdep", package = "reinhardt-test" } # workspace = true\n', False),
+            "literal-text": ('reinhardt-test = { path = "../stubdep" }\nnote = { package="reinhardt-test", path="../stubdep" } # workspace = true\n', False),
+            "comment-and-key": ('reinhardt-test = {\n# workspace = true is also an actual key below\nworkspace = true,\n}\n', True),
+            "quoted-key": ('reinhardt-test = {\n# unrelated comment\n"workspace" = true,\n}\n', True),
+        }
+        expected = set()
+        for name, (dependency_text, finding) in cases.items():
+            path = self.file(f"{name}/Cargo.toml")
+            path.write_text('[package]\nname="fixture"\nversion="0.1.0"\nedition="2024"\n[lib]\npath="lib.rs"\n[workspace]\n[workspace.dependencies]\nreinhardt-test={path="../stubdep"}\n[dev-dependencies]\n' + dependency_text)
+            path.with_name("lib.rs").write_text("")
+            # Cargo's real parser supports multiline inline tables (TOML1.1),
+            # unlike Python3.11/3.12 tomllib. Validate the fixture using Cargo.
+            parsed = subprocess.run([shutil.which("cargo"), "metadata", "--offline", "--no-deps", "--format-version", "1", "--manifest-path", str(path)], capture_output=True, text=True, check=False)
+            self.assertEqual(parsed.returncode, 0, parsed.stderr)
+            if finding:
+                expected.add(path.resolve())
+        result = subprocess.run([shutil.which("semgrep"), "scan", "--config", str(ROOT / "hooks/semgrep/reinhardt-antipatterns.yml"), "--json", "--metrics", "off", "--quiet", "--no-git-ignore", str(self.root)], cwd=self.root, capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        report = json.loads(result.stdout)
+        self.assertEqual(report["errors"], [])
+        actual = {Path(finding["path"]).resolve() for finding in report["results"] if finding["check_id"].endswith("reinhardt-no-workspace-test-dep")}
+        self.assertEqual(actual, expected)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -2,6 +2,9 @@
 """Check pinned feature expansion and all published scaffolding manifests."""
 import importlib.util
 import json
+import os
+import subprocess
+import tempfile
 from pathlib import Path
 import re
 import sys
@@ -45,6 +48,8 @@ class Alpha20Features(unittest.TestCase):
         requirements = {
             "0.4": True, "^0.4": True, "~0.4": True,
             "0.4.*": True, "=0.4.1": True,
+            ">=0.4.*, <0.5": True, "<=0.4.*": True, ">0.4.*": False,
+            "<0.4.*": False, "^0.4.*": True, "~0.4.*": True,
             ">=0.3, <0.4.0": False, ">=0.3, <0.4": False,
             ">=0.4, <0.5": True, ">0.4.0, <0.4.2": True,
             ">0.4.0, <0.4.1": False, "<=0.4": True,
@@ -72,6 +77,20 @@ class Alpha20Features(unittest.TestCase):
                 self.assertEqual(metadata["feature_baseline"],
                                  "0.4.0-alpha.20" if current else "legacy presets")
                 self.assertEqual("routing" in metadata["features"], current)
+
+    def test_social_auth_context_preserves_explicit_oauth_capability(self):
+        metadata = hook.dependency_metadata({"dependencies": {"reinhardt": {
+            "package": "reinhardt-web", "version": "=0.4.0-alpha.20",
+            "default-features": False, "features": ["social-auth"],
+        }}}, {})
+        self.assertIn("reinhardt-auth/social", metadata["dependency_tokens"])
+        with tempfile.TemporaryDirectory(prefix="social-auth-context-", dir="/tmp") as temporary:
+            project = Path(temporary)
+            (project / "src/bin").mkdir(parents=True)
+            (project / "src/bin/manage.rs").write_text("fn main() {}")
+            (project / "Cargo.toml").write_text('[dependencies]\nreinhardt={package="reinhardt-web",version="=0.4.0-alpha.20",default-features=false,features=["social-auth"]}\n')
+            result = subprocess.run([sys.executable, str(ROOT / "hooks/scripts/inject_context.py")], cwd=project, input='{"hook_event_name":"SessionStart"}', capture_output=True, text=True, env=dict(os.environ), check=True)
+            self.assertIn("social/oauth", result.stdout)
 
     def test_published_manifests_are_readable_and_features_exist(self):
         document = (ROOT / "skills/scaffolding/references/feature-flags.md").read_text()

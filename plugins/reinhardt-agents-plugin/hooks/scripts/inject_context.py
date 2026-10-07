@@ -593,7 +593,7 @@ def allows_04_family(requirement: str) -> bool:
         ):
             return False
         pre = prerelease_key(prerelease)
-        pinned_matches &= matches_pinned("wildcard" if wildcard else operator or "^",
+        pinned_matches &= matches_pinned("wildcard" if wildcard and operator is None else operator or "^",
                                          numeric, pre) if numeric else False
         prerelease_compatible |= tuple(numeric) == pinned_core and prerelease is not None
         if not numeric:
@@ -603,9 +603,7 @@ def allows_04_family(requirement: str) -> bool:
         value = tuple(numeric + [0] * (3 - len(numeric)))
         last = len(numeric) - 1
         next_prefix = tuple(numeric[:last] + [numeric[last] + 1] + [0] * (2 - last))
-        if wildcard:
-            if operator not in {None, "="}:
-                return False
+        if wildcard and operator in {None, "="}:
             restrict(value, high=next_prefix)
         elif operator in {None, "^"}:
             first_nonzero = next((i for i, part in enumerate(numeric) if part), last)
@@ -862,7 +860,8 @@ def application_metadata() -> dict | None:
     ]
     tokens = metadata["dependency_tokens"]
     for dependency_feature, label in (
-        ("jwt", "jwt"), ("sessions", "session"), ("oauth", "oauth"), ("token", "token")
+        ("jwt", "jwt"), ("sessions", "session"), ("oauth", "oauth"),
+        ("social", "social/oauth"), ("token", "token")
     ):
         if ("reinhardt-auth/" + dependency_feature in tokens
                 or "reinhardt-auth/auth-full" in tokens) and label not in auth:

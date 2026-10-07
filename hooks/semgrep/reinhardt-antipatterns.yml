@@ -18,7 +18,7 @@ rules:
     patterns:
       - pattern-either:
           - pattern-regex: >-
-              (?m)^[\t ]*\[[\t ]*(?:(?:target|"target"|'target')[\t ]*\.[^\]\r\n]+\.[\t ]*)?(?:dev-dependencies|"dev-dependencies"|'dev-dependencies')[\t ]*\][\t ]*(?:#[^\r\n]*)?\r?\n(?:(?![\t ]*\[)[^\r\n]*(?:\r?\n|$))*?[\t ]*(?:reinhardt-test|"reinhardt-test"|'reinhardt-test')[\t ]*=[\t ]*\{[^}]*\bworkspace[\t ]*=[\t ]*true\b
+              (?m)^[\t ]*\[[\t ]*(?:(?:target|"target"|'target')[\t ]*\.[^\]\r\n]+\.[\t ]*)?(?:dev-dependencies|"dev-dependencies"|'dev-dependencies')[\t ]*\][\t ]*(?:#[^\r\n]*)?\r?\n(?:(?![\t ]*\[)[^\r\n]*(?:\r?\n|$))*?[\t ]*(?:reinhardt-test|"reinhardt-test"|'reinhardt-test')[\t ]*=[\t ]*\{(?:[^#"'{}]|"(?:\\.|[^"\\])*"|'[^']*'|#[^\r\n]*(?:\r?\n|$))*?(?<![\w-])(?:workspace|"workspace"|'workspace')[\t ]*=[\t ]*true\b
           - pattern-regex: >-
               (?m)^[\t ]*\[[\t ]*(?:(?:target|"target"|'target')[\t ]*\.[^\]\r\n]+\.[\t ]*)?(?:dev-dependencies|"dev-dependencies"|'dev-dependencies')[\t ]*\][\t ]*(?:#[^\r\n]*)?\r?\n(?:(?![\t ]*\[)[^\r\n]*(?:\r?\n|$))*?[\t ]*(?:reinhardt-test|"reinhardt-test"|'reinhardt-test')[\t ]*\.[\t ]*(?:workspace|"workspace"|'workspace')[\t ]*=[\t ]*true\b
           - pattern-regex: >-
