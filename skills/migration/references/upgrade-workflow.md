@@ -51,7 +51,9 @@ reinhardt = { package = "reinhardt-web", version = "0.1.0-rc.19", features = [..
   gh release list -R kent8192/reinhardt-web --limit 1
   ```
 
-  Or read `reinhardt/Cargo.toml` if the repo is available locally.
+  Or read the framework checkout's root `Cargo.toml` `[package].version`
+  if it is available locally. The pinned 0.4.0-alpha.20 facade package and
+  feature graph share this manifest with `[workspace]`.
 
 ### Step 1.3 — Dispatch migration-analyzer agent
 

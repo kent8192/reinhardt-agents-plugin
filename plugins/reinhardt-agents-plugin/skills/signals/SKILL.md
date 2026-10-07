@@ -90,12 +90,13 @@ cancelled, or expose progress to a polling/server-function UI:
 
 ## Dynamic References
 
-For the latest API:
+For the latest API, resolve source paths relative to the local framework
+checkout root:
 
-1. Read `reinhardt/crates/reinhardt-core/src/signals.rs` for signal types and `connect_receiver!` macro
-2. Read `reinhardt/crates/reinhardt-core/src/signals/model_signals.rs` for pre/post save/delete
-3. Read `reinhardt/crates/reinhardt-core/src/signals/transaction.rs` for transaction-aware signals
-4. Read `reinhardt/crates/reinhardt-tasks/src/lib.rs` for task system types
-5. Read `reinhardt/crates/reinhardt-tasks/src/task.rs` for `Task` and `TaskExecutor` traits
-6. For 0.4 durable jobs, read `reinhardt/crates/reinhardt-tasks/src/durable.rs`
-7. Read `reinhardt/Cargo.toml` for facade feature wiring such as `tasks-durable`
+1. Read `crates/reinhardt-core/src/signals.rs` for signal types and `connect_receiver!` macro
+2. Read `crates/reinhardt-core/src/signals/model_signals.rs` for pre/post save/delete
+3. Read `crates/reinhardt-core/src/signals/transaction.rs` for transaction-aware signals
+4. Read `crates/reinhardt-tasks/src/lib.rs` for task system types
+5. Read `crates/reinhardt-tasks/src/task.rs` for `Task` and `TaskExecutor` traits
+6. For 0.4 durable jobs, read `crates/reinhardt-tasks/src/durable.rs`
+7. Read the root `Cargo.toml` for facade feature wiring such as `tasks-durable`; the pinned 0.4.0-alpha.20 facade package is in this manifest

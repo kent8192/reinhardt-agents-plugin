@@ -94,10 +94,11 @@ If the user wants to immediately set up models after scaffolding, read
 
 ## Dynamic References
 
-When you need the latest CLI options or template details:
+When you need the latest CLI options or template details, resolve source paths
+relative to the local framework checkout root:
 
 1. Run `reinhardt-admin startproject --help` and `reinhardt-admin startapp --help`
-2. Read `reinhardt/crates/reinhardt-admin-cli/src/main.rs` for CLI argument definitions
-3. Read `reinhardt/crates/reinhardt-commands/src/start_commands.rs` for command implementation
-4. Read `reinhardt/crates/reinhardt-commands/templates/` for actual template files
-5. Read `reinhardt/Cargo.toml` `[features]` section for current feature flags
+2. Read `crates/reinhardt-admin-cli/src/main.rs` for CLI argument definitions
+3. Read `crates/reinhardt-commands/src/start_commands.rs` for command implementation
+4. Read `crates/reinhardt-commands/templates/` for actual template files
+5. Read the root `Cargo.toml` `[features]` section for current feature flags; the pinned 0.4.0-alpha.20 facade package is in this manifest
