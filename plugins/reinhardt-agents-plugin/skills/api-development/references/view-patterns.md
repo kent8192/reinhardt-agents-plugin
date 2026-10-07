@@ -296,6 +296,7 @@ calls, parsing/chunking, projection building, or nontrivial state transitions.
 
 ```rust
 use reinhardt::di::KeyedDepends;
+use reinhardt::db::orm::connection::DatabaseConnectionLease;
 use reinhardt::prelude::*;
 
 #[post("/outlines/{id}/regenerate/", name = "outline_regenerate")]
@@ -307,12 +308,16 @@ pub async fn regenerate_outline(
 ) -> ViewResult<Response> {
     input.validate()?;
 
-    let current = Outline::objects().get(id).first().await?
+    let current = {
+        let mut connection = DatabaseConnectionLease::new(&db).await?;
+        Outline::objects().get(id).first_with_db(&mut connection).await?
+    }
         .ok_or_else(|| AppError::NotFound("Outline not found".into()))?;
     let draft = build_outline_revision(&providers, &current, &input).await?;
     let revision = OutlineRevision::from_draft(id, draft);
+    let mut connection = DatabaseConnectionLease::new(&db).await?;
     let saved = OutlineRevision::objects()
-        .create(&revision)
+        .create_with_conn(&mut connection, &revision)
         .await?;
 
     Ok(Response::new(StatusCode::CREATED)

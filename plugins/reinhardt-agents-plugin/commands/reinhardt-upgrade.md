@@ -14,7 +14,12 @@ You are guiding the user through upgrading their reinhardt-web dependency. Follo
 
 Read the project's `Cargo.toml` and extract the current reinhardt version:
 
-- Look for `reinhardt = { version = "..." }` in `[dependencies]`
+- Parse the dependency tables as TOML. Accept string and inline-table entries in
+  `[dependencies]` as well as subtables such as `[dependencies.reinhardt]`.
+- Identify the facade by its package name: `reinhardt-web` (including aliases such
+  as `reinhardt` with `package = "reinhardt-web"`) or the historical `reinhardt`.
+- Check target-specific dependency tables. For `workspace = true`, resolve the
+  matching entry in the owning workspace's `[workspace.dependencies]` first.
 - Report the detected version to the user
 
 If no reinhardt dependency is found, inform the user this command is for reinhardt-web projects only.

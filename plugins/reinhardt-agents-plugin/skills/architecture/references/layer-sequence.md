@@ -108,6 +108,7 @@ use serde::{Deserialize, Serialize};
 pub struct SharedProductCreateInput {
     #[validate(length(min = 1, max = 200))]
     pub name: String,
+    pub description: Option<String>,
 }
 ```
 
@@ -227,7 +228,7 @@ async fn get_product(Path(id): Path<Uuid>) -> ViewResult<Response> {
 
 #[post("/", name = "product_create")]
 async fn create_product(
-    Json(input): Json<ProductCreateInput>,
+    Json(input): Json<SharedProductCreateInput>,
     #[inject] policy: CatalogPolicy,
 ) -> ViewResult<Response> {
     input.validate()?;
@@ -253,7 +254,7 @@ pub fn product_routes() -> UnifiedRouter {
 ```
 
 `http_result` is the application adapter in [Error Mapping](error-mapping.md).
-`ProductCreateInput` is the application's validated input DTO.
+`SharedProductCreateInput` is the validated input DTO defined in Layer 2.
 Mount this app-local aggregate from the one project `#[routes]` entrypoint;
 apply `#[url_patterns]` when the aggregate is shared with browser-WASM code.
 
@@ -319,7 +320,7 @@ Write tests at three levels: unit, integration, and API.
 #[rstest]
 fn test_build_product_success() {
     // Arrange
-    let input = ProductCreateInput {
+    let input = SharedProductCreateInput {
         name: "Test Product".into(),
         description: None,
     };
