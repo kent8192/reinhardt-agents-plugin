@@ -212,7 +212,7 @@ Create views and URL routing for the feature.
 
 ```rust
 use hyper::StatusCode;
-use reinhardt::{get, post, prelude::{Json, Path, Response, ViewResult}};
+use reinhardt::{get, post, prelude::{Json, Path, Response, Validate, ViewResult}};
 use reinhardt::urls::routers::UnifiedRouter;
 
 #[get("/{id}", name = "product_detail")]
@@ -317,6 +317,8 @@ Write tests at three levels: unit, integration, and API.
 **Unit test example (input validation):**
 
 ```rust
+use reinhardt::prelude::Validate;
+
 #[rstest]
 #[case("Test Product", true)]
 #[case("", false)]

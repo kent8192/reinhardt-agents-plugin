@@ -48,6 +48,7 @@ impl AppError {
                 StatusCode::UNAUTHORIZED => "Authentication required",
                 StatusCode::FORBIDDEN => "Permission denied",
                 StatusCode::NOT_FOUND => "Resource not found",
+                StatusCode::METHOD_NOT_ALLOWED => "Method not allowed",
                 StatusCode::CONFLICT => "Request conflict",
                 StatusCode::SERVICE_UNAVAILABLE => "Service unavailable",
                 _ => "Internal server error",
