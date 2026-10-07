@@ -1,10 +1,14 @@
 ---
 name: admin
 description: Use when setting up or customizing the reinhardt admin panel - covers AdminSite configuration, ModelAdmin registration, and the #[admin] macro
-versions: ["0.1.x", "0.2.x", "0.3.x"]
+versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.x"]
 ---
 
 # Reinhardt Admin Panel
+
+**0.4 baseline:** Current examples target `0.4.0-alpha.20`. Consult
+`compatibility/README.md` at the plugin root for the source pin and checks;
+explicit 0.1/0.2/0.3 sections are historical.
 
 Guide developers through setting up and customizing the reinhardt admin panel for model management.
 

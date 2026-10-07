@@ -6,6 +6,10 @@ versions: ["0.4.0"]
 
 # Reinhardt Feature Development Architecture
 
+**0.4 baseline:** Current examples target `0.4.0-alpha.20`. Consult
+`compatibility/README.md` at the plugin root for the source pin and checks;
+explicit 0.1/0.2/0.3 sections are historical.
+
 Guide developers through implementing a complete feature across all reinhardt layers, from model definition to API endpoints to tests. This is the "glue" skill that ties individual skills together into a coherent workflow.
 
 ## When to Use

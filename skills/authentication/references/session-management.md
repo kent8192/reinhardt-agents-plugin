@@ -2,21 +2,35 @@
 
 **Feature:** `sessions`
 
-**Module:** `reinhardt_auth::sessions` (re-exported via `reinhardt::sessions`)
+**Module:** `reinhardt_auth::sessions` (re-exported via `reinhardt::auth::sessions`)
 
 ---
 
-## Session Backend Trait
+## Session Backend Trait (0.4.0-alpha.20)
 
 ```rust
 #[async_trait]
-pub trait SessionBackend: Send + Sync {
-    async fn load(&self, session_key: &str) -> Result<Option<SessionData>, Error>;
-    async fn save(&mut self, session_key: &str, data: &SessionData, expiry: Duration) -> Result<(), Error>;
-    async fn delete(&mut self, session_key: &str) -> Result<(), Error>;
-    async fn exists(&self, session_key: &str) -> Result<bool, Error>;
+pub trait SessionBackend: Send + Sync + Clone {
+    async fn load<T>(&self, session_key: &str) -> Result<Option<T>, SessionError>
+    where
+        T: for<'de> Deserialize<'de> + Serialize + Send + Sync;
+
+    async fn save<T>(
+        &self,
+        session_key: &str,
+        data: &T,
+        ttl: Option<u64>,
+    ) -> Result<(), SessionError>
+    where
+        T: Serialize + Send + Sync;
+
+    async fn delete(&self, session_key: &str) -> Result<(), SessionError>;
+    async fn exists(&self, session_key: &str) -> Result<bool, SessionError>;
 }
 ```
+
+TTL is optional and measured in seconds. Implement internal mutation with the
+backend's own synchronized storage; the public receivers are shared.
 
 ---
 
@@ -75,44 +89,49 @@ fn session_config(settings: &ProjectSettings) -> SessionConfig {
 
 ---
 
-## Session Cleanup
-
-Expired sessions should be cleaned up periodically:
+## Session Cleanup (0.4.0-alpha.20)
 
 ```rust
-use reinhardt::sessions::SessionCleanupTask;
+use reinhardt::auth::sessions::cleanup::SessionCleanupTask;
+use std::time::Duration;
 
-// Run cleanup every hour
-let cleanup = SessionCleanupTask::new(session_backend.clone())
-    .with_interval(Duration::from_secs(3600));
-cleanup.start().await;
+let cleanup = SessionCleanupTask::new(
+    session_backend.clone(),
+    Duration::from_secs(7200),
+);
+let removed = cleanup.run_cleanup().await?;
 ```
 
----
+The second argument is maximum age, not a scheduler interval. Invoke
+`run_cleanup` from the application's owned periodic task; retain its task
+guard so cancellation and shutdown follow the application's lifecycle.
 
 ## Session Rotation
 
-Rotate session IDs to prevent session fixation attacks:
-
 ```rust
-use reinhardt::sessions::SessionRotator;
+use reinhardt::auth::sessions::rotation::{RotationPolicy, SessionRotator};
 
-// Rotate session on login
-let rotator = SessionRotator::new(session_backend.clone());
-rotator.rotate_session(&old_session_key).await?;
+let rotator = SessionRotator::new(RotationPolicy::default());
+rotator.rotate(&mut session).await?;
 ```
 
----
+Rotate the live session, rather than passing a backend or an old key string.
 
 ## CSRF Protection
 
 ```rust
-use reinhardt::sessions::CsrfSessionManager;
+use reinhardt::auth::sessions::csrf::CsrfSessionManager;
 
-let csrf = CsrfSessionManager::new(session_backend.clone());
-let token = csrf.generate_token(&session_key).await?;
-csrf.validate_token(&session_key, &submitted_token).await?;
+let csrf = CsrfSessionManager::new();
+let token = csrf.generate_token(&mut session)?;
+if !csrf.validate_token(&mut session, &submitted_token)? {
+    return Err(reinhardt::Error::PermissionDenied("Invalid CSRF token".into()));
+}
 ```
+
+These token operations are synchronous and take `&mut Session<B>`.
+A successful `Result` does not imply a matching token: reject `Ok(false)`.
+Use the application error adapter when constructing an HTTP response.
 
 ---
 
@@ -155,5 +174,5 @@ Sessions support tenant isolation for multi-tenant applications, ensuring sessio
 For the latest session API:
 
 1. Read `reinhardt/crates/reinhardt-auth/src/sessions/` for all session implementations
-2. Read `reinhardt/crates/reinhardt-auth/src/sessions/backend.rs` for SessionBackend trait
+2. Read `reinhardt/crates/reinhardt-auth/src/sessions/backends/cache.rs` for SessionBackend trait
 3. Read `reinhardt/crates/reinhardt-auth/src/sessions/config.rs` for SessionConfig

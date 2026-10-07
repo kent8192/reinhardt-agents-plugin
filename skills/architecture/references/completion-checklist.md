@@ -34,7 +34,7 @@ Run through this checklist after implementing a feature to verify all layers are
 - [ ] Single-use helpers that only delegate one endpoint/section's request, dependencies, and persistence/provider sequence are inlined and deleted
 - [ ] Service struct defined with common dependency fields when a service is justified
 - [ ] `#[injectable]` macro applied when a service is justified
-- [ ] `#[injectable_key]` / `FactoryOutput<K, T>` used when provider output type is not unique
+- [ ] `#[injectable_key]` / `KeyedFactoryOutput<K, T>` (0.4.x; `FactoryOutput<K, T>` on 0.3.x) used when provider output type is not unique
 - [ ] Constructor receives all dependencies via injection
 - [ ] Methods return reusable domain results; endpoint-specific DTO and response assembly stays outside service code
 - [ ] Error handling uses domain error types (not HTTP status codes)

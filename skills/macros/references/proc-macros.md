@@ -123,7 +123,21 @@ let router = UnifiedRouter::new()
     .route(path!("/users/{user_id}/"), user_detail);
 ```
 
-> **0.2.x note:** `path!` continues to work in 0.2.x with `#[routes]`. The `#[url_patterns]` attribute that previously also consumed `path!` expressions is removed in 0.2.x — use `#[routes]` for all URL registration.
+> **Version note:** Legacy `#[url_patterns]` was removed in 0.2.x. In 0.4.0-alpha.20 it is available again on synchronous `UnifiedRouter` functions: `.server(...)` is omitted outside native server builds while client routes, mounts, merges, prefixes and namespaces remain. Keep `#[routes]` on the one inventory entrypoint; the attributes can be stacked.
+Use the cross-target facade prelude in a shared aggregate:
+
+```rust
+use reinhardt::{url_patterns, prelude::UnifiedRouter};
+
+#[url_patterns]
+pub fn app_routes() -> UnifiedRouter {
+    UnifiedRouter::new().client(|router| router)
+}
+```
+
+Enable facade `routing` and `client-router` features. Native-only handlers
+belong in `.server(|router| ...)`; the macro strips that chain from client
+builds.
 
 ---
 

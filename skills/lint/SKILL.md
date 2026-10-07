@@ -1,10 +1,14 @@
 ---
 name: lint
 description: Use when running static analysis, fixing lint errors, or preparing code for commit - covers the full cargo/clippy/rustdoc/semgrep suite with fix-iterate workflow
-versions: ["0.1.x", "0.2.x", "0.3.x"]
+versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.x"]
 ---
 
 # Reinhardt Static Analysis & Linting
+
+**0.4 baseline:** Current examples target `0.4.0-alpha.20`. Consult
+`compatibility/README.md` at the plugin root for the source pin and checks;
+explicit 0.1/0.2/0.3 sections are historical.
 
 Run the full static analysis suite and iteratively fix issues. Covers formatting, linting, documentation, security scanning, and dependency auditing.
 

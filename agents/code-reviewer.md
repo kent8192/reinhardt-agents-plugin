@@ -5,6 +5,10 @@ capabilities: ["code-review", "anti-pattern-detection", "convention-check"]
 
 # Code Reviewer Agent
 
+For 0.4 application work, use the pinned
+[0.4.0-alpha.20 compatibility baseline](../compatibility/README.md).
+Do not apply historical 0.1/0.2/0.3 API examples to that target.
+
 Specialized agent for reviewing reinhardt-web application code against project conventions and best practices.
 
 ## Expertise
@@ -85,6 +89,7 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] Route names are unique across the application (duplicates cause startup failure)
 - [ ] Consider `url-resolver` feature for type-safe URL resolution **(0.1.x only — removed in 0.2.x)**
 - [ ] **(0.2.x)** No usage of removed `#[url_patterns]` macro — use `#[routes]` instead
+- [ ] **(0.4.x)** Reintroduced `#[url_patterns]` composes a synchronous `UnifiedRouter`; `#[routes]` remains the endpoint inventory
 - [ ] **(0.2.x)** No usage of removed `named_route*` methods on `ClientRouter` — use `route()` with mandatory `name` first arg
 - [ ] **(0.2.x)** No usage of removed `SecurityConfig` — use `SecurityMiddleware` builder methods
 - [ ] **(0.3.x)** No raw `ServerRouter::function`, `.route`, or `.handler_with_method` registration — use endpoint macros plus `.endpoint(...)`
@@ -94,6 +99,9 @@ Specialized agent for reviewing reinhardt-web application code against project c
 - [ ] Handler and server function signatures/bodies import request, DTO, and framework types instead of repeating long fully qualified paths
 
 ### Pages Frontend
+
+- [ ] **(0.4.0-alpha.20)** Direct `if` / `match` / `for` in `page!` replaces removed `watch` blocks; Context APIs receive typed `Context<T>` handles
+- [ ] **(0.4.0-alpha.20)** `form!` contains declarative fields and validators; runtime callbacks are attached to one `use_form` / `use_form_action` submission path
 
 - [ ] Button actions operate on the displayed/current entity: route params, form values, loaded DTOs, selected rows/versions, and server return values, not fixture IDs, sample constants, or canned text
 - [ ] Component-local async mutations use `use_action`, component-local async reads or derived text use `use_resource`, and event handlers use `use_callback` / `use_callback_with`; `spawn_local` is limited to low-level browser integration

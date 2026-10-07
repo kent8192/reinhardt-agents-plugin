@@ -6,7 +6,7 @@ Enable the `admin` feature in your `Cargo.toml`:
 
 ```toml
 [dependencies]
-reinhardt = { version = "...", features = ["admin"] }
+reinhardt = { package = "reinhardt-web", version = "...", features = ["admin"] }
 ```
 
 ## AdminSite Configuration

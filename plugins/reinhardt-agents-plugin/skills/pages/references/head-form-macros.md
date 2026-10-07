@@ -75,11 +75,22 @@ DOM node cannot undo side effects that already ran.
 
 ## form! Macro
 
+For a browser-WASM consumer of the alpha.20 `form!` expansion, also declare
+the macro's direct browser dependencies:
+
+```toml
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+web-sys = { version = "0.3", features = ["Event", "HtmlFormElement", "HtmlInputElement"] }
+```
+
 Creates type-safe forms with reactive bindings and validation.
 
 ### Basic Syntax
 
 ```rust
+use reinhardt::pages::server_fn::server_fn;
+
 use reinhardt::pages::form;
 use reinhardt::pages::component::Page;
 
@@ -156,7 +167,11 @@ existing behavior.
 | `class` | String | No | CSS class (default: `"reinhardt-form"`) |
 | `initial_loader` | Path | No | Server function for initial values |
 | `redirect_on_success` | String | No | URL redirect after success |
-| `on_success` | Closure | No | Callback on successful submission |
+
+In 0.4.0-alpha.20, runtime `state` and callback clauses (`on_submit`,
+`on_success`, `on_success_ref`, `on_error`, `on_loading`) are rejected by
+`form!`. Configure runtime lifecycle behavior through `use_form` and
+`use_form_action` instead.
 
 ### HTTP Methods
 
@@ -300,30 +315,31 @@ fields: {
 }
 ```
 
-### on_success Callback
+### Submit Lifecycle Callbacks (0.4.0-alpha.20)
 
-Handle successful form submission (e.g., update auth state):
+Configure callbacks on the runtime action, outside the static form DSL:
 
 ```rust
-form! {
-    name: LoginForm,
-    server_fn: login,
-    redirect_on_success: "/",
-    on_success: |result: AuthResponse| {
-        use reinhardt::pages::auth::{AuthData, auth_state};
+use reinhardt::pages::{use_form, use_form_action};
 
-        if let Some(ref user) = result.user {
-            auth_state().update(AuthData {
-                is_authenticated: true,
-                username: Some(user.username.clone()),
-                email: Some(user.email.clone()),
-                ..Default::default()
-            });
-        }
-    },
-    fields: { /* ... */ },
-}
+let runtime = use_form(&login_form).build();
+let submit = use_form_action(&runtime, |values| async move {
+    login(values.username, values.password).await
+})
+.on_success(|runtime, result| {
+    // Apply application-owned auth state from the returned AuthResponse.
+    apply_auth_response(result);
+    runtime.reset();
+});
 ```
+
+Here `login` and `apply_auth_response` are application functions. Bind
+`submit.submit_handler()` to the form boundary's submit event and render fields
+from this same runtime. Choose one submit path: do not also run the generated
+form's automatic server-function submit handler for that event.
+
+For a callback that only needs form state, configure
+`use_form(&form).on_submit_success(|runtime| { ... }).build()` instead.
 
 ### Validation
 
@@ -551,6 +567,8 @@ later `#[server_fn]` refactor cannot bypass lifecycle, validation, or
 orchestration policy.
 
 ```rust
+use reinhardt::pages::server_fn::server_fn;
+
 #[server_fn]
 pub async fn generate_scene(
     chapter_id: Uuid,
@@ -618,6 +636,8 @@ cursor pagination, bulk actions, composite lookups, or model-to-DTO mapping.
 Use `ServerFnError::application(msg)` for application-level errors. Log internal details with `tracing`, return generic messages to prevent information leakage:
 
 ```rust
+use reinhardt::pages::server_fn::server_fn;
+
 use tracing::error;
 
 #[server_fn]

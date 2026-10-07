@@ -497,16 +497,35 @@ def default_feature_graph(
     return forwarded, activated_dependencies
 
 
-def expand_features(features: set[str]) -> set[str]:
+def alpha20_features(version: str | None) -> dict[str, list[str]] | None:
+    # A pinned graph is authoritative for 0.4; older families retain their presets.
+    if version is None or not re.search(r"(?<![0-9])0\.4\.", version):
+        return None
+    snapshot = Path(__file__).resolve().parents[2] / "compatibility/reinhardt-web-alpha20.json"
+    try:
+        return json.loads(snapshot.read_text())["features"]
+    except (OSError, ValueError, KeyError):
+        return None
+
+
+def feature_tokens(features: set[str], graph: dict) -> set[str]:
     expanded = set(features)
     pending = list(features)
     while pending:
         feature = pending.pop()
-        additions = set(PRESET_FEATURES.get(feature, set()))
-        for addition in additions - expanded:
+        for addition in set(graph.get(feature, [])) - expanded:
             expanded.add(addition)
             pending.append(addition)
     return expanded
+
+
+def expand_features(features: set[str], version: str | None = None) -> set[str]:
+    graph = alpha20_features(version)
+    if graph is None:
+        return feature_tokens(features, PRESET_FEATURES)
+    # Dependency forwarding tokens are capabilities, not facade feature names.
+    tokens = feature_tokens(features, graph)
+    return {token for token in tokens if token in graph or token in features}
 
 
 def dependency_metadata(manifest: dict, workspace: dict) -> dict | None:
@@ -557,14 +576,23 @@ def dependency_metadata(manifest: dict, workspace: dict) -> dict | None:
         )
         features.update(forwarded_by_dependency.get(name, set()))
 
-    if default_features or {"default", "standard"} & features:
-        features.update(DEFAULT_FEATURES)
-    features = expand_features(features)
+    graph = alpha20_features(version)
+    if graph is None:
+        if default_features or {"default", "standard"} & features:
+            features.update(DEFAULT_FEATURES)
+        tokens = set()
+    else:
+        if default_features:
+            features.add("default")
+        tokens = feature_tokens(features, graph)
+    features = expand_features(features, version)
     source = "path" if saw_path else "git" if saw_git else "unknown"
     return {
         "version": version or source,
         "default_features": default_features,
         "features": features,
+        "dependency_tokens": tokens,
+        "feature_baseline": "0.4.0-alpha.20" if graph is not None else "legacy presets",
     }
 
 
@@ -695,7 +723,14 @@ def application_metadata() -> dict | None:
         )
         if feature in features
     ]
-    if not auth and "auth" in features:
+    tokens = metadata["dependency_tokens"]
+    for dependency_feature, label in (
+        ("jwt", "jwt"), ("sessions", "session"), ("oauth", "oauth"), ("token", "token")
+    ):
+        if ("reinhardt-auth/" + dependency_feature in tokens
+                or "reinhardt-auth/auth-full" in tokens) and label not in auth:
+            auth.append(label)
+    if not auth and ("auth" in features or "reinhardt-auth" in tokens):
         auth.append("auth (default)")
     metadata["auth"] = ", ".join(auth) or "none"
     metadata["app_count"] = len(list_apps())
@@ -710,6 +745,7 @@ def render_baseline(metadata: dict) -> str:
             '  :kind "baseline"',
             '  :project-type "reinhardt-web application"',
             f'  :reinhardt-version "{sanitize_bounded(metadata["version"], 128)}"',
+            f'  :feature-baseline "{metadata["feature_baseline"]}"',
             f"  :default-features {default_features}",
             f'  :features "{sanitize(metadata["feature_text"])}"',
             f'  :db-backend "{sanitize(metadata["database"])}"',

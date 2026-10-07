@@ -27,7 +27,7 @@ async fn create_primary_database(
 use reinhardt::db::prelude::*;
 use reinhardt::di::prelude::*;
 use reinhardt::CurrentUser;
-use reinhardt::views::prelude::*;
+use reinhardt::prelude::*;
 
 #[get("/users/{id}/", name = "user_retrieve")]
 pub async fn get_user(
@@ -103,7 +103,7 @@ pub async fn transfer_funds(
 ```rust
 use reinhardt::auth::prelude::*;
 use reinhardt::di::prelude::*;
-use reinhardt::views::prelude::*;
+use reinhardt::prelude::*;
 
 #[get("/profile/", name = "user_profile")]
 pub async fn get_profile(
@@ -172,7 +172,7 @@ pub async fn list_posts(
 ```rust
 use reinhardt::auth::prelude::*;
 use reinhardt::di::prelude::*;
-use reinhardt::views::prelude::*;
+use reinhardt::prelude::*;
 
 #[get("/cart/", name = "cart_get")]
 pub async fn get_cart(

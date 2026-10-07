@@ -5,6 +5,10 @@ capabilities: ["range-pr-enumeration", "worktree-merge", "conflict-resolution", 
 
 # Main Range PR Merger Agent
 
+For 0.4 application work, use the pinned
+[0.4.0-alpha.20 compatibility baseline](../compatibility/README.md).
+Do not apply historical 0.1/0.2/0.3 API examples to that target.
+
 Specialized agent for forwarding all pull requests merged into `main` between
 two version tags into a target branch such as `develop/0.2.0`.
 

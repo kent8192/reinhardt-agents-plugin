@@ -5,6 +5,10 @@ capabilities: ["test-generation", "fixture-design", "testcontainers-setup"]
 
 # Test Generator Agent
 
+For 0.4 application work, use the pinned
+[0.4.0-alpha.20 compatibility baseline](../compatibility/README.md).
+Do not apply historical 0.1/0.2/0.3 API examples to that target.
+
 Specialized agent for generating high-quality tests that comply with reinhardt testing standards.
 
 ## Expertise

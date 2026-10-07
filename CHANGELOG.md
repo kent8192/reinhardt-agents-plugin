@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Align current Pages control flow, context, resource, form, and i18n guidance
+  with the pinned Reinhardt Web 0.4.0-alpha.20 API.
+- Correct facade manifests, settings validation, DI, authentication, ORM,
+  serializer, HTTP error, migration command, and routing examples.
+- Read edit-hook JSON from stdin and scan Cargo manifests and patch edits.
+- Derive 0.4 feature expansion from a pinned graph instead of legacy presets.
+- Replace disconnected mocks and empty queue tests with observable assertions.
+
+### Added
+
+- Add native/WASM compatibility consumers and hook/manifest regression checks
+  with an explicit framework version and source commit.
+
 ### Changed
 
 - Align Pages, macro, and code-review guidance with direct `page!({ ... })`

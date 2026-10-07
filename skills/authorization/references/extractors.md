@@ -42,7 +42,7 @@ pub struct AuthState {
 ### Usage
 
 ```rust
-use reinhardt::views::prelude::*;
+use reinhardt::prelude::*;
 
 #[get("/profile/", name = "user_profile")]
 pub async fn get_profile(
@@ -93,7 +93,7 @@ where
 ### Usage
 
 ```rust
-use reinhardt::views::prelude::*;
+use reinhardt::prelude::*;
 use reinhardt::auth::prelude::*;
 
 #[get("/admin/dashboard/", name = "admin_dashboard")]

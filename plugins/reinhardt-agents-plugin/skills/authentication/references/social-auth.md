@@ -1,6 +1,6 @@
 # Reinhardt Social Authentication (OAuth2/OIDC) Reference
 
-**Feature:** `social`
+**Facade feature:** `social-auth` for browser/session integration; `auth-social` for provider support. The internal `reinhardt-auth` crate uses `social`.
 
 **Module:** `reinhardt_auth::social` (re-exported via `reinhardt::auth::social`)
 
@@ -45,7 +45,7 @@ User → Authorization URL → Provider → Callback URL → Token Exchange → 
 
 ```toml
 [dependencies]
-reinhardt = { version = "...", features = ["social", "argon2-hasher"] }
+reinhardt = { package = "reinhardt-web", version = "...", features = ["social-auth", "argon2-hasher"] }
 ```
 
 ### Provider Configuration
@@ -115,8 +115,8 @@ async fn build_social_auth_backend(
 #[injectable(scope = "singleton")]
 async fn social_auth(
     #[inject] settings: ProjectSettings,
-) -> FactoryOutput<SocialAuthBackendKey, Result<SocialAuthBackend, SocialAuthError>> {
-    FactoryOutput::new(build_social_auth_backend(&settings).await)
+) -> KeyedFactoryOutput<SocialAuthBackendKey, Result<SocialAuthBackend, SocialAuthError>> {
+    KeyedFactoryOutput::new(build_social_auth_backend(&settings).await)
 }
 ```
 

@@ -4,6 +4,10 @@ description: Upgrade reinhardt-web version with guided migration analysis, break
 
 # Reinhardt Version Upgrade
 
+For 0.4 application work, use the pinned
+[0.4.0-alpha.20 compatibility baseline](../compatibility/README.md).
+Do not apply historical 0.1/0.2/0.3 API examples to that target.
+
 You are guiding the user through upgrading their reinhardt-web dependency. Follow this workflow:
 
 ## Step 1: Detect Current Version

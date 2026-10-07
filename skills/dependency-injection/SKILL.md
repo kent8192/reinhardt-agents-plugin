@@ -6,6 +6,10 @@ versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.x"]
 
 # Reinhardt Dependency Injection
 
+**0.4 baseline:** Current examples target `0.4.0-alpha.20`. Consult
+`compatibility/README.md` at the plugin root for the source pin and checks;
+explicit 0.1/0.2/0.3 sections are historical.
+
 Guide developers through DI configuration using reinhardt-di, including service registration, scoping, and integration with database and authentication.
 
 ## When to Use

@@ -114,14 +114,15 @@ replacement for short-lived work.
 
 ```toml
 [dependencies]
-reinhardt = { version = "...", features = ["tasks-durable"] }
+reinhardt = { package = "reinhardt-web", version = "=0.4.0-alpha.20", features = ["tasks-durable"] }
 ```
 
 For a server function or handler that receives the shared durable queue through
 DI, enable both features:
 
 ```toml
-reinhardt = { version = "...", features = ["tasks-durable", "di"] }
+[dependencies]
+reinhardt = { package = "reinhardt-web", version = "=0.4.0-alpha.20", features = ["tasks-durable", "di"] }
 ```
 
 The facade feature is named `tasks-durable`. Applications that depend directly
@@ -159,105 +160,106 @@ when the application uses PostgreSQL, MySQL, or CockroachDB.
 
 ## Cargo.toml Examples
 
+These 0.4.0-alpha.20 recipes use dependency tables supported by both Cargo
+and the hook's Python 3.11+ TOML parser. Cargo 1.96 also accepts TOML 1.1
+multiline inline tables; Python 3.12 `tomllib` does not. Use the table spelling
+below when hook context detection must read the same manifest.
+
 ### API-Only with PostgreSQL + JWT
 
 ```toml
-[dependencies]
-reinhardt = {
-    version = "...",
-    default-features = false,
-    features = [
-        "core",
-        "di",
-        "server",
-        "api",
-        "middleware",
-        "commands",
-        "db-postgres",
-        "auth-jwt",
-        "argon2-hasher",
-    ]
-}
+[dependencies.reinhardt]
+package = "reinhardt-web"
+version = "=0.4.0-alpha.20"
+default-features = false
+features = [
+    "core",
+    "routing",
+    "di",
+    "server",
+    "api",
+    "middleware",
+    "commands",
+    "db-postgres",
+    "auth-jwt",
+    "argon2-hasher",
+]
 
-[dev-dependencies]
-reinhardt = {
-    version = "...",
-    features = ["test", "testcontainers"]
-}
+[dev-dependencies.reinhardt]
+package = "reinhardt-web"
+version = "=0.4.0-alpha.20"
+features = ["test", "testcontainers"]
 ```
 
 ### Full-Stack with Pages
 
 ```toml
-[dependencies]
-reinhardt = {
-    version = "...",
-    default-features = false,
-    features = [
-        "core",
-        "conf",
-        "di",
-        "server",
-        "api",
-        "forms",
-        "pages",
-        "client-router",
-        "middleware",
-        "sessions",
-        "commands",
-        "db-postgres",
-        "auth-session",
-        "argon2-hasher",
-        "cache",
-        "redis-backend",
-        "i18n",
-        "admin",
-        "static-files",
-    ]
-}
+[dependencies.reinhardt]
+package = "reinhardt-web"
+version = "=0.4.0-alpha.20"
+default-features = false
+features = [
+    "core",
+    "conf",
+    "di",
+    "server",
+    "api",
+    "forms",
+    "pages",
+    "client-router",
+    "middleware",
+    "sessions",
+    "commands",
+    "db-postgres",
+    "auth-session",
+    "argon2-hasher",
+    "cache",
+    "redis-backend",
+    "i18n",
+    "admin",
+    "static-files",
+]
 
-[dev-dependencies]
-reinhardt = {
-    version = "...",
-    features = ["test", "testcontainers", "server-fn-test"]
-}
+[dev-dependencies.reinhardt]
+package = "reinhardt-web"
+version = "=0.4.0-alpha.20"
+features = ["test", "testcontainers", "server-fn-test"]
 ```
 
 ### Minimal Microservice
 
 ```toml
-[dependencies]
-reinhardt = {
-    version = "...",
-    default-features = false,
-    features = [
-        "core",
-        "di",
-        "server",
-    ]
-}
+[dependencies.reinhardt]
+package = "reinhardt-web"
+version = "=0.4.0-alpha.20"
+default-features = false
+features = [
+    "core",
+    "routing",
+    "di",
+    "server",
+]
 
-[dev-dependencies]
-reinhardt = {
-    version = "...",
-    features = ["test"]
-}
+[dev-dependencies.reinhardt]
+package = "reinhardt-web"
+version = "=0.4.0-alpha.20"
+features = ["test"]
 ```
 
 ### GraphQL Server
 
 ```toml
-[dependencies]
-reinhardt = {
-    version = "...",
-    default-features = false,
-    features = [
-        "core",
-        "di",
-        "server",
-        "graphql",
-        "auth",
-        "db-postgres",
-    ]
-}
+[dependencies.reinhardt]
+package = "reinhardt-web"
+version = "=0.4.0-alpha.20"
+default-features = false
+features = [
+    "core",
+    "routing",
+    "di",
+    "server",
+    "graphql",
+    "auth",
+    "db-postgres",
+]
 ```

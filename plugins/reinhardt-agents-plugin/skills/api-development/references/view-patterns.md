@@ -2,19 +2,23 @@
 
 ## Function-Based Views with Decorators
 
+The following CRUD examples assume an application-owned `User` model with `id`, `username`, and `email`, `From<CreateUserRequest> for User`, and `From<User> for UserResponse`. Define those conversions in the app; they are not framework-generated CRUD helpers. `UpdateUserRequest` uses optional `username` and `email` fields for PATCH.
+
 Handler functions use HTTP method decorators (`#[get]`, `#[post]`, `#[put]`, `#[patch]`, `#[delete]`) to declare their route and method. Handlers are async and return `ViewResult<Response>`.
 
 ```rust
-use reinhardt::views::prelude::*;
+use reinhardt::prelude::*;
 use reinhardt::core::exception::Error as AppError;
-use reinhardt::core::serde::json;
+use serde_json as json;
+use hyper::StatusCode;
 
 #[get("/users/{id}/", name = "user_retrieve")]
 pub async fn get_user(Path(id): Path<i64>) -> ViewResult<Response> {
     let user = User::objects()
         .get(id)
-        .await
-        .map_err(|_| AppError::NotFound("User not found".into()))?;
+        .first()
+        .await?
+        .ok_or_else(|| AppError::NotFound("User not found".into()))?;
 
     Ok(Response::new(StatusCode::OK)
         .with_header("Content-Type", "application/json")
@@ -24,7 +28,8 @@ pub async fn get_user(Path(id): Path<i64>) -> ViewResult<Response> {
 #[post("/users/", name = "user_create")]
 pub async fn create_user(Json(body): Json<CreateUserRequest>) -> ViewResult<Response> {
     body.validate()?;
-    let user = User::objects().create_from(&body).await?;
+    let model = User::from(body);
+    let user = User::objects().create(&model).await?;
 
     Ok(Response::new(StatusCode::CREATED)
         .with_header("Content-Type", "application/json")
@@ -37,8 +42,15 @@ pub async fn update_user(
     Json(body): Json<UpdateUserRequest>,
 ) -> ViewResult<Response> {
     body.validate()?;
-    let user = User::objects().get(id).await?;
-    let updated = user.update_from(&body).await?;
+    let mut user = User::objects().get(id).first().await?
+        .ok_or_else(|| AppError::NotFound("User not found".into()))?;
+    if let Some(username) = body.username {
+        user.username = username;
+    }
+    if let Some(email) = body.email {
+        user.email = email;
+    }
+    let updated = User::objects().update(&user).await?;
 
     Ok(Response::new(StatusCode::OK)
         .with_header("Content-Type", "application/json")
@@ -51,8 +63,11 @@ pub async fn replace_user(
     Json(body): Json<CreateUserRequest>,
 ) -> ViewResult<Response> {
     body.validate()?;
-    let user = User::objects().get(id).await?;
-    let replaced = user.replace_from(&body).await?;
+    let mut user = User::objects().get(id).first().await?
+        .ok_or_else(|| AppError::NotFound("User not found".into()))?;
+    user.username = body.username;
+    user.email = body.email;
+    let replaced = User::objects().update(&user).await?;
 
     Ok(Response::new(StatusCode::OK)
         .with_header("Content-Type", "application/json")
@@ -61,7 +76,8 @@ pub async fn replace_user(
 
 #[delete("/users/{id}/", name = "user_delete")]
 pub async fn delete_user(Path(id): Path<i64>) -> ViewResult<Response> {
-    let user = User::objects().get(id).await?;
+    let mut user = User::objects().get(id).first().await?
+        .ok_or_else(|| AppError::NotFound("User not found".into()))?;
     user.delete().await?;
     Ok(Response::new(StatusCode::NO_CONTENT))
 }
@@ -100,6 +116,7 @@ Extractors pull typed data from the incoming request:
 pub async fn list_users(Query(params): Query<PaginationParams>) -> ViewResult<Response> {
     let users = User::objects()
         .paginate(params.page, params.per_page)
+        .all()
         .await?;
 
     Ok(Response::new(StatusCode::OK)
@@ -156,10 +173,10 @@ pub struct UserResponse {
 }
 ```
 
-JSON serialization uses the reinhardt-provided module:
+JSON serialization uses the application's declared `serde_json` dependency:
 
 ```rust
-use reinhardt::core::serde::json;
+use serde_json as json;
 let bytes = json::to_vec(&response_data)?;
 ```
 
@@ -184,7 +201,7 @@ Use `#[inject]` to receive services and auth context from the DI container:
 ```rust
 use reinhardt::di::prelude::*;
 use reinhardt::CurrentUser;
-use reinhardt::views::prelude::*;
+use reinhardt::prelude::*;
 
 #[get("/profile/", name = "user_profile")]
 pub async fn get_profile(
@@ -206,7 +223,7 @@ pub async fn admin_list_users(
     if !user.is_staff {
         return Err(AppError::Authentication("Admin access required".into()));
     }
-    let users = User::objects().all().await?;
+    let users = User::objects().all().all().await?;
 
     Ok(Response::new(StatusCode::OK)
         .with_header("Content-Type", "application/json")
@@ -221,8 +238,8 @@ pub async fn admin_list_users(
 | `AuthInfo` | Lightweight JWT auth state with `state.user_id()` |
 | `CurrentUser<T>` | Full user model resolution from auth token or session |
 | `T` | Direct injectable service/configuration value from the DI container |
-| `Depends<K, T>` | Keyed provider output from the DI container |
-| `Depends<PrimaryDatabase, DatabaseConnection>` | Keyed database connection from the pool |
+| `KeyedDepends<K, T>` | Keyed provider output from the DI container |
+| `KeyedDepends<PrimaryDatabase, DatabaseConnection>` | Keyed database connection from the pool |
 
 ### Endpoint-local workflows with shared DI dependencies
 
@@ -259,8 +276,9 @@ let path = document_path(project_id, document_id);
 // Prefer: keep direct CRUD and endpoint-specific mapping visible.
 let project = Project::objects()
     .get(project_id)
-    .await
-    .map_err(|_| AppError::NotFound("Project not found".into()))?;
+    .first()
+    .await?
+    .ok_or_else(|| AppError::NotFound("Project not found".into()))?;
 ensure_project_owner(&project, current_user.id)?;
 
 let chunks = DocumentChunk::objects()
@@ -277,23 +295,24 @@ simple CRUD, such as transaction boundaries, cross-model orchestration, provider
 calls, parsing/chunking, projection building, or nontrivial state transitions.
 
 ```rust
-use reinhardt::di::Depends;
-use reinhardt::views::prelude::*;
+use reinhardt::di::KeyedDepends;
+use reinhardt::prelude::*;
 
 #[post("/outlines/{id}/regenerate/", name = "outline_regenerate")]
 pub async fn regenerate_outline(
     Path(id): Path<Uuid>,
     Json(input): Json<RegenerateOutlineRequest>,
-    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
-    #[inject] providers: Depends<AiProviderRegistryKey, ProviderRegistry>,
+    #[inject] db: KeyedDepends<PrimaryDatabase, DatabaseConnection>,
+    #[inject] providers: KeyedDepends<AiProviderRegistryKey, ProviderRegistry>,
 ) -> ViewResult<Response> {
     input.validate()?;
 
-    let current = Outline::objects().get(id, &*db).await?;
+    let current = Outline::objects().get(id).first().await?
+        .ok_or_else(|| AppError::NotFound("Outline not found".into()))?;
     let draft = build_outline_revision(&providers, &current, &input).await?;
     let revision = OutlineRevision::from_draft(id, draft);
     let saved = OutlineRevision::objects()
-        .create_with_conn(&*db, &revision)
+        .create(&revision)
         .await?;
 
     Ok(Response::new(StatusCode::CREATED)
@@ -418,7 +437,9 @@ endpoint-specific DTO/persistence flow visible unless a narrower service
 contract is reused across endpoints.
 
 ```rust
-use reinhardt::di::Depends;
+use reinhardt::pages::server_fn::server_fn;
+
+use reinhardt::di::KeyedDepends;
 use reinhardt::pages::prelude::*;
 
 use crate::apps::accounts::services::{
@@ -432,7 +453,7 @@ use crate::apps::accounts::services::{
 pub async fn login(
     username: String,
     password: String,
-    #[inject] auth: Depends<AuthServiceKey, AuthService>,
+    #[inject] auth: KeyedDepends<AuthServiceKey, AuthService>,
 ) -> Result<AuthResponse, ServerFnError> {
     (*auth).login(username, password).await.map_err(ServerFnError::from)
 }
@@ -440,26 +461,26 @@ pub async fn login(
 #[server_fn]
 pub async fn get_user_profile(
     user_id: i64,
-    #[inject] profiles: Depends<UserProfileServiceKey, UserProfileService>,
+    #[inject] profiles: KeyedDepends<UserProfileServiceKey, UserProfileService>,
 ) -> Result<UserProfile, ServerFnError> {
     (*profiles).get(user_id).await.map_err(ServerFnError::from)
 }
 ```
 
 Register shared business services in the app's `services/` module with the
-Reinhardt 0.3 provider shape:
+Reinhardt 0.4 provider shape (use the older unprefixed keyed wrappers only on 0.3.x):
 
 ```rust
-use reinhardt::di::{Depends, FactoryOutput, injectable, injectable_key};
+use reinhardt::di::{KeyedDepends, KeyedFactoryOutput, injectable, injectable_key};
 
 #[injectable_key]
 pub struct AuthServiceKey;
 
 #[injectable(scope = "request")]
 async fn auth_service(
-    #[inject] settings: Depends<AppSettingsKey, AppSettings>,
-) -> FactoryOutput<AuthServiceKey, AuthService> {
-    FactoryOutput::new(AuthService::from_settings(&*settings))
+    #[inject] settings: KeyedDepends<AppSettingsKey, AppSettings>,
+) -> KeyedFactoryOutput<AuthServiceKey, AuthService> {
+    KeyedFactoryOutput::new(AuthService::from_settings(&*settings))
 }
 ```
 
@@ -488,6 +509,8 @@ argument struct**, so the client call site only passes the
 data-shaped parameters.
 
 ```rust
+use reinhardt::pages::server_fn::server_fn;
+
 #[server_fn]
 pub async fn submit_vote(
     poll_id: i64,                            // Sent from the client

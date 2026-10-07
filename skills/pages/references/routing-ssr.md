@@ -441,13 +441,15 @@ output is not wanted; minified output also uses the buffered path.
 native target, the inert scheduler leaves the resource in `Loading`.
 
 ```rust
-let user = use_resource(fetch_current_user, ());
+use reinhardt::pages::deps;
+
+let user = use_resource(fetch_current_user, deps![]);
 
 // For a conditionally rendered hook, make the hydration identity explicit.
 let report = use_resource_with_key(
     "workspace-report",
     fetch_workspace_report,
-    (workspace_id,),
+    deps![workspace_id],
 );
 ```
 

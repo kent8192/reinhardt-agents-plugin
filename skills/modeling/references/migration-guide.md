@@ -71,7 +71,7 @@ migrations/
 - Default values are appropriate
 - The migration is reversible (has both `up` and `down` operations)
 
-> **Note:** There is no `sqlmigrate` command. To preview SQL, use `--plan` flag on the `migrate` command or review the generated migration file directly.
+> **0.4.0-alpha.20:** Use `cargo run --bin manage -- sqlmigrate APP MIGRATION --database default` for SQL preview. Add `--backwards` for reverse SQL. `migrate --plan` shows the execution plan rather than serving as the SQL rendering command.
 
 ### Generated Columns (0.4.x)
 
@@ -126,7 +126,7 @@ Run tests to verify models work correctly:
 cargo nextest run --workspace --all-features
 ```
 
-> **Note:** There is no `showmigrations` command. Check migration state by reviewing the `migrations/` directory or inspecting the `reinhardt_migrations` table in the database.
+> **0.4.0-alpha.20:** Use `cargo run --bin manage -- showmigrations [APP] --database default` to inspect recorded state. Add `--plan` for the catalog plan. Prefer this command to querying recorder tables directly.
 
 ## Model Fixture and Seed Commands (0.4.x)
 
