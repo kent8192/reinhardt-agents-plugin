@@ -150,6 +150,17 @@ class EditHookTests(unittest.TestCase):
             "inline-next-section": (
                 '[dev-dependencies]\nother = { version = "1" }\n'
                 '[dependencies]\nreinhardt-test = { workspace = true }\n', False),
+            "dotted": ('[dev-dependencies]\nreinhardt-test.workspace = true\n', True),
+            "dotted-target": (
+                '[target.\'cfg(unix)\'.dev-dependencies]\n'
+                'reinhardt-test.workspace = true\n', True),
+            "dotted-quoted": (
+                '[dev-dependencies]\n"reinhardt-test" . "workspace" = true\n', True),
+            "dotted-runtime": ('[dependencies]\nreinhardt-test.workspace = true\n', False),
+            "dotted-build": ('[build-dependencies]\nreinhardt-test.workspace = true\n', False),
+            "dotted-next-section": (
+                '[dev-dependencies]\nother = { version = "1" }\n'
+                '[dependencies]\nreinhardt-test.workspace = true\n', False),
             "subtable": ('[dev-dependencies.reinhardt-test]\nworkspace = true\n', True),
             "quoted-target": (
                 '[target.\'cfg(unix)\'.dev-dependencies."reinhardt-test"]\n'
