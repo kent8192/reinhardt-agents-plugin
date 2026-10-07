@@ -138,6 +138,18 @@ class EditHookTests(unittest.TestCase):
     @unittest.skipUnless(shutil.which("semgrep"), "Requires the optional local semgrep scanner")
     def test_real_scanner_covers_cargo_dependency_tables(self):
         cases = {
+            "inline": ('[dev-dependencies]\nreinhardt-test = { workspace = true }\n', True),
+            "inline-target": (
+                '[target.\'cfg(unix)\'.dev-dependencies]\n'
+                '"reinhardt-test" = { features = ["test-utils"], workspace = true }\n', True),
+            "inline-runtime": ('[dependencies]\nreinhardt-test = { workspace = true }\n', False),
+            "inline-build": ('[build-dependencies]\nreinhardt-test = { workspace = true }\n', False),
+            "inline-target-runtime": (
+                '[target.\'cfg(unix)\'.dependencies]\n'
+                'reinhardt-test = { workspace = true }\n', False),
+            "inline-next-section": (
+                '[dev-dependencies]\nother = { version = "1" }\n'
+                '[dependencies]\nreinhardt-test = { workspace = true }\n', False),
             "subtable": ('[dev-dependencies.reinhardt-test]\nworkspace = true\n', True),
             "quoted-target": (
                 '[target.\'cfg(unix)\'.dev-dependencies."reinhardt-test"]\n'

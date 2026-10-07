@@ -17,7 +17,8 @@ rules:
   - id: reinhardt-no-workspace-test-dep
     patterns:
       - pattern-either:
-          - pattern-regex: 'reinhardt-test\s*=\s*\{[^}]*workspace\s*=\s*true'
+          - pattern-regex: >-
+              (?m)^[\t ]*\[(?:target\.[^\]\r\n]+\.)?dev-dependencies\][\t ]*(?:#[^\r\n]*)?\r?\n(?:(?![\t ]*\[)[^\r\n]*(?:\r?\n|$))*?[\t ]*(?:reinhardt-test|"reinhardt-test"|'reinhardt-test')[\t ]*=[\t ]*\{[^}]*\bworkspace[\t ]*=[\t ]*true\b
           - pattern-regex: >-
               (?m)^[\t ]*\[(?:target\.[^\]\r\n]+\.)?dev-dependencies\.(?:reinhardt-test|"reinhardt-test"|'reinhardt-test')\][\t ]*(?:#[^\r\n]*)?\r?\n(?:(?![\t ]*\[)[^\r\n]*(?:\r?\n|$))*?[\t ]*workspace[\t ]*=[\t ]*true\b
     message: >-
