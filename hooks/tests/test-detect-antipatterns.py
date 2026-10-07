@@ -7,6 +7,7 @@ from pathlib import Path
 import subprocess
 import shutil
 import tempfile
+import tomllib
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -142,6 +143,22 @@ class EditHookTests(unittest.TestCase):
             "inline-target": (
                 '[target.\'cfg(unix)\'.dev-dependencies]\n'
                 '"reinhardt-test" = { features = ["test-utils"], workspace = true }\n', True),
+            "spaced-inline": ('[ dev-dependencies ]\nreinhardt-test = { workspace = true }\n', True),
+            "quoted-inline": ('[ "dev-dependencies" ]\nreinhardt-test = { workspace = true }\n', True),
+            "literal-inline": ("[ 'dev-dependencies' ]\nreinhardt-test = { workspace = true }\n", True),
+            "spaced-target": (
+                '[ "target" . \'cfg(unix)\' . "dev-dependencies" ]\n'
+                'reinhardt-test.workspace = true\n', True),
+            "spaced-subtable": (
+                '[ dev-dependencies . "reinhardt-test" ]\n"workspace" = true\n', True),
+            "literal-subtable": (
+                "[ 'target' . 'cfg(unix)' . 'dev-dependencies' . 'reinhardt-test' ]\n"
+                "'workspace' = true\n", True),
+            "quoted-runtime": ('[ "dependencies" ]\nreinhardt-test.workspace = true\n', False),
+            "spaced-build": ('[ build-dependencies ]\nreinhardt-test.workspace = true\n', False),
+            "spaced-next-section": (
+                '[ dev-dependencies ]\nother = { version = "1" }\n'
+                '[ "dependencies" ]\nreinhardt-test.workspace = true\n', False),
             "inline-runtime": ('[dependencies]\nreinhardt-test = { workspace = true }\n', False),
             "inline-build": ('[build-dependencies]\nreinhardt-test = { workspace = true }\n', False),
             "inline-target-runtime": (
@@ -174,6 +191,7 @@ class EditHookTests(unittest.TestCase):
         }
         expected = set()
         for name, (text, finding) in cases.items():
+            tomllib.loads(text)
             path = self.file(f"{name}/Cargo.toml")
             path.write_text(text)
             if finding:
