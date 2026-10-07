@@ -6,6 +6,10 @@ versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.x"]
 
 # Reinhardt Data Modeling
 
+**0.4 baseline:** Current examples target `0.4.0-alpha.20`. Consult
+`compatibility/README.md` at the plugin root for the source pin and checks;
+explicit 0.1/0.2/0.3 sections are historical.
+
 Guide developers through model definition, database operations, and migration management using reinhardt-db and reinhardt-query.
 
 ## When to Use
@@ -88,7 +92,7 @@ Guide developers through model definition, database operations, and migration ma
 - Migration commands are in the project-specific `manage` binary, NOT in `reinhardt-admin`
 - `reinhardt-admin` is only for: `startproject`, `startapp`, `plugin`, `fmt`
 - Build application filters from generated model field helpers such as `<Model>::field_name().eq(value)` / `<Model>::field_project().eq(value)` instead of untyped `Filter::new(...)` calls
-- There is NO `sqlmigrate` or `showmigrations` command
+- In 0.4.0-alpha.20, use `showmigrations [APP] --plan --database default` for catalog state and `sqlmigrate APP MIGRATION --database default` to inspect forward SQL (`--backwards` for reverse SQL)
 - Migration files use declarative `Operation` variants — there are NO `up`/`down` methods
 - Migration names are auto-generated from detected changes (`--name` is optional)
 - Field types map to Rust types (String, i32, i64, bool, Option<T>, DateTime<Utc>)

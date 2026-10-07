@@ -421,9 +421,10 @@ that cannot run in the browser.
 
 For Pages apps, `services/` is reserved for injectable service keys, provider
 functions, and service structs/functions. Register application business
-operations there with Reinhardt 0.3 DI shape:
-`#[injectable(scope = "...")] -> FactoryOutput<K, T>`, then inject them from
-`#[server_fn]` as `Depends<K, T>`.
+operations there with the 0.4.x DI shape: self-keyed providers return direct
+`T` and consumers use `T` / `Depends<T>`. Explicit keys use
+`KeyedFactoryOutput<K, T>` and `KeyedDepends<K, T>`. The unprefixed keyed
+wrappers apply only to 0.3.x.
 
 Keep `services` visible on native and WASM targets so `#[server_fn]` stubs can
 import service keys and service types. Gate native/server-only provider

@@ -64,23 +64,33 @@ Define serializers for API input/output using `ModelSerializer` or custom serial
 **Example:**
 
 ```rust
-use reinhardt::rest::prelude::*;
+use chrono::NaiveDateTime;
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
-#[derive(ModelSerializer)]
-#[serializer(model = Product)]
-pub struct ProductSerializer {
-    pub id: Uuid,
+#[derive(Serialize, Deserialize)]
+pub struct ProductResponse {
+    pub id: Option<Uuid>,
     pub name: String,
     pub description: Option<String>,
-    pub created_at: NaiveDateTime,
+    pub created_at: Option<NaiveDateTime>,
 }
 
-#[derive(Deserialize, Validate, Schema)]
-pub struct ProductCreateInput {
-    pub name: String,
-    pub description: Option<String>,
+impl From<Product> for ProductResponse {
+    fn from(product: Product) -> Self {
+        Self {
+            id: product.id,
+            name: product.name,
+            description: product.description,
+            created_at: product.created_at,
+        }
+    }
 }
 ```
+
+For automatic model-backed serialization, construct the generic
+`reinhardt::rest::serializers::ModelSerializer::<Product>::new()` builder.
+There is no `ModelSerializer` derive or `#[serializer(model = ...)]` attribute.
 
 For a named input payload that crosses between a WASM client and a native API
 boundary **(0.4.0; #5543)**, use `#[dto]` instead of a native-only
@@ -98,6 +108,7 @@ use serde::{Deserialize, Serialize};
 pub struct SharedProductCreateInput {
     #[validate(length(min = 1, max = 200))]
     pub name: String,
+    pub description: Option<String>,
 }
 ```
 
@@ -141,30 +152,32 @@ domain value, shared caller, or independently testable invariant.
 5. Register with DI using `#[injectable]`
 6. If no, keep the flow in the endpoint or a nearby private helper
 
-**Example:**
+### Example: a Reusable Name Policy
 
 ```rust
-use reinhardt::prelude::*;
-
-#[injectable_key]
-struct PrimaryDatabase;
+use reinhardt::injectable;
 
 #[injectable(scope = "request")]
-pub struct ProductCatalog {
+pub struct CatalogPolicy {
     #[inject]
-    db: Depends<PrimaryDatabase, DatabaseConnection>,
+    limits: CatalogLimits,
 }
 
-impl ProductCatalog {
-    pub async fn get_by_id(&self, id: Uuid) -> Result<Product, AppError> {
-        let product = Product::objects()
-            .get(id, &*self.db)
-            .await
-            .map_err(|_| AppError::NotFound("Product not found".into()))?;
-        Ok(product)
+impl CatalogPolicy {
+    pub fn validate_name(&self, name: &str) -> Result<(), AppError> {
+        if name.trim().len() < self.limits.minimum_name_length {
+            return Err(AppError::Validation("Product name is too short".into()));
+        }
+        Ok(())
     }
 }
 ```
+
+`CatalogLimits` is an application-owned configuration value registered by
+an application provider. `CatalogPolicy` can be shared by import, create,
+and rename boundaries. Keep one-endpoint CRUD and DTO assembly at the endpoint.
+For an explicitly keyed provider, use `KeyedFactoryOutput<K, T>` and
+`KeyedDepends<K, T>` in alpha.20.
 
 **Checklist:**
 
@@ -174,7 +187,7 @@ impl ProductCatalog {
 - [ ] Single-use helpers that only delegate the same endpoint flow are inlined and deleted
 - [ ] Service struct defined with injected common dependencies
 - [ ] `#[injectable]` applied when a service is justified
-- [ ] `#[injectable_key]` / `FactoryOutput<K, T>` used if the provider output type is not unique
+- [ ] `#[injectable_key]` / `KeyedFactoryOutput<K, T>` used if the provider output type is not unique in alpha.20
 - [ ] Returns reusable domain results; endpoint-specific DTO and response assembly stays outside the service
 - [ ] Error handling uses domain error types
 - [ ] No HTTP concerns (status codes, headers) in service
@@ -198,48 +211,52 @@ Create views and URL routing for the feature.
 **Example:**
 
 ```rust
-use reinhardt::prelude::*;
-use reinhardt::rest::prelude::*;
+use hyper::StatusCode;
+use reinhardt::{get, post, prelude::{Json, Path, Response, Validate, ViewResult}};
+use reinhardt::urls::routers::UnifiedRouter;
 
-#[get("/{id}")]
-async fn get_product(
-    path: Path<Uuid>,
-    #[inject] catalog: ProductCatalog,
-) -> Result<Json<ProductSerializer>, AppError> {
-    let product = catalog.get_by_id(path.into_inner()).await?;
-    Ok(Json(ProductSerializer::from_model(&product)))
+#[get("/{id}", name = "product_detail")]
+async fn get_product(Path(id): Path<Uuid>) -> ViewResult<Response> {
+    let result = Product::objects()
+        .get(id)
+        .first()
+        .await?
+        .map(ProductResponse::from)
+        .ok_or_else(|| AppError::NotFound("Product not found".into()));
+    http_result(result, StatusCode::OK)
 }
 
-#[post("/")]
+#[post("/", name = "product_create")]
 async fn create_product(
-    Json(input): Json<ProductCreateInput>,
-    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
-) -> Result<Json<ProductSerializer>, AppError> {
+    Json(input): Json<SharedProductCreateInput>,
+    #[inject] policy: CatalogPolicy,
+) -> ViewResult<Response> {
     input.validate()?;
-    let product = build_product(input)?;
-    let saved = Product::objects()
-        .create_with_conn(&*db, &product)
-        .await?;
-    Ok(Json(ProductSerializer::from_model(&saved)))
+    let result = async {
+        policy.validate_name(&input.name)?;
+        let product = Product {
+            id: None,
+            name: input.name,
+            description: input.description,
+            created_at: None,
+        };
+        let saved = Product::objects().create(&product).await?;
+        Ok(ProductResponse::from(saved))
+    }.await;
+    http_result(result, StatusCode::CREATED)
 }
 
-fn build_product(input: ProductCreateInput) -> Result<Product, AppError> {
-    Ok(Product {
-        id: None,
-        name: input.name,
-        description: input.description,
-        created_at: None,
+pub fn product_routes() -> UnifiedRouter {
+    UnifiedRouter::new().server(|router| {
+        router.endpoint(get_product).endpoint(create_product)
     })
 }
-
-pub fn product_routes(cfg: &mut ServiceConfig) {
-    cfg.service(
-        scope("/products")
-            .service(get_product)
-            .service(create_product)
-    );
-}
 ```
+
+`http_result` is the application adapter in [Error Mapping](error-mapping.md).
+`SharedProductCreateInput` is the validated input DTO defined in Layer 2.
+Mount this app-local aggregate from the one project `#[routes]` entrypoint;
+apply `#[url_patterns]` when the aggregate is shared with browser-WASM code.
 
 **Checklist:**
 
@@ -297,24 +314,26 @@ Write tests at three levels: unit, integration, and API.
 2. **Integration tests** — test with real database via TestContainers
 3. **API tests** — test HTTP endpoints end-to-end
 
-**Unit test example (endpoint-local helper):**
+**Unit test example (input validation):**
 
 ```rust
+use reinhardt::prelude::Validate;
+
 #[rstest]
-fn test_build_product_success() {
+#[case("Test Product", true)]
+#[case("", false)]
+fn test_product_input_validation(#[case] name: &str, #[case] valid: bool) {
     // Arrange
-    let input = ProductCreateInput {
-        name: "Test Product".into(),
+    let input = SharedProductCreateInput {
+        name: name.into(),
         description: None,
     };
 
     // Act
-    let result = build_product(input);
+    let result = input.validate();
 
     // Assert
-    assert!(result.is_ok());
-    let product = result.unwrap();
-    assert_eq!(product.name, "Test Product");
+    assert_eq!(result.is_ok(), valid);
 }
 ```
 

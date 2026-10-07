@@ -196,7 +196,7 @@ pub struct UserDocument {
 | `use_inject` | `bool` | Enable `#[inject]` on parameters |
 | `pre_validate` | `bool` | Run validation before handler |
 
-Examples that inject `Depends<PrimaryDatabase, DatabaseConnection>` assume a
+Examples that inject `KeyedDepends<PrimaryDatabase, DatabaseConnection>` assume a
 database provider key in scope:
 
 ```rust
@@ -208,7 +208,7 @@ struct PrimaryDatabase;
 #[get("/users/{id}/", name = "user_detail", use_inject = true)]
 pub async fn user_detail(
     Path(id): Path<Uuid>,
-    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
+    #[inject] db: KeyedDepends<PrimaryDatabase, DatabaseConnection>,
 ) -> ViewResult<Response> {
     // ...
 }
@@ -324,7 +324,7 @@ Mark a parameter for DI resolution.
 #[get("/config/", name = "config_info", use_inject = true)]
 pub async fn config_info(
     #[inject] config: AppConfig,
-    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
+    #[inject] db: KeyedDepends<PrimaryDatabase, DatabaseConnection>,
     #[inject(cache = false)] counter: RequestCounter,  // Fresh instance each time
 ) -> ViewResult<Response> {
     // ...
@@ -617,6 +617,8 @@ on the server side and excludes them from the WASM client's argument struct,
 so they do not appear in client-side call sites.
 
 ```rust
+use reinhardt::pages::server_fn::server_fn;
+
 use reinhardt::pages::prelude::*;
 use reinhardt::http::{Json, Query, Path, Header, Cookie, Form, Body};
 use reinhardt::http::extractors::Validated;
@@ -697,7 +699,7 @@ gRPC service method with DI support.
 ```rust
 #[grpc_handler]
 pub async fn get_user(
-    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
+    #[inject] db: KeyedDepends<PrimaryDatabase, DatabaseConnection>,
     request: Request<GetUserRequest>,
 ) -> Result<Response<UserResponse>, Status> {
     // ...
@@ -713,7 +715,7 @@ GraphQL resolver with DI support.
 ```rust
 #[graphql_handler]
 pub async fn get_user(
-    #[inject] db: Depends<PrimaryDatabase, DatabaseConnection>,
+    #[inject] db: KeyedDepends<PrimaryDatabase, DatabaseConnection>,
     ctx: &Context<'_>,
 ) -> Result<User, Error> {
     // ...

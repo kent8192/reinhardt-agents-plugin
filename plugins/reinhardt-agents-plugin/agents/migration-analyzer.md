@@ -5,6 +5,10 @@ capabilities: ["changelog-analysis", "deprecated-api-detection", "github-context
 
 # Migration Analyzer Agent
 
+For 0.4 application work, use the pinned
+[0.4.0-alpha.20 compatibility baseline](../compatibility/README.md).
+Do not apply historical 0.1/0.2/0.3 API examples to that target.
+
 Specialized agent for analyzing the impact of reinhardt-web version upgrades.
 
 ## Invocation
@@ -63,6 +67,13 @@ for synchronous `SsrRenderer` calls that now require `.await`, assumptions that
 `render_page` returns a complete `String` instead of an `SsrStream`, and native
 `use_resource` hooks that need SSR timeout or hydration coverage. Report stable
 explicit keys for conditionally rendered resources.
+
+For the pinned 0.4.0-alpha.20 baseline, also scan for removed `watch` blocks,
+string Context keys, tuple arguments to `use_resource`, and runtime callback
+clauses inside `form!`. Use direct reactive control flow, typed `Context<T>`,
+`deps![...]`, and one `use_form` / `use_form_action` submission path.
+The reintroduced `#[url_patterns]` composes synchronous `UnifiedRouter`
+aggregates; do not apply the 0.2 removal rule to this version.
 
 ### Step 2: GitHub Context Enrichment
 

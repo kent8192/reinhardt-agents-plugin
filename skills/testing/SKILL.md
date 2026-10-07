@@ -6,6 +6,10 @@ versions: ["0.4.0"]
 
 # Reinhardt Testing
 
+**0.4 baseline:** Current examples target `0.4.0-alpha.20`. Consult
+`compatibility/README.md` at the plugin root for the source pin and checks;
+explicit 0.1/0.2/0.3 sections are historical.
+
 Guide developers through writing high-quality tests using rstest, AAA pattern, reinhardt-test fixtures, and TestContainers.
 
 ## When to Use

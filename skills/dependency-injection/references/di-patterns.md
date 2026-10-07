@@ -705,7 +705,7 @@ HTTP method decorators (`#[get]`, `#[post]`, etc.) have built-in `#[inject]` sup
 
 ```rust
 use reinhardt::di::prelude::*;
-use reinhardt::views::prelude::*;
+use reinhardt::prelude::*;
 
 #[get("/users/", name = "user_list")]
 pub async fn list_users(

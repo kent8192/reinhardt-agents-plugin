@@ -23,7 +23,7 @@ JWT is the verified production pattern, confirmed in use by the reinhardt-cloud 
 
 ```toml
 [dependencies]
-reinhardt = { version = "...", features = ["auth-jwt", "argon2-hasher"] }
+reinhardt = { package = "reinhardt-web", version = "...", features = ["auth-jwt", "argon2-hasher"] }
 ```
 
 ### Configuration
@@ -72,7 +72,7 @@ Reinhardt provides two auth extractors, both used with `#[inject]`:
 `AuthInfo` provides lightweight access to the authenticated state without loading the full user model. This is the pattern used in the reinhardt-cloud dashboard.
 
 ```rust
-use reinhardt::views::prelude::*;
+use reinhardt::prelude::*;
 
 #[get("/profile/", name = "user_profile")]
 pub async fn get_profile(
@@ -135,7 +135,7 @@ pub async fn login(
 
 ```toml
 [dependencies]
-reinhardt = { version = "...", features = ["auth-session", "sessions", "argon2-hasher"] }
+reinhardt = { package = "reinhardt-web", version = "...", features = ["auth-session", "sessions", "argon2-hasher"] }
 ```
 
 ### Configuration
@@ -170,7 +170,7 @@ Use HTTP method decorators or `#[server_fn]` — never raw `async fn` with `Requ
 
 ```rust
 use reinhardt::auth::prelude::*;
-use reinhardt::views::prelude::*;
+use reinhardt::prelude::*;
 
 #[post("/auth/login/", name = "session_login", pre_validate = true)]
 pub async fn session_login(

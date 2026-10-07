@@ -6,6 +6,10 @@ versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.x"]
 
 # Reinhardt Migration
 
+**0.4 baseline:** Current examples target `0.4.0-alpha.20`. Consult
+`compatibility/README.md` at the plugin root for the source pin and checks;
+explicit 0.1/0.2/0.3 sections are historical.
+
 Guide developers through reinhardt-web version upgrades and deprecated API replacement.
 
 ## When to Use

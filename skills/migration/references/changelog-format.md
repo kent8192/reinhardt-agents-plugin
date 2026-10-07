@@ -128,7 +128,7 @@ reinhardt/crates/reinhardt-dentdelion/CHANGELOG.md
 Focus on crates that the user's application depends on. Check `Cargo.toml` features:
 
 ```toml
-reinhardt = { version = "0.1.3", features = ["auth", "database", "dentdelion"] }  # or "0.2.0"
+reinhardt = { package = "reinhardt-web", version = "0.1.3", features = ["auth", "database", "dentdelion"] }  # or "0.2.0"
 ```
 
 This means read CHANGELOGs for:

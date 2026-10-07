@@ -6,6 +6,10 @@ versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.0"]
 
 # Reinhardt REST API Development
 
+**0.4 baseline:** Current examples target `0.4.0-alpha.20`. Consult
+`compatibility/README.md` at the plugin root for the source pin and checks;
+explicit 0.1/0.2/0.3 sections are historical.
+
 Guide developers through building REST API endpoints using reinhardt-rest, reinhardt-views, and reinhardt-auth.
 
 ## When to Use
@@ -37,7 +41,7 @@ Guide developers through building REST API endpoints using reinhardt-rest, reinh
 - Scoped endpoints must apply the same target scope to every backend path, including fallback filename, filesystem, and hybrid-search branches
 - `#[server_fn]` is for Pages client RPC; external workers and agent services should use explicit HTTP or gRPC endpoints with configured domains
 - Server-side prompt endpoints and generated text APIs must use `reinhardt-i18n` / locale-aware settings for language-specific output
-- For Pages `#[server_fn]` business logic, inject shared keyed services with `Depends<K, T>` rather than constructing settings directly in the request boundary
+- In 0.4.0-alpha.20 Pages `#[server_fn]`, inject self-keyed services with `T` / `Depends<T>` and explicit keys with `KeyedDepends<K, T>`; use `KeyedFactoryOutput<K, T>` for those providers
 - In Pages component files, import DTOs, route helpers, serializers, server functions, and shared components at module scope; avoid repeated full `crate::...` paths inside `page!`, event handlers, and small helpers
 - Prefer DI services over utility-function clusters when endpoint or server-function behavior needs settings, providers, repositories, external I/O, lifecycle scoping, or test overrides
 - Keep app `services/` modules limited to DI keys, providers, and service structs/functions; put provider adapters, prompt builders, parsers, converters, repository/database helpers, and pure helpers under app-local `server/` modules
@@ -52,7 +56,7 @@ Guide developers through building REST API endpoints using reinhardt-rest, reinh
 - Implement `From` for custom response DTOs and call `.into()` at mapping sites instead of repeating manual field-by-field conversions
 - Do not serialize absent typed identifiers as empty strings; drop the item or return an explicit optional/error shape
 - ALL code comments must be in English
-- `#[url_patterns]` is removed in 0.2.x -- use `#[routes]` for all URL registration
+- `#[url_patterns]` was removed in 0.2.x and reintroduced in 0.4: use it for target-neutral `UnifiedRouter` functions, and `#[routes]` for the single project inventory entrypoint
 - In 0.3.x, raw server-route registration (`ServerRouter::function`, `.route`, `.handler_with_method`, and named variants) is removed from the public migration surface — use `#[get]` / `#[post]` / endpoint macros plus `.endpoint(factory)`
 - `FunctionHandler` is not a public app-facing registration type in 0.3.x; keep `.view(...)` / `.view_named(...)` only for intentional class-style `Handler` implementations
 - Use `CurrentUser<T>` for full authenticated-user extraction; migrate legacy `AuthUser<T>` before upgrading to 0.3.x

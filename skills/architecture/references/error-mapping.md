@@ -1,57 +1,38 @@
 # Service Error to HTTP Response Mapping
 
-Standard conventions for mapping domain/service errors to HTTP responses in reinhardt applications.
+Services return application errors. Map them centrally at the HTTP boundary.
+The following pattern uses the 0.4.0-alpha.20 `Response` API; Reinhardt does
+not provide a `ResponseError` trait, `HttpResponse::build`, or a
+`rest::prelude` module.
 
----
-
-## Principle
-
-Services raise domain-specific errors. The API layer maps these to HTTP responses **centrally**, not inside each view function. This keeps services free of HTTP concerns.
-
-## Standard Error Mapping
-
-| Service Error | HTTP Status | Response Body |
-|---|---|---|
-| `NotFound(String)` | 404 Not Found | `{"detail": "<message>"}` |
-| `ValidationError(String)` | 400 Bad Request | `{"detail": "<message>"}` |
-| `PermissionDenied(String)` | 403 Forbidden | `{"detail": "<message>"}` |
-| `Conflict(String)` | 409 Conflict | `{"detail": "<message>"}` |
-| `Unauthorized(String)` | 401 Unauthorized | `{"detail": "<message>"}` |
-| `Framework(reinhardt::Error)` | Category-dependent; otherwise 500 | Generic body for internal failures |
-
-## Implementation Pattern
-
-Define a central application error type:
+## Application Error Adapter
 
 ```rust
-use reinhardt::rest::prelude::*;
+use hyper::StatusCode;
+use reinhardt::{Error, http::Response};
+use serde::Serialize;
 
 #[derive(Debug, thiserror::Error)]
 pub enum AppError {
     #[error("{0}")]
     NotFound(String),
-
     #[error("{0}")]
-    ValidationError(String),
-
+    Validation(String),
     #[error("{0}")]
     PermissionDenied(String),
-
     #[error("{0}")]
     Conflict(String),
-
     #[error("{0}")]
     Unauthorized(String),
-
     #[error(transparent)]
-    Framework(#[from] reinhardt::Error),
+    Framework(#[from] Error),
 }
 
-impl ResponseError for AppError {
-    fn status_code(&self) -> StatusCode {
+impl AppError {
+    pub fn status_code(&self) -> StatusCode {
         match self {
             Self::NotFound(_) => StatusCode::NOT_FOUND,
-            Self::ValidationError(_) => StatusCode::BAD_REQUEST,
+            Self::Validation(_) => StatusCode::BAD_REQUEST,
             Self::PermissionDenied(_) => StatusCode::FORBIDDEN,
             Self::Conflict(_) => StatusCode::CONFLICT,
             Self::Unauthorized(_) => StatusCode::UNAUTHORIZED,
@@ -60,52 +41,72 @@ impl ResponseError for AppError {
         }
     }
 
-    fn error_response(&self) -> HttpResponse {
+    pub fn error_response(&self) -> reinhardt::Result<Response> {
         let detail = match self {
             Self::Framework(_) => match self.status_code() {
-                StatusCode::BAD_REQUEST => "Invalid request".to_string(),
-                StatusCode::UNAUTHORIZED => "Authentication required".to_string(),
-                StatusCode::FORBIDDEN => "Permission denied".to_string(),
-                StatusCode::NOT_FOUND => "Resource not found".to_string(),
-                StatusCode::METHOD_NOT_ALLOWED => "Method not allowed".to_string(),
-                StatusCode::CONFLICT => "Request conflict".to_string(),
-                StatusCode::SERVICE_UNAVAILABLE => "Service unavailable".to_string(),
-                _ => "Internal server error".to_string(),
+                StatusCode::BAD_REQUEST => "Invalid request",
+                StatusCode::UNAUTHORIZED => "Authentication required",
+                StatusCode::FORBIDDEN => "Permission denied",
+                StatusCode::NOT_FOUND => "Resource not found",
+                StatusCode::METHOD_NOT_ALLOWED => "Method not allowed",
+                StatusCode::CONFLICT => "Request conflict",
+                StatusCode::SERVICE_UNAVAILABLE => "Service unavailable",
+                _ => "Internal server error",
             },
-            other => other.to_string(),
+            Self::NotFound(message)
+            | Self::Validation(message)
+            | Self::PermissionDenied(message)
+            | Self::Conflict(message)
+            | Self::Unauthorized(message) => message,
         };
-        HttpResponse::build(self.status_code())
-            .json(serde_json::json!({"detail": detail}))
+        Response::new(self.status_code())
+            .with_json(&serde_json::json!({ "detail": detail }))
+    }
+}
+
+pub fn http_result<T: Serialize>(
+    result: Result<T, AppError>,
+    success_status: StatusCode,
+) -> reinhardt::Result<Response> {
+    match result {
+        Ok(value) => Response::new(success_status).with_json(&value),
+        Err(error) => error.error_response(),
     }
 }
 ```
 
-## Rules
+Declare `hyper`, `serde`, `serde_json`, and `thiserror` in the
+application manifest for these imports. A handler returning
+`ViewResult<Response>` can call `http_result(operation.await, StatusCode::OK)`.
+This adapter is application-owned; a service returning `Result<T, AppError>`
+does not automatically register a custom HTTP error handler.
 
-- **NEVER** expose raw framework or database diagnostics to clients — use a generic message for internal failures
-- **NEVER** construct HTTP responses inside service methods
-- **ALWAYS** define `AppError` once per project, not per app
-- Services use `AppError` variants; views return `Result<T, AppError>`
-- In 0.4.x, preserve repository-owned framework errors with a named `#[from] reinhardt::Error` variant; do not expose `anyhow::Error` in application/framework boundaries
-- Match portable `database_kind()` categories first. Treat optional vendor codes as diagnostics, not cross-database control flow
-- Conversion traits (`From<OrmError>`, `From<AuthError>`) centralize ORM/auth error mapping
+Keep domain messages safe for clients. Match portable `database_kind()`
+categories when mapping persistence failures, preserve the original framework
+error for diagnostics, and return generic text for internal causes.
 
 ## Testing Error Mapping
 
 ```rust
 #[rstest]
 #[tokio::test]
-async fn test_not_found_returns_404(#[future] api_client: APIClient) {
+async fn test_not_found_returns_404(api_client: APIClient) {
     // Arrange
-    let client = api_client.await;
     let nonexistent_id = Uuid::new_v4();
 
     // Act
-    let response = client.get(&format!("/products/{nonexistent_id}")).await;
+    let response = api_client
+        .get(&format!("/products/{nonexistent_id}"))
+        .await
+        .unwrap();
 
     // Assert
-    assert_eq!(response.status(), 404);
-    let json = response.json::<serde_json::Value>().await;
-    assert!(json["detail"].is_string());
+    assert_eq!(response.status_code(), 404);
+    let body = response.json::<serde_json::Value>().unwrap();
+    assert_eq!(body["detail"], "Product not found");
 }
 ```
+
+Use the exact application's safe message in the assertion. Also exercise an
+internal framework error and assert the complete generic response body so
+database or authentication diagnostics cannot leak.

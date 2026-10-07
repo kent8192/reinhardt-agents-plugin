@@ -13,6 +13,7 @@ ITEMS=(
   .codex-plugin
   agents
   commands
+  compatibility
   hooks
   scripts
   skills

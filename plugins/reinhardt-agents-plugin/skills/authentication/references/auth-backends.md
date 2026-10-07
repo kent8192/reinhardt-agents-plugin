@@ -9,7 +9,7 @@
 | Token | `TokenAuthentication` | `auth-token` | `Authorization: Token <key>` | Yes (DB) | Persistent API keys, service accounts |
 | Basic | `HttpBasicAuth` | `argon2-hasher` or `bcrypt-hasher` | `Authorization: Basic <b64>` | No | Development, simple integrations |
 | Remote User | `RemoteUserAuthentication` | (always available) | Proxy header | No | Reverse proxy auth (nginx) |
-| Social/OAuth2 | `SocialAuthBackend` | `social` | OAuth2 redirect flow | Depends | Google, GitHub, Apple, Microsoft |
+| Social/OAuth2 | `SocialAuthBackend` | `social-auth` (facade) | OAuth2 redirect flow | Depends | Google, GitHub, Apple, Microsoft |
 
 **Module:** `reinhardt_auth` (re-exported via `reinhardt::auth`)
 
@@ -41,29 +41,28 @@ impl AuthBackend for JwtBackend {
 
 ---
 
-## AuthenticationBackend Trait
+## Authentication Backend Traits (0.4.0-alpha.20)
 
-All backends implement this core trait:
+`AuthBackend` is the current contract. `AuthenticationBackend` is removed.
 
 ```rust
 #[async_trait]
-pub trait AuthenticationBackend: Send + Sync {
+pub trait AuthBackend: Send + Sync {
     async fn authenticate(&self, request: &Request)
-        -> Result<Option<Box<dyn User>>, AuthenticationError>;
+        -> Result<Option<Box<dyn AuthIdentity>>, AuthenticationError>;
     async fn get_user(&self, user_id: &str)
-        -> Result<Option<Box<dyn User>>, AuthenticationError>;
+        -> Result<Option<Box<dyn AuthIdentity>>, AuthenticationError>;
 }
-```
 
-There is also a `RestAuthentication` trait used by REST-specific backends:
-
-```rust
 #[async_trait]
 pub trait RestAuthentication: Send + Sync {
     async fn authenticate(&self, request: &Request)
-        -> Result<Option<Box<dyn User>>, AuthenticationError>;
+        -> Result<Option<Box<dyn AuthIdentity>>, AuthenticationError>;
 }
 ```
+
+Import these through `reinhardt::auth`. Legacy `Box<dyn User>` examples
+belong to the pre-0.2 migration comparison only.
 
 ---
 
@@ -119,7 +118,7 @@ pub enum JwtError {
 
 ```rust
 // Cargo.toml
-// reinhardt = { version = "...", features = ["auth-jwt", "argon2-hasher"] }
+// reinhardt = { package = "reinhardt-web", version = "...", features = ["auth-jwt", "argon2-hasher"] }
 
 use chrono::Duration;
 use reinhardt::auth::jwt::{Claims, JwtAuth, JwtError};
@@ -233,7 +232,7 @@ pub struct SessionSettings {
 
 ```rust
 // Cargo.toml
-// reinhardt = { version = "...", features = ["auth-session", "sessions", "argon2-hasher"] }
+// reinhardt = { package = "reinhardt-web", version = "...", features = ["auth-session", "sessions", "argon2-hasher"] }
 
 use reinhardt::auth::{sessions::config::SessionConfig, SessionSettings};
 
@@ -245,7 +244,7 @@ fn session_config(auth_session: &SessionSettings) -> SessionConfig {
 ### Login/Logout Handlers
 
 ```rust
-use reinhardt::views::prelude::*;
+use reinhardt::prelude::*;
 
 #[post("/auth/login/", name = "session_login")]
 pub async fn session_login(
@@ -364,8 +363,8 @@ pub struct CompositeAuthentication { /* ... */ }
 | Method | Signature | Description |
 |--------|-----------|-------------|
 | `new` | `fn new() -> Self` | Create empty composite |
-| `with_backend` | `fn with_backend<B: AuthenticationBackend + 'static>(mut self, backend: B) -> Self` | Add a backend |
-| `with_backends` | `fn with_backends(mut self, backends: Vec<Arc<dyn AuthenticationBackend>>) -> Self` | Add multiple |
+| `with_backend` | `fn with_backend<B: AuthBackend + 'static>(mut self, backend: B) -> Self` | Add a backend |
+| `with_backends` | `fn with_backends(mut self, backends: Vec<Arc<dyn AuthBackend>>) -> Self` | Add multiple |
 
 ### Example
 

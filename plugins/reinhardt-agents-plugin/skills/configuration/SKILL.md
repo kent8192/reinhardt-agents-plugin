@@ -1,10 +1,14 @@
 ---
 name: configuration
 description: Use when setting up or modifying reinhardt-web project configuration - covers settings fragments, TOML sources, profiles, and the composable settings system
-versions: ["0.1.x", "0.2.x", "0.3.x"]
+versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.x"]
 ---
 
 # Reinhardt Configuration
+
+**0.4 baseline:** Current examples target `0.4.0-alpha.20`. Consult
+`compatibility/README.md` at the plugin root for the source pin and checks;
+explicit 0.1/0.2/0.3 sections are historical.
 
 Guide developers through reinhardt-web's composable settings system using fragments, TOML sources, environment profiles, and the `#[settings]` macro.
 
@@ -41,7 +45,7 @@ Guide developers through reinhardt-web's composable settings system using fragme
 - Use `LowPriorityEnvSource` for env vars, `TomlFileSource` for TOML files
 - Priority order (highest to lowest): env-specific TOML > base TOML > env vars > defaults
 - In 0.3.x shared app/config modules should compile cfg-clean across native and WASM; avoid broad call-site `#[cfg]` workarounds around settings types
-- If settings are provided through DI, use 0.3 keyed provider patterns (`#[injectable]`, optional `FactoryOutput<K, T>`) when multiple settings-like values can exist
+- If settings are provided through DI, use `#[injectable]` with direct `T` / `Depends<T>`, or explicit `KeyedFactoryOutput<K, T>` / `KeyedDepends<K, T>` on 0.4.x (the unprefixed keyed wrappers apply only to 0.3.x) when multiple settings-like values can exist
 
 ## Dynamic References
 

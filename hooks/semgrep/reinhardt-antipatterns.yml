@@ -16,9 +16,15 @@ rules:
   # ERROR: reinhardt-test must not use workspace = true in dev-dependencies
   - id: reinhardt-no-workspace-test-dep
     patterns:
-      - pattern-regex: 'reinhardt-test\s*=\s*\{[^}]*workspace\s*=\s*true'
+      - pattern-either:
+          - pattern-regex: >-
+              (?m)^[\t ]*\[[\t ]*(?:(?:target|"target"|'target')[\t ]*\.[^\]\r\n]+\.[\t ]*)?(?:dev-dependencies|"dev-dependencies"|'dev-dependencies')[\t ]*\][\t ]*(?:#[^\r\n]*)?\r?\n(?:(?![\t ]*\[)[^\r\n]*(?:\r?\n|$))*?[\t ]*(?:reinhardt-test|"reinhardt-test"|'reinhardt-test')[\t ]*=[\t ]*\{(?:[^#"'{}]|"(?:\\.|[^"\\])*"|'[^']*'|#[^\r\n]*(?:\r?\n|$))*?(?<![\w-])(?:workspace|"workspace"|'workspace')[\t ]*=[\t ]*true\b
+          - pattern-regex: >-
+              (?m)^[\t ]*\[[\t ]*(?:(?:target|"target"|'target')[\t ]*\.[^\]\r\n]+\.[\t ]*)?(?:dev-dependencies|"dev-dependencies"|'dev-dependencies')[\t ]*\][\t ]*(?:#[^\r\n]*)?\r?\n(?:(?![\t ]*\[)[^\r\n]*(?:\r?\n|$))*?[\t ]*(?:reinhardt-test|"reinhardt-test"|'reinhardt-test')[\t ]*\.[\t ]*(?:workspace|"workspace"|'workspace')[\t ]*=[\t ]*true\b
+          - pattern-regex: >-
+              (?m)^[\t ]*\[[\t ]*(?:(?:target|"target"|'target')[\t ]*\.[^\]\r\n]+\.[\t ]*)?(?:dev-dependencies|"dev-dependencies"|'dev-dependencies')[\t ]*\.[\t ]*(?:reinhardt-test|"reinhardt-test"|'reinhardt-test')[\t ]*\][\t ]*(?:#[^\r\n]*)?\r?\n(?:(?![\t ]*\[)[^\r\n]*(?:\r?\n|$))*?[\t ]*(?:workspace|"workspace"|'workspace')[\t ]*=[\t ]*true\b
     message: >-
-      `reinhardt-test = { workspace = true }` in dev-dependencies is forbidden
+      Workspace-inherited `reinhardt-test` in dev-dependencies is forbidden
       in functional crates. Use an optional dependency or path-only dev-dependency
       instead (see KI-2).
     languages: [generic]

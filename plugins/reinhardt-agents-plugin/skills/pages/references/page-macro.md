@@ -439,45 +439,31 @@ ul {
 }
 ```
 
-## Reactive watch Blocks
+## Reactive Control Flow (0.4.0-alpha.20)
 
-Use `watch` for Signal-dependent reactive rendering. Unlike static `if` conditions evaluated once at render time, `watch` blocks re-evaluate when Signal dependencies change.
+Read Signals inside `page!` expressions and control flow. alpha.20 automatically
+tracks these reads; `watch { ... }` is removed and produces a compile error.
 
 ```rust
-// 0.4.x direct body with watch
 page!({
     div {
-        watch {
-            if error.get().is_some() {
-                div { class: "alert", { error.get().unwrap_or_default() } }
-            }
+        if error.get().is_some() {
+            div { class: "alert", { error.get().unwrap_or_default() } }
         }
     }
 })
-
-// watch with match
-watch {
-    match state.get() {
-        State::Loading => div { "Loading..." },
-        State::Ready(data) => div { { data } },
-        State::Error(msg) => div { class: "error", { msg } },
-    }
-}
 ```
 
-### When to Use watch
+Use direct `if`, `match`, and `for` nodes for reactive branches and lists.
+Copy Signal handles in 0.4; read them inside the render expression instead of
+extracting a snapshot beforehand. Clone ordinary owned values only as needed.
 
-| Scenario | Solution |
-|----------|----------|
-| Static condition on Copy type | Plain `if` |
-| Dynamic Signal-dependent condition | `watch { if signal.get() { ... } }` |
-| Multiple reactive branches | `watch { match state.get() { ... } }` |
-
-**Best practices**: Pass Signals directly (don't extract values before `page!`). Clone freely. Single expression per `watch` block.
+The following 0.1-to-0.2 migration comparison is historical. Its optional
+`watch` compatibility does not apply to alpha.20.
 
 ### 0.2.x: Automatic Reactive Wrapping
 
-In 0.2.x, reactive expressions (`{expr}`, `if`, `for`) inside `page!` are **automatically wrapped** in `Page::reactive` — no explicit `watch { ... }` or manual `Page::reactive(...)` call is needed. Existing `watch` blocks still compile, but the wrapping is now redundant.
+In 0.2.x, reactive expressions (`{expr}`, `if`, `for`) inside `page!` are **automatically wrapped** in `Page::reactive` — no explicit `watch { ... }` or manual `Page::reactive(...)` call is needed. On 0.2.x and 0.3.x, existing `watch` blocks still compile but are redundant. alpha.20 rejects them.
 
 ```rust
 // 0.1.x — explicit watch needed for reactive re-rendering
@@ -634,10 +620,8 @@ fn todo_app(todos: Signal<Vec<String>>, filter: Signal<String>) -> Page {
 
             ul {
                 class: "todo-list",
-                watch {
-                    if todos.get().is_empty() {
-                        li { class: "empty", "No todos yet" }
-                    }
+                if todos.get().is_empty() {
+                    li { class: "empty", "No todos yet" }
                 }
             }
 

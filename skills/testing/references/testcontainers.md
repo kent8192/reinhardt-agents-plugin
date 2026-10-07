@@ -404,7 +404,7 @@ Pool configuration can be tuned via environment variables:
 
 ```toml
 [dev-dependencies]
-reinhardt = { version = "...", features = ["test", "testcontainers"] }
+reinhardt = { package = "reinhardt-web", version = "...", features = ["test", "testcontainers"] }
 rstest = "0.23"
 serial_test = "3"
 tokio = { version = "1", features = ["full"] }

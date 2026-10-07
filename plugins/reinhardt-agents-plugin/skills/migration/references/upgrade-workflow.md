@@ -39,7 +39,7 @@ Goal: Build a complete picture of what changed between the current and target ve
 Read the project's `Cargo.toml` and extract the reinhardt dependency version:
 
 ```text
-reinhardt = { version = "0.1.0-rc.19", features = [...] }
+reinhardt = { package = "reinhardt-web", version = "0.1.0-rc.19", features = [...] }
 ```
 
 ### Step 1.2 — Resolve target version
@@ -51,7 +51,9 @@ reinhardt = { version = "0.1.0-rc.19", features = [...] }
   gh release list -R kent8192/reinhardt-web --limit 1
   ```
 
-  Or read `reinhardt/Cargo.toml` if the repo is available locally.
+  Or read the framework checkout's root `Cargo.toml` `[package].version`
+  if it is available locally. The pinned 0.4.0-alpha.20 facade package and
+  feature graph share this manifest with `[workspace]`.
 
 ### Step 1.3 — Dispatch migration-analyzer agent
 
@@ -110,7 +112,7 @@ Goal: Apply changes incrementally with verification at each step.
 Change the reinhardt version to the target:
 
 ```toml
-reinhardt = { version = "0.1.3", features = [...] }  # or "0.2.0"
+reinhardt = { package = "reinhardt-web", version = "0.1.3", features = [...] }  # or "0.2.0"
 ```
 
 Run `cargo check` immediately after to identify compilation errors. This surfaces

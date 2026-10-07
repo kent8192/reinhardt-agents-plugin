@@ -1,0 +1,527 @@
+{
+  "package": "reinhardt-web",
+  "version": "0.4.0-alpha.20",
+  "commit": "81dba7c84d1dcdb26b6b2e6a56a0212b0c9e650f",
+  "rust_version": "1.96.0",
+  "features": {
+    "default": [
+      "standard"
+    ],
+    "minimal": [
+      "core",
+      "routing",
+      "di",
+      "server"
+    ],
+    "standard": [
+      "minimal",
+      "viewset-routing",
+      "database",
+      "db-postgres",
+      "reinhardt-rest",
+      "reinhardt-rest/serializers",
+      "dep:reinhardt-views",
+      "reinhardt-views/viewsets",
+      "reinhardt-auth",
+      "reinhardt-middleware",
+      "reinhardt-middleware/sessions",
+      "reinhardt-rest/pagination",
+      "reinhardt-rest/filters",
+      "reinhardt-rest/throttling",
+      "core",
+      "signals",
+      "reinhardt-rest/parsers",
+      "reinhardt-pages",
+      "reinhardt-rest/versioning",
+      "reinhardt-rest/metadata",
+      "reinhardt-rest/negotiation"
+    ],
+    "database": [
+      "reinhardt-db",
+      "reinhardt-db/orm",
+      "reinhardt-db/migrations",
+      "reinhardt-db/associations",
+      "reinhardt-db/contenttypes",
+      "reinhardt-query",
+      "linkme",
+      "ctor",
+      "reinhardt-auth?/database",
+      "reinhardt-shortcuts?/database"
+    ],
+    "api": [
+      "rest",
+      "viewset-routing",
+      "reinhardt-rest",
+      "reinhardt-rest/serializers",
+      "dep:reinhardt-views",
+      "reinhardt-views/viewsets"
+    ],
+    "auth": [
+      "reinhardt-auth",
+      "reinhardt-commands?/auth"
+    ],
+    "argon2-hasher": [
+      "auth",
+      "reinhardt-auth/argon2-hasher"
+    ],
+    "bcrypt-hasher": [
+      "auth",
+      "reinhardt-auth/bcrypt-hasher"
+    ],
+    "admin": [
+      "pages",
+      "reinhardt-admin",
+      "reinhardt-admin/adapters",
+      "reinhardt-admin/server",
+      "reinhardt-admin/pages",
+      "reinhardt-admin/file-uploads",
+      "reinhardt-forms",
+      "reinhardt-pages",
+      "reinhardt-commands/admin"
+    ],
+    "forms": [
+      "reinhardt-forms"
+    ],
+    "graphql": [
+      "reinhardt-graphql"
+    ],
+    "pages": [
+      "reinhardt-pages",
+      "reinhardt-commands/pages",
+      "client-router"
+    ],
+    "templates": [
+      "reinhardt-pages"
+    ],
+    "pages-web-sys-full": [
+      "pages",
+      "reinhardt-pages/web-sys-full"
+    ],
+    "image-validation": [
+      "reinhardt-core/image-validation"
+    ],
+    "compressed-parsers": [
+      "core",
+      "reinhardt-core/compressed-parsers",
+      "reinhardt-rest?/compressed-parsers"
+    ],
+    "pages-nav-diag-dom": [
+      "pages",
+      "reinhardt-pages/nav-diag-dom"
+    ],
+    "uuid": [
+      "reinhardt-pages/uuid",
+      "reinhardt-di?/uuid"
+    ],
+    "chrono": [
+      "reinhardt-pages/chrono"
+    ],
+    "websockets": [
+      "routing",
+      "reinhardt-websockets",
+      "reinhardt-websockets/di",
+      "reinhardt-commands?/websockets"
+    ],
+    "websockets-pages": [
+      "websockets",
+      "reinhardt-websockets/pages-integration"
+    ],
+    "cache": [
+      "dep:reinhardt-utils",
+      "reinhardt-utils/cache"
+    ],
+    "redis-backend": [
+      "cache",
+      "reinhardt-utils/redis-backend"
+    ],
+    "i18n": [
+      "reinhardt-i18n",
+      "reinhardt-pages?/i18n"
+    ],
+    "mail": [
+      "reinhardt-mail"
+    ],
+    "sessions": [
+      "reinhardt-auth",
+      "reinhardt-auth/sessions"
+    ],
+    "session-redis": [
+      "sessions",
+      "middleware",
+      "reinhardt-middleware/session-redis"
+    ],
+    "social-auth": [
+      "auth",
+      "middleware",
+      "reinhardt-auth/social",
+      "reinhardt-middleware/social-auth"
+    ],
+    "middleware": [
+      "reinhardt-middleware",
+      "reinhardt-middleware/sessions",
+      "sessions",
+      "reinhardt-auth/middleware"
+    ],
+    "static-files": [
+      "dep:reinhardt-utils",
+      "reinhardt-utils/staticfiles"
+    ],
+    "storage": [
+      "dep:reinhardt-utils",
+      "reinhardt-utils/storage"
+    ],
+    "file-storage": [
+      "database",
+      "dep:reinhardt-storages",
+      "reinhardt-core/parsers",
+      "reinhardt-db/file-storage"
+    ],
+    "image-fields": [
+      "file-storage",
+      "reinhardt-db/image-fields"
+    ],
+    "file-storage-local": [
+      "file-storage",
+      "reinhardt-storages/local"
+    ],
+    "file-storage-s3": [
+      "file-storage",
+      "reinhardt-storages/s3"
+    ],
+    "file-storage-gcs": [
+      "file-storage",
+      "reinhardt-storages/gcs"
+    ],
+    "file-storage-azure": [
+      "file-storage",
+      "reinhardt-storages/azure"
+    ],
+    "shortcuts": [
+      "reinhardt-shortcuts"
+    ],
+    "tasks": [
+      "reinhardt-tasks"
+    ],
+    "tasks-durable": [
+      "tasks",
+      "reinhardt-tasks/durable"
+    ],
+    "streaming": [
+      "dep:reinhardt-streaming",
+      "reinhardt-streaming/kafka"
+    ],
+    "server": [
+      "reinhardt-server"
+    ],
+    "commands": [
+      "reinhardt-commands",
+      "reinhardt-commands/migrations"
+    ],
+    "commands-contract": [
+      "commands",
+      "conf",
+      "database",
+      "routing",
+      "reinhardt-commands/contract"
+    ],
+    "commands-autoreload": [
+      "commands",
+      "reinhardt-commands/autoreload"
+    ],
+    "commands-server": [
+      "commands",
+      "reinhardt-commands/server"
+    ],
+    "commands-shell": [
+      "commands",
+      "database",
+      "di",
+      "reinhardt-commands/shell"
+    ],
+    "introspect": [
+      "reinhardt-commands/introspect"
+    ],
+    "conf": [
+      "reinhardt-conf"
+    ],
+    "core": [
+      "reinhardt-core/exception",
+      "reinhardt-core/validators",
+      "reinhardt-apps",
+      "dep:reinhardt-http",
+      "dep:inventory"
+    ],
+    "rest": [
+      "reinhardt-rest",
+      "reinhardt-rest/serializers",
+      "reinhardt-rest/parsers"
+    ],
+    "messages": [
+      "reinhardt-core/messages"
+    ],
+    "signals": [
+      "reinhardt-core/signals"
+    ],
+    "di": [
+      "reinhardt-di",
+      "reinhardt-di/params",
+      "reinhardt-di/macros",
+      "reinhardt-db?/di",
+      "reinhardt-grpc?/di",
+      "reinhardt-tasks?/di"
+    ],
+    "test": [
+      "reinhardt-test",
+      "reinhardt-pages?/testing"
+    ],
+    "testcontainers": [
+      "test",
+      "reinhardt-test/testcontainers",
+      "reinhardt-commands?/testcontainers"
+    ],
+    "server-fn-test": [
+      "test",
+      "reinhardt-test/server-fn-test"
+    ],
+    "msw": [
+      "test",
+      "pages",
+      "reinhardt-test/msw",
+      "reinhardt-pages/msw"
+    ],
+    "openapi": [
+      "core",
+      "reinhardt-rest",
+      "reinhardt-rest/openapi",
+      "reinhardt-views?/openapi",
+      "rest",
+      "dep:inventory"
+    ],
+    "openapi-swagger-ui": [
+      "openapi",
+      "reinhardt-rest/openapi-swagger-ui"
+    ],
+    "openapi-router": [
+      "reinhardt-openapi",
+      "openapi",
+      "reinhardt-commands/openapi-router"
+    ],
+    "reinhardt-browsable-api": [
+      "reinhardt-rest",
+      "reinhardt-rest/browsable-api",
+      "reinhardt-views?/browsable-api"
+    ],
+    "browsable-api": [
+      "reinhardt-browsable-api"
+    ],
+    "client-router": [
+      "routing",
+      "reinhardt-urls/client-router"
+    ],
+    "routing": [
+      "dep:reinhardt-urls",
+      "reinhardt-urls/routers",
+      "reinhardt-urls/routers-macros"
+    ],
+    "viewset-routing": [
+      "routing",
+      "reinhardt-urls/viewsets"
+    ],
+    "dentdelion": [
+      "reinhardt-dentdelion"
+    ],
+    "deeplink": [
+      "reinhardt-deeplink"
+    ],
+    "dispatch": [
+      "reinhardt-dispatch"
+    ],
+    "grpc": [
+      "di",
+      "routing",
+      "reinhardt-grpc",
+      "reinhardt-grpc?/di",
+      "reinhardt-urls/grpc",
+      "reinhardt-commands?/grpc"
+    ],
+    "full": [
+      "standard",
+      "conf",
+      "database",
+      "db-pgvector",
+      "auth",
+      "argon2-hasher",
+      "bcrypt-hasher",
+      "admin",
+      "graphql",
+      "websockets",
+      "cache",
+      "i18n",
+      "mail",
+      "sessions",
+      "social-auth",
+      "static-files",
+      "storage",
+      "commands",
+      "commands-contract",
+      "commands-autoreload",
+      "commands-shell",
+      "test",
+      "reinhardt-db/database-full",
+      "reinhardt-core/core-full",
+      "reinhardt-rest/rest-full",
+      "reinhardt-pages/pages-full",
+      "reinhardt-urls/urls-full",
+      "reinhardt-views/views-full",
+      "reinhardt-auth/auth-full",
+      "reinhardt-di/di-full",
+      "reinhardt-utils/utils-full",
+      "reinhardt-server/server-full",
+      "reinhardt-apps/full",
+      "reinhardt-commands/full",
+      "reinhardt-forms/full",
+      "reinhardt-http/full",
+      "reinhardt-i18n/full",
+      "reinhardt-mail/full",
+      "reinhardt-shortcuts/full",
+      "reinhardt-tasks/full",
+      "reinhardt-test/full",
+      "websockets-pages",
+      "reinhardt-websockets/full",
+      "reinhardt-middleware/full",
+      "reinhardt-graphql/full",
+      "deeplink",
+      "dispatch",
+      "grpc",
+      "reinhardt-deeplink/full",
+      "reinhardt-dispatch/full",
+      "reinhardt-grpc/full",
+      "dentdelion",
+      "client-router",
+      "image-validation",
+      "openapi-swagger-ui",
+      "openapi-router"
+    ],
+    "api-only": [
+      "minimal",
+      "viewset-routing",
+      "reinhardt-rest",
+      "reinhardt-rest/serializers",
+      "dep:reinhardt-views",
+      "reinhardt-views/viewsets",
+      "reinhardt-auth",
+      "reinhardt-rest/parsers",
+      "reinhardt-pages",
+      "reinhardt-rest/versioning",
+      "reinhardt-rest/metadata",
+      "reinhardt-rest/negotiation",
+      "reinhardt-rest/pagination",
+      "reinhardt-rest/filters",
+      "reinhardt-rest/throttling"
+    ],
+    "graphql-server": [
+      "minimal",
+      "reinhardt-auth",
+      "graphql",
+      "database"
+    ],
+    "websocket-server": [
+      "minimal",
+      "reinhardt-auth",
+      "websockets",
+      "cache"
+    ],
+    "cli-tools": [
+      "database",
+      "reinhardt-db",
+      "reinhardt-db/migrations",
+      "reinhardt-tasks",
+      "mail"
+    ],
+    "test-utils": [
+      "reinhardt-test",
+      "reinhardt-test/testcontainers",
+      "database"
+    ],
+    "auth-jwt": [
+      "auth",
+      "reinhardt-auth/jwt"
+    ],
+    "auth-session": [
+      "auth",
+      "reinhardt-auth/sessions",
+      "sessions"
+    ],
+    "auth-oauth": [
+      "auth",
+      "reinhardt-auth/oauth"
+    ],
+    "auth-oidc-op": [
+      "auth-oauth",
+      "reinhardt-auth/oidc-op"
+    ],
+    "auth-social": [
+      "auth-oauth",
+      "reinhardt-auth/social"
+    ],
+    "auth-token": [
+      "auth",
+      "reinhardt-auth/token"
+    ],
+    "db-postgres": [
+      "database",
+      "reinhardt-db/postgres",
+      "reinhardt-commands?/postgres",
+      "reinhardt-macros/db-postgres"
+    ],
+    "db-pgvector": [
+      "database",
+      "db-postgres",
+      "reinhardt-db/pgvector",
+      "reinhardt-admin?/pgvector",
+      "reinhardt-commands?/pgvector",
+      "reinhardt-core/pgvector",
+      "reinhardt-macros/pgvector",
+      "reinhardt-test?/pgvector"
+    ],
+    "db-mysql": [
+      "database",
+      "reinhardt-db/mysql",
+      "reinhardt-commands?/mysql",
+      "reinhardt-macros/db-mysql"
+    ],
+    "db-sqlite": [
+      "database",
+      "reinhardt-db/sqlite",
+      "reinhardt-commands?/sqlite",
+      "reinhardt-macros/db-sqlite"
+    ],
+    "db-cockroachdb": [
+      "database",
+      "reinhardt-db/cockroachdb-backend",
+      "reinhardt-commands?/postgres",
+      "reinhardt-macros/db-postgres"
+    ],
+    "middleware-cors": [
+      "reinhardt-middleware",
+      "reinhardt-middleware/cors"
+    ],
+    "middleware-compression": [
+      "reinhardt-middleware",
+      "reinhardt-middleware/compression"
+    ],
+    "middleware-security": [
+      "reinhardt-middleware",
+      "reinhardt-middleware/security"
+    ],
+    "middleware-rate-limit": [
+      "reinhardt-middleware",
+      "reinhardt-middleware/rate-limit"
+    ],
+    "middleware-auth-jwt": [
+      "reinhardt-middleware",
+      "reinhardt-middleware/auth-jwt",
+      "auth-jwt"
+    ]
+  }
+}

@@ -4,13 +4,22 @@ description: Upgrade reinhardt-web version with guided migration analysis, break
 
 # Reinhardt Version Upgrade
 
+For 0.4 application work, use the pinned
+[0.4.0-alpha.20 compatibility baseline](../compatibility/README.md).
+Do not apply historical 0.1/0.2/0.3 API examples to that target.
+
 You are guiding the user through upgrading their reinhardt-web dependency. Follow this workflow:
 
 ## Step 1: Detect Current Version
 
 Read the project's `Cargo.toml` and extract the current reinhardt version:
 
-- Look for `reinhardt = { version = "..." }` in `[dependencies]`
+- Parse the dependency tables as TOML. Accept string and inline-table entries in
+  `[dependencies]` as well as subtables such as `[dependencies.reinhardt]`.
+- Identify the facade by its package name: `reinhardt-web` (including aliases such
+  as `reinhardt` with `package = "reinhardt-web"`) or the historical `reinhardt`.
+- Check target-specific dependency tables. For `workspace = true`, resolve the
+  matching entry in the owning workspace's `[workspace.dependencies]` first.
 - Report the detected version to the user
 
 If no reinhardt dependency is found, inform the user this command is for reinhardt-web projects only.
@@ -20,7 +29,7 @@ If no reinhardt dependency is found, inform the user this command is for reinhar
 Ask the user which version they want to upgrade to:
 
 - Accept specific versions (e.g., `0.1.3`, `0.2.0`, `0.3.0`)
-- Accept `latest` — resolve via `gh release list -R kent8192/reinhardt-web --limit 1` or by reading `reinhardt/Cargo.toml` if the repo is available locally
+- Accept `latest` — resolve via `gh release list -R kent8192/reinhardt-web --limit 1` or by reading the local framework checkout's root `Cargo.toml` for `[package].version`. The pinned 0.4.0-alpha.20 checkout contains the `reinhardt-web` package and its feature graph in that root manifest, alongside `[workspace]`.
 - If the target is the same as current, inform the user and exit
 - If upgrading directly from 0.1.x to 0.3.x, warn the user this combines the 0.2.x and 0.3.x major migrations; recommend reviewing both the migration skill's "Major Version Upgrade: 0.1.x → 0.2.x" section and `skills/migration/references/0.3-upgrade.md` or the local `reinhardt/instructions/MIGRATION_0.3.md` guide before proceeding
 - If upgrading from 0.1.x to 0.2.x, warn the user this is a **major version upgrade** with extensive breaking changes, and recommend reviewing the migration skill's "Major Version Upgrade: 0.1.x → 0.2.x" section before proceeding

@@ -345,5 +345,5 @@ For the latest user model API:
 4. Read `reinhardt/crates/reinhardt-auth/src/core/hasher.rs` for PasswordHasher
 5. Read `reinhardt/crates/reinhardt-auth/src/core/permissions_mixin.rs` for PermissionsMixin
 6. Read `reinhardt/crates/reinhardt-auth/src/core/superuser_creator.rs` for SuperuserCreator
-7. Read `reinhardt/crates/reinhardt-auth/src/default_user.rs` for DefaultUser
+7. For current application user models, read the `#[user]` implementation in `reinhardt/crates/reinhardt-core/macros/src/user_attribute.rs`; `DefaultUser` is historical and requires a pre-0.2 source checkout
 8. Read `reinhardt/crates/reinhardt-auth/src/user_management.rs` for UserManager

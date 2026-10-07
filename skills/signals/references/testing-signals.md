@@ -1,164 +1,180 @@
 # Testing Signals and Tasks
 
-Patterns for testing signal receivers and background tasks in reinhardt.
+Test observable effects, inject the test doubles into the object under test,
+and verify retries against the same repository state.
 
----
+## Receiver and Task Logic
 
-## Testing Signal Receivers
-
-### Principle
-
-Test receivers in isolation — mock dependencies, verify behavior, don't rely on the full signal dispatch chain.
-
-### Basic Receiver Test
+The following application example assumes an application-owned
+`SendOrderConfirmation::new(order_id, repository)` constructor and a
+`MockOrderRepo` generated from the application's repository trait.
+`get` returns `Option<OrderDto>`; `OrderDto` has `id` and
+`notification_sent` fields. `mark_notified` records delivery.
+Import those application types, `TaskExecutor`, `Arc`, `Uuid`,
+`AtomicU32` / `Ordering`, `mockall::predicate::eq`, and
+`rstest::rstest` in the test module.
 
 ```rust
-use rstest::*;
-
 #[rstest]
 #[tokio::test]
-async fn test_order_confirmation_receiver() {
+async fn order_confirmation_uses_the_injected_repository() {
     // Arrange
-    let order_id = Uuid::new_v4();
-    let mock_repo = Arc::new(MockOrderRepo::new());
-    mock_repo.expect_get()
-        .returning(move |id| Ok(OrderDto { id, notification_sent: false, /* ... */ }));
-    mock_repo.expect_mark_notified()
+    let order_id = Uuid::now_v7();
+    let mut repository = MockOrderRepo::new();
+    repository.expect_get()
+        .with(eq(order_id))
+        .times(1)
+        .returning(|id| Ok(Some(OrderDto { id, notification_sent: false })));
+    repository.expect_mark_notified()
+        .with(eq(order_id))
+        .times(1)
         .returning(|_| Ok(()));
-
-    let task = SendOrderConfirmation::new(order_id);
+    let repository = Arc::new(repository);
+    let task = SendOrderConfirmation::new(order_id, Arc::clone(&repository));
 
     // Act
-    let result = task.execute().await;
+    task.execute().await.unwrap();
 
     // Assert
-    assert!(result.is_ok());
+    // Dropping the last mock owner verifies both exact call expectations.
+    drop(task);
+    drop(repository);
 }
 ```
 
-### Testing Idempotency
+Construct the mutable mock before putting it in `Arc`. An unused mock does
+not verify the task's behavior. Exact call expectations fail if the repository
+is bypassed, the wrong order is used, or delivery is recorded twice.
 
-Every receiver/task test MUST verify idempotency — call `execute()` twice and verify it succeeds both times without duplicating side-effects:
+### Idempotency for Retried Tasks
 
 ```rust
 #[rstest]
 #[tokio::test]
-async fn test_order_confirmation_is_idempotent() {
+async fn order_confirmation_records_delivery_once() {
     // Arrange
-    let order_id = Uuid::new_v4();
-    let call_count = Arc::new(AtomicU32::new(0));
-    let count_clone = call_count.clone();
-
-    let mock_repo = Arc::new(MockOrderRepo::new());
-    mock_repo.expect_get()
-        .returning(move |id| {
-            let sent = count_clone.load(Ordering::SeqCst) > 0;
-            Ok(OrderDto { id, notification_sent: sent, /* ... */ })
-        });
-    mock_repo.expect_mark_notified()
+    let order_id = Uuid::now_v7();
+    let recorded = Arc::new(AtomicU32::new(0));
+    let read_count = Arc::clone(&recorded);
+    let write_count = Arc::clone(&recorded);
+    let mut repository = MockOrderRepo::new();
+    repository.expect_get()
+        .with(eq(order_id))
+        .times(2)
+        .returning(move |id| Ok(Some(OrderDto {
+            id,
+            notification_sent: read_count.load(Ordering::SeqCst) > 0,
+        })));
+    repository.expect_mark_notified()
+        .with(eq(order_id))
+        .times(1)
         .returning(move |_| {
-            call_count.fetch_add(1, Ordering::SeqCst);
+            write_count.fetch_add(1, Ordering::SeqCst);
             Ok(())
         });
+    let task = SendOrderConfirmation::new(order_id, Arc::new(repository));
 
-    let task = SendOrderConfirmation::new(order_id);
+    // Act
+    task.execute().await.unwrap();
+    task.execute().await.unwrap();
 
-    // Act — execute twice
-    let result1 = task.execute().await;
-    let result2 = task.execute().await;
-
-    // Assert — both succeed, side-effect runs only once
-    assert!(result1.is_ok());
-    assert!(result2.is_ok());
+    // Assert
+    assert_eq!(recorded.load(Ordering::SeqCst), 1);
 }
 ```
 
-### Testing Signal Connection
+The application's implementation must read the injected repository and skip
+already delivered orders. If delivery crosses a separate external system,
+also verify its idempotency key or transaction/outbox contract; marking a
+repository flag alone does not prove crash-safe delivery.
 
-To verify a signal actually triggers the receiver, use `SignalSpy`:
+### Missing-Order Error
 
 ```rust
-use reinhardt::core::signals::{SignalSpy, post_save};
+#[rstest]
+#[tokio::test]
+async fn order_confirmation_rejects_missing_orders() {
+    // Arrange
+    let order_id = Uuid::now_v7();
+    let mut repository = MockOrderRepo::new();
+    repository.expect_get().with(eq(order_id)).times(1).returning(|_| Ok(None));
+    repository.expect_mark_notified().times(0);
+    let task = SendOrderConfirmation::new(order_id, Arc::new(repository));
+
+    // Act
+    let error = task.execute().await.unwrap_err();
+
+    // Assert
+    match error {
+        TaskError::ExecutionFailed(message) => assert_eq!(message, "Order not found"),
+        other => panic!("Unexpected task error: {other}"),
+    }
+}
+```
+
+The exact error message belongs to this application contract; use the
+application's actual message when adapting the example.
+
+## Signal Dispatch
+
+A fresh signal isolates middleware and connection state from other tests:
+
+```rust
+use reinhardt::core::signals::{Signal, SignalSpy};
+use rstest::rstest;
 
 #[rstest]
 #[tokio::test]
-async fn test_post_save_triggers_receiver() {
+async fn signal_dispatch_is_observed() {
     // Arrange
-    let spy = SignalSpy::<Product>::new();
-    let signal = post_save::<Product>();
+    let signal = Signal::<i32>::new_with_string("test_order_saved");
+    let spy = SignalSpy::<i32>::new();
     signal.add_middleware(spy.clone());
 
     // Act
-    signal.send(product).await.unwrap();
+    signal.send(42).await.unwrap();
 
     // Assert
     assert_eq!(spy.call_count(), 1);
 }
 ```
 
----
+This verifies dispatch through middleware. To verify a receiver's business
+effect, connect the receiver and assert its injected dependency's state.
+Tests using the global `post_save::<T>()` registry must use
+`#[serial(signals)]` and restore any registered connections/middleware;
+prefer an owned signal for isolated tests.
 
-## Testing Background Tasks
+## Persistent Enqueue Boundary
 
-### Unit Test (Task Logic)
+A real queue assertion verifies that accepted work exists with an initial
+event. This is a queue boundary test; a full application integration test must
+inject the same queue into the order flow, call that flow, and inspect the
+resulting job and payload.
 
 ```rust
+use reinhardt::tasks::{
+    DurableQueue, JobEventKind, JobSpec, JobState, SqliteDurableJobStore,
+};
+
 #[rstest]
 #[tokio::test]
-async fn test_task_execution() {
+async fn enqueue_records_pending_work() {
     // Arrange
-    let task = MyTask::new(/* params */);
+    let store = SqliteDurableJobStore::new("sqlite::memory:").await.unwrap();
+    let queue = DurableQueue::new(store);
 
     // Act
-    let result = task.execute().await;
+    let queued = queue.enqueue(JobSpec::new("send_email")).await.unwrap();
+    let persisted = queue.status(queued.id).await.unwrap();
+    let events = queue.events(queued.id).await.unwrap();
 
     // Assert
-    assert!(result.is_ok());
+    assert_eq!(persisted.state, JobState::Queued);
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].kind, JobEventKind::Enqueued);
 }
 ```
-
-### Testing Task Error Handling
-
-```rust
-#[rstest]
-#[tokio::test]
-async fn test_task_handles_not_found() {
-    // Arrange
-    let task = SendOrderConfirmation::new(Uuid::new_v4()); // Nonexistent order
-
-    // Act
-    let result = task.execute().await;
-
-    // Assert
-    assert!(matches!(result, Err(TaskError::ExecutionFailed(_))));
-}
-```
-
-### Testing with Real DB (Integration)
-
-For integration tests that verify the full signal → task flow with a real database, use TestContainers:
-
-```rust
-#[rstest]
-#[tokio::test]
-async fn test_order_creation_enqueues_task(
-    #[future] shared_db_pool: Arc<DatabasePool>,
-    order_table: (),
-) {
-    // Arrange
-    let db = shared_db_pool.await;
-    let service = OrderService::new(db.clone());
-    let input = CreateOrderInput { /* ... */ };
-
-    // Act
-    let order = service.create_order(input).await.unwrap();
-
-    // Assert — verify task was enqueued
-    // (implementation depends on task backend — use ImmediateBackend for testing)
-}
-```
-
----
 
 ## Testing Durable Job Queues (0.4.x)
 
@@ -170,7 +186,7 @@ real `SqliteDurableJobStore` and one focused lifecycle per test:
 use reinhardt::tasks::{
     DurableQueue, JobEventKind, JobSpec, JobState, SqliteDurableJobStore,
 };
-use rstest::*;
+use rstest::rstest;
 use serde_json::json;
 
 #[rstest]
@@ -240,7 +256,7 @@ let _task_id = queue.enqueue(Box::new(task), &backend).await?;
 
 ## Rules for Signal/Task Tests
 
-1. **ALWAYS test idempotency** — call the receiver/task twice
+1. **Test the retry contract** — idempotent receivers/tasks run twice against the same state; non-retryable tasks document and test their explicit policy
 2. **Use `#[rstest]`** — never plain `#[test]`
 3. **AAA pattern** with standard labels
 4. **Mock external dependencies** — don't send real emails/webhooks in tests

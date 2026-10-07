@@ -71,20 +71,25 @@ Share data through the component tree without prop drilling.
 ```rust
 use reinhardt::pages::prelude::*;
 
-// Provide context
+// Create a typed context handle and retain it for both operations.
+let theme_context: Context<Signal<String>> = Context::new();
 let theme = Signal::new("dark".to_string());
-provide_context("theme", theme);
+provide_context(&theme_context, theme);
 
 // Consume context (anywhere in the subtree)
-let theme: Signal<String> = get_context("theme").unwrap();
+let theme: Signal<String> = get_context(&theme_context).unwrap();
 ```
 
 | Function | Description |
 |----------|-------------|
-| `create_context(key, value)` | Create a new context |
-| `provide_context(key, value)` | Provide a context value |
-| `get_context::<T>(key)` | Get a context value |
-| `remove_context(key)` | Remove a context |
+| `Context::<T>::new()` | Create a typed context handle |
+| `provide_context(&context, value)` | Provide a value under that handle |
+| `get_context::<T>(&context)` | Get the value for that handle |
+| `remove_context(&context)` | Remove a value |
+
+Low-level native examples that construct Signals must run inside
+`reinhardt::pages::reactive::ReactiveScope::run(...)`. Normal Pages render and
+mount entrypoints own that scope automatically.
 
 ## Hooks API
 
@@ -421,17 +426,19 @@ use_retained_effect(
 );
 ```
 
-## watch Blocks vs Hooks
+## Reactive Rendering vs Hooks (0.4.0-alpha.20)
 
-The `page!` macro's `watch` block provides **reactive rendering** that automatically re-renders when Signal dependencies change. This is distinct from hooks.
+The `page!` macro automatically tracks Signal reads inside expressions and
+control flow. The `watch` wrapper is removed in alpha.20; rendering does not
+require an effect that manually changes DOM nodes.
 
-### When to Use watch (Not Hooks)
+### Declarative Rendering
 
 | Scenario | Use | Not |
 |----------|-----|-----|
-| Conditionally show/hide elements based on Signal | `watch { if signal.get() { ... } }` | `use_effect` |
-| Render different views based on state | `watch { match state.get() { ... } }` | `use_effect` + manual DOM |
-| Reactive list rendering | `watch { for item in items.get() { ... } }` | `use_effect` |
+| Conditionally show/hide elements based on Signal | `if signal.get() { ... }` | `use_effect` |
+| Render different views based on state | `match state.get() { ... }` | `use_effect` + manual DOM |
+| Reactive list rendering | `for item in items.get() { ... }` | `use_effect` |
 
 ### When Hooks Are Still Needed
 
@@ -446,14 +453,14 @@ The `page!` macro's `watch` block provides **reactive rendering** that automatic
 For forms, use `form!` for static expressions such as fields, labels, validation
 rules, action/server_fn, and submit button shape. Use `use_form` for dynamic
 states such as current values, dirty/touched markers, validation results, submit
-phase, and reset/submit actions. Use Signals, hooks, and `watch {}` for the
+phase, and reset/submit actions. Use Signals, hooks, and direct reactive branches for the
 surrounding display state, not as a second implementation of the form runtime.
 
-### Example: watch Replaces Manual Effect Rendering
+### Example: A Reactive Branch Replaces Manual Effect Rendering
 
 ```rust
 // AVOID: using Effect for conditional rendering
-let (show, _) = use_state(Signal::new(false));
+let (show, _) = use_state(false);
 use_effect(
     move || {
         if show.get() { /* manually update DOM */ }
@@ -471,12 +478,12 @@ page!({
 })
 ```
 
-### watch Best Practices
+### Rendering Best Practices
 
 - **Pass Signals directly** to `page!` — don't extract values before the macro
 - **Copy Signal handles directly** — the owning `ReactiveScope` controls their lifetime
-- **One expression per watch** — each block must contain exactly one `if`, `match`, or `for`
-- **Don't nest watch blocks** — use multiple sibling watch blocks instead
+- **Read Signals inside the branch** — an earlier extracted value is a snapshot
+- **Keep side effects in hooks** — rendering branches describe UI only
 
 ## Architecture Notes
 
@@ -485,7 +492,7 @@ page!({
 - **Batching**: Multiple Signal changes batch into a single update cycle via micro-tasks
 - **Memory management**: The owning `ReactiveScope` disposes its reactive nodes together
 - **Effect retention**: Keep the RAII guard for explicit ownership, or use `use_retained_effect` for component-scoped registration
-- **watch compiles to `Page::reactive()`**: The reactive closure is tracked by the runtime and re-evaluated on Signal changes
+- **Automatic reactive wrapping**: Expressions and control flow are tracked by the runtime and re-evaluated on Signal changes
 
 ## Version Differences (0.2.x)
 

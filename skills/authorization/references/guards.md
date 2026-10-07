@@ -112,7 +112,7 @@ guard!((IsAdminUser | IsStaffUser) & IsActiveUser)
 ### With `guard!` macro (recommended)
 
 ```rust
-use reinhardt::views::prelude::*;
+use reinhardt::prelude::*;
 use reinhardt::auth::prelude::*;
 
 #[get("/admin/users/", name = "admin_user_list")]

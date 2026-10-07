@@ -4,6 +4,10 @@ description: Create a new reinhardt-web project with guided feature flag selecti
 
 # Create New Reinhardt Project
 
+For 0.4 application work, use the pinned
+[0.4.0-alpha.20 compatibility baseline](../compatibility/README.md).
+Do not apply historical 0.1/0.2/0.3 API examples to that target.
+
 You are guiding the user through creating a new reinhardt-web project. Follow this interactive workflow:
 
 ## Step 1: Project Name

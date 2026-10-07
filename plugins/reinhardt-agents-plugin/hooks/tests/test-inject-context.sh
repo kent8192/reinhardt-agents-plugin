@@ -410,7 +410,7 @@ regression_feature_implications() {
   assert_contains "$output" 'sessions'
   assert_contains "$output" 'middleware'
   assert_contains "$output" 'tasks'
-  assert_contains "$output" ':auth-method "jwt"'
+  assert_contains "$output" ':auth-method "jwt, session"'
 }
 
 regression_base_feature_implications() {
@@ -625,7 +625,7 @@ regression_full_preset_auth() {
   local app output
   app="$(make_app final-full-preset $'[dependencies]\nreinhardt = { version = "0.4.0", default-features = false, features = ["full"] }')"
   output="$(run_hook "$app" session-start)"
-  assert_contains "$output" ':auth-method "jwt, session, oauth, token"'
+  assert_contains "$output" ':auth-method "jwt, session, oauth, social/oauth, token"'
 }
 
 regression_optional_dependency_activation() {
@@ -755,7 +755,7 @@ output="$(run_hook "$direct" session-start)"
 assert_contains "$output" ':kind "baseline"'
 assert_contains "$output" ':reinhardt-version "0.4.0"'
 assert_contains "$output" ':default-features false'
-assert_contains "$output" ':features "auth, auth-session, database, db-sqlite"'
+assert_contains "$output" ':features "auth, auth-session, database, db-sqlite, sessions"'
 assert_contains "$output" ':db-backend "sqlite"'
 assert_contains "$output" ':auth-method "session"'
 
@@ -1077,7 +1077,7 @@ session_start_command='"${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}/hooks/run-hook.cmd" 
 prompt_command='"${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}/hooks/run-hook.cmd" inject-context.sh prompt'
 subagent_command='"${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}/hooks/run-hook.cmd" inject-context.sh subagent-start'
 session_end_command='"${CLAUDE_PLUGIN_ROOT:-$PLUGIN_ROOT}/hooks/run-hook.cmd" inject-context.sh session-end'
-assert_hook_mapping PostToolUse 'Write|Edit' "$anti_pattern_command"
+assert_hook_mapping PostToolUse 'Write|Edit|apply_patch' "$anti_pattern_command"
 assert_hook_mapping PostToolUse 'Read|Glob|Grep|Edit|Write|Bash' "$tool_command"
 assert_hook_mapping SessionStart '' "$session_start_command"
 assert_hook_mapping UserPromptSubmit '' "$prompt_command"

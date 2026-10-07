@@ -2,7 +2,7 @@
 
 ## App-Level URL Configuration
 
-> **Note: The `url_patterns()` convention below is removed in 0.2.x.** All URL registration uses `#[routes]` instead. The content below applies to 0.1.x only. See the [Root-Level URL Configuration](#root-level-url-configuration) section for the `#[routes]` pattern that works in both versions.
+> **Historical note:** The legacy convention below applies to 0.1.x. In 0.4.0-alpha.20, `#[url_patterns]` declares shared synchronous `UnifiedRouter` builders and `#[routes]` registers the one project inventory entrypoint. See [Root-Level URL Configuration](#root-level-url-configuration).
 
 Each app defines its routes using a `ServerRouter`. Handlers decorated with `#[get]`, `#[post]`, etc. are registered via `.endpoint()`.
 
@@ -195,8 +195,8 @@ struct EmailServiceKey;
 #[injectable(scope = "singleton")]
 async fn create_email_service(
     #[inject] config: AppConfig,
-) -> FactoryOutput<EmailServiceKey, EmailService> {
-    FactoryOutput::new(EmailService::new(&config.email_api_key))
+) -> KeyedFactoryOutput<EmailServiceKey, EmailService> {
+    KeyedFactoryOutput::new(EmailService::new(&config.email_api_key))
 }
 ```
 

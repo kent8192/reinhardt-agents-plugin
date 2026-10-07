@@ -1,10 +1,14 @@
 ---
 name: authorization
 description: Use when configuring authorization and permissions in reinhardt-web applications - covers Permission trait, Guard types, guard! macro, model/object permissions, and auth extractors
-versions: ["0.1.x", "0.2.x", "0.3.x"]
+versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.x"]
 ---
 
 # Reinhardt Authorization
+
+**0.4 baseline:** Current examples target `0.4.0-alpha.20`. Consult
+`compatibility/README.md` at the plugin root for the source pin and checks;
+explicit 0.1/0.2/0.3 sections are historical.
 
 Guide developers through authorization setup using reinhardt-auth, including permission classes, guard types, the `guard!` macro, and auth extractors.
 

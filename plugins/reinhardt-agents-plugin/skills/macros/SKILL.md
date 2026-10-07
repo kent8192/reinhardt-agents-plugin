@@ -6,6 +6,10 @@ versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.x"]
 
 # Reinhardt Macros
 
+**0.4 baseline:** Current examples target `0.4.0-alpha.20`. Consult
+`compatibility/README.md` at the plugin root for the source pin and checks;
+explicit 0.1/0.2/0.3 sections are historical.
+
 Guide developers through the use of reinhardt's procedural macros for models, views, DI, authentication, configuration, and more.
 
 ## When to Use
@@ -47,7 +51,7 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
    server-function groups
 8. In 0.4.x, use `#[loader]` for route entry data
 
-> **0.2.x note:** `#[url_patterns]` is removed in 0.2.x — use `#[routes]` for all URL registration.
+> **Version note:** `#[url_patterns]` was removed in 0.2.x and reintroduced in 0.4.0-alpha.20 for target-neutral `UnifiedRouter` declarations. Keep `#[routes]` on the single inventory entrypoint; both attributes can be stacked.
 
 ### Component-Scoped Styles
 
@@ -66,7 +70,7 @@ Guide developers through the use of reinhardt's procedural macros for models, vi
 1. Use `#[inject]` on handler parameters to receive dependencies
 2. Use `#[injectable]` on structs for auto-registration (auto-derives `Clone`)
 3. Use `#[injectable]` on async provider functions for factory-based registration
-4. Use `#[injectable_key]` with `FactoryOutput<K, T>` when the provider output type is not a unique dependency identity
+4. On 0.4.x, use `#[injectable_key]` with `KeyedFactoryOutput<K, T>` (use `FactoryOutput<K, T>` only on 0.3.x) when the provider output type is not a unique dependency identity
 5. Use `#[use_inject]` to enable `#[inject]` in non-handler async functions
 
 ### Server Hooks

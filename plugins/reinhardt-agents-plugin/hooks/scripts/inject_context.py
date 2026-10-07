@@ -497,16 +497,170 @@ def default_feature_graph(
     return forwarded, activated_dependencies
 
 
-def expand_features(features: set[str]) -> set[str]:
+def allows_04_family(requirement: str) -> bool:
+    """Recognize stable 0.4 ranges and ranges selecting the pinned alpha.20."""
+    lower, lower_inclusive = (0, 4, 0), True
+    upper, upper_inclusive = (0, 5, 0), False
+    stable_possible = True
+    pinned_core = (0, 4, 0)
+    pinned_pre = (0, ((1, "alpha"), (0, 20)))
+    pinned_matches = True
+    prerelease_compatible = False
+
+    def prerelease_key(value):
+        if value is None:
+            return (1, ())  # A stable release sorts after every prerelease.
+        return (0, tuple((0, int(part)) if part.isdigit() else (1, part)
+                         for part in value.split(".")))
+
+    def matches_pinned(operator, numeric, pre):
+        prefix_matches = pinned_core[:len(numeric)] == tuple(numeric)
+        exact = prefix_matches and pinned_pre == pre
+        if operator in {"=", "wildcard"}:
+            return exact
+        if operator in {">", ">=", "<", "<="}:
+            prefix = pinned_core[:len(numeric)]
+            value = tuple(numeric)
+            greater = prefix > value or (prefix == value and len(numeric) == 3
+                                        and pinned_pre > pre)
+            less = prefix < value or (prefix == value and len(numeric) == 3
+                                     and pinned_pre < pre)
+            return {">": greater, ">=": exact or greater,
+                    "<": less, "<=": exact or less}[operator]
+        if pinned_core[0] != numeric[0]:
+            return False
+        if operator == "~":
+            if len(numeric) > 1 and pinned_core[1] != numeric[1]:
+                return False
+            if len(numeric) == 3 and pinned_core[2] != numeric[2]:
+                return pinned_core[2] > numeric[2]
+            return pinned_pre >= pre
+        if len(numeric) == 1:
+            return True
+        if len(numeric) == 2:
+            return (pinned_core[1] >= numeric[1] if numeric[0] > 0
+                    else pinned_core[1] == numeric[1])
+        if numeric[0] > 0:
+            if pinned_core[1:] != tuple(numeric[1:]):
+                return pinned_core[1:] > tuple(numeric[1:])
+        elif numeric[1] > 0:
+            if pinned_core[1] != numeric[1]:
+                return False
+            if pinned_core[2] != numeric[2]:
+                return pinned_core[2] > numeric[2]
+        elif pinned_core[1:] != tuple(numeric[1:]):
+            return False
+        return pinned_pre >= pre
+
+    def restrict(low=None, low_inclusive=True, high=None, high_inclusive=False):
+        nonlocal lower, lower_inclusive, upper, upper_inclusive
+        if low is not None:
+            if low > lower:
+                lower, lower_inclusive = low, low_inclusive
+            elif low == lower:
+                lower_inclusive &= low_inclusive
+        if high is not None:
+            if high < upper:
+                upper, upper_inclusive = high, high_inclusive
+            elif high == upper:
+                upper_inclusive &= high_inclusive
+
+    for comparator in requirement.split(","):
+        match = re.fullmatch(
+            r"\s*(>=|<=|>|<|=|\^|~)?\s*"
+            r"([0-9]+|[xX*])(?:\.([0-9]+|[xX*]))?"
+            r"(?:\.([0-9]+|[xX*]))?(?:-([0-9A-Za-z.-]+))?"
+            r"(?:\+[0-9A-Za-z.-]+)?\s*", comparator
+        )
+        if match is None:
+            return False
+        operator, major, minor, patch, prerelease = match.groups()
+        parts = (major, minor, patch)
+        numeric = []
+        wildcard = False
+        for index, part in enumerate(parts):
+            if part is None or part in {"*", "x", "X"}:
+                wildcard |= part is not None
+            elif len(numeric) != index:
+                # Reject numeric components after a wildcard or omitted component.
+                return False
+            else:
+                numeric.append(int(part))
+        if prerelease is not None and (
+            len(numeric) != 3 or wildcard
+            or any(not part or (part.isdigit() and len(part) > 1 and part.startswith("0"))
+                   for part in prerelease.split("."))
+        ):
+            return False
+        pre = prerelease_key(prerelease)
+        pinned_matches &= matches_pinned("wildcard" if wildcard and operator is None else operator or "^",
+                                         numeric, pre) if numeric else False
+        prerelease_compatible |= tuple(numeric) == pinned_core and prerelease is not None
+        if not numeric:
+            if operator is not None:
+                return False
+            continue
+        value = tuple(numeric + [0] * (3 - len(numeric)))
+        last = len(numeric) - 1
+        next_prefix = tuple(numeric[:last] + [numeric[last] + 1] + [0] * (2 - last))
+        if wildcard and operator in {None, "="}:
+            restrict(value, high=next_prefix)
+        elif operator in {None, "^"}:
+            first_nonzero = next((i for i, part in enumerate(numeric) if part), last)
+            ceiling = tuple(numeric[:first_nonzero] + [numeric[first_nonzero] + 1]
+                            + [0] * (2 - first_nonzero))
+            restrict(value, high=ceiling)
+        elif operator == "~":
+            ceiling = (value[0] + 1, 0, 0) if len(numeric) == 1 else (value[0], value[1] + 1, 0)
+            restrict(value, high=ceiling)
+        elif operator == "=":
+            stable_possible &= prerelease is None
+            restrict(value, high=value if len(numeric) == 3 else next_prefix,
+                     high_inclusive=len(numeric) == 3)
+        elif operator == ">=":
+            restrict(value)
+        elif operator == ">":
+            restrict(value if len(numeric) == 3 else next_prefix,
+                     low_inclusive=len(numeric) != 3 or prerelease is not None)
+        elif operator == "<":
+            restrict(high=value)
+        elif operator == "<=":
+            restrict(high=value if len(numeric) == 3 else next_prefix,
+                     high_inclusive=len(numeric) == 3 and prerelease is None)
+    first = lower if lower_inclusive else (lower[0], lower[1], lower[2] + 1)
+    stable_matches = stable_possible and (first < upper or (first == upper and upper_inclusive))
+    return stable_matches or (pinned_matches and prerelease_compatible)
+
+
+def alpha20_features(version: str | None) -> dict[str, list[str]] | None:
+    # Use the snapshot for stable 0.4 ranges or ranges that allow its pinned alpha.
+    if version is None or not allows_04_family(version):
+        return None
+    snapshot = Path(__file__).resolve().parents[2] / "compatibility/reinhardt-web-alpha20.json"
+    try:
+        return json.loads(snapshot.read_text())["features"]
+    except (OSError, ValueError, KeyError):
+        return None
+
+
+def feature_tokens(features: set[str], graph: dict) -> set[str]:
     expanded = set(features)
     pending = list(features)
     while pending:
         feature = pending.pop()
-        additions = set(PRESET_FEATURES.get(feature, set()))
-        for addition in additions - expanded:
+        for addition in set(graph.get(feature, [])) - expanded:
             expanded.add(addition)
             pending.append(addition)
     return expanded
+
+
+def expand_features(features: set[str], version: str | None = None) -> set[str]:
+    graph = alpha20_features(version)
+    if graph is None:
+        return feature_tokens(features, PRESET_FEATURES)
+    # Dependency forwarding tokens are capabilities, not facade feature names.
+    tokens = feature_tokens(features, graph)
+    return {token for token in tokens if token in graph or token in features}
 
 
 def dependency_metadata(manifest: dict, workspace: dict) -> dict | None:
@@ -557,14 +711,23 @@ def dependency_metadata(manifest: dict, workspace: dict) -> dict | None:
         )
         features.update(forwarded_by_dependency.get(name, set()))
 
-    if default_features or {"default", "standard"} & features:
-        features.update(DEFAULT_FEATURES)
-    features = expand_features(features)
+    graph = alpha20_features(version)
+    if graph is None:
+        if default_features or {"default", "standard"} & features:
+            features.update(DEFAULT_FEATURES)
+        tokens = set()
+    else:
+        if default_features:
+            features.add("default")
+        tokens = feature_tokens(features, graph)
+    features = expand_features(features, version)
     source = "path" if saw_path else "git" if saw_git else "unknown"
     return {
         "version": version or source,
         "default_features": default_features,
         "features": features,
+        "dependency_tokens": tokens,
+        "feature_baseline": "0.4.0-alpha.20" if graph is not None else "legacy presets",
     }
 
 
@@ -695,7 +858,15 @@ def application_metadata() -> dict | None:
         )
         if feature in features
     ]
-    if not auth and "auth" in features:
+    tokens = metadata["dependency_tokens"]
+    for dependency_feature, label in (
+        ("jwt", "jwt"), ("sessions", "session"), ("oauth", "oauth"),
+        ("social", "social/oauth"), ("token", "token")
+    ):
+        if ("reinhardt-auth/" + dependency_feature in tokens
+                or "reinhardt-auth/auth-full" in tokens) and label not in auth:
+            auth.append(label)
+    if not auth and ("auth" in features or "reinhardt-auth" in tokens):
         auth.append("auth (default)")
     metadata["auth"] = ", ".join(auth) or "none"
     metadata["app_count"] = len(list_apps())
@@ -710,6 +881,7 @@ def render_baseline(metadata: dict) -> str:
             '  :kind "baseline"',
             '  :project-type "reinhardt-web application"',
             f'  :reinhardt-version "{sanitize_bounded(metadata["version"], 128)}"',
+            f'  :feature-baseline "{metadata["feature_baseline"]}"',
             f"  :default-features {default_features}",
             f'  :features "{sanitize(metadata["feature_text"])}"',
             f'  :db-backend "{sanitize(metadata["database"])}"',

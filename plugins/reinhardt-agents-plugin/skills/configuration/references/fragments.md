@@ -16,16 +16,16 @@ Fragments are independent configuration sections that compose into `ProjectSetti
 | `CorsSettings` | `[cors]` | CORS configuration |
 | `SecuritySettings` | `[core.security]` | Security (nested under core) |
 
-## Creating Custom Fragments
+## Creating Custom Fragments (0.4.0-alpha.20)
 
-Use the `#[settings]` macro on a struct to implement the `SettingsFragment` trait:
+Use fragment mode for an application-owned root section. Composition mode,
+`#[settings(core: CoreSettings | myapp: MyAppSettings)]`, is a separate operation.
 
 ```rust
-use reinhardt::conf::settings::fragment::SettingsFragment;
 use reinhardt::settings;
 use serde::{Deserialize, Serialize};
 
-#[settings]
+#[settings(fragment = true, section = "myapp", validate = false)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MyAppSettings {
     pub api_key: String,
@@ -36,6 +36,10 @@ pub struct MyAppSettings {
 
 fn default_timeout() -> u64 { 30 }
 ```
+
+This example supplies custom validation below, so it opts out of the generated
+default validator with `validate = false`. Without custom validation, omit that
+option and retain the generated no-op implementation.
 
 ### Registering in ProjectSettings
 
@@ -71,67 +75,50 @@ pub async fn status() -> ViewResult<Response> {
 }
 ```
 
-## Validation
+## Validation (0.4.0-alpha.20)
 
-Fragments can implement `SettingsValidation` for custom validation logic. Validation runs automatically during `build_composed()`.
+Implement `SettingsValidation` on the application-owned fragment. Its one
+method accepts the environment profile. The fragment macro bridges it into
+composition validation when `validate = false` is set.
 
 ```rust
+use reinhardt::conf::settings::{
+    fragment::SettingsValidation,
+    profile::Profile,
+    validation::{ValidationError, ValidationResult},
+};
+
 impl SettingsValidation for MyAppSettings {
-    fn validate(&self) -> ValidationResult {
+    fn validate(&self, profile: &Profile) -> ValidationResult {
         if self.max_retries == 0 {
-            return Err(ValidationError::new("max_retries must be > 0"));
+            return Err(ValidationError::InvalidValue {
+                key: "myapp.max_retries".into(),
+                message: "must be greater than zero".into(),
+            });
         }
-        Ok(())
-    }
-}
-```
-
-### Common Validation Patterns
-
-```rust
-impl SettingsValidation for MyAppSettings {
-    fn validate(&self) -> ValidationResult {
-        // Required field check
-        if self.api_key.is_empty() {
-            return Err(ValidationError::new("api_key must not be empty"));
-        }
-
-        // Range check
         if self.timeout_secs > 300 {
-            return Err(ValidationError::new("timeout_secs must be <= 300"));
+            return Err(ValidationError::Constraint(
+                "myapp.timeout_secs must be at most 300".into(),
+            ));
         }
-
-        Ok(())
-    }
-}
-```
-
-## Profile-Specific Validation
-
-Fragments can validate differently based on the environment profile. For example, requiring a real secret key in production but allowing a placeholder in development:
-
-```rust
-impl SettingsValidation for CoreSettings {
-    fn validate_with_profile(&self, profile: &Profile) -> ValidationResult {
-        match profile {
-            Profile::Production => {
-                if self.secret_key.starts_with("dev-") {
-                    return Err(ValidationError::new(
-                        "production secret_key must not use dev- prefix"
-                    ));
-                }
-                if self.debug {
-                    return Err(ValidationError::new(
-                        "debug must be false in production"
-                    ));
-                }
-            }
-            _ => {}
+        if *profile == Profile::Production && self.api_key.starts_with("dev-") {
+            return Err(ValidationError::Security(
+                "production myapp.api_key must not use a development key".into(),
+            ));
+        }
+        if self.api_key.is_empty() {
+            return Err(ValidationError::MissingRequired("myapp.api_key".into()));
         }
         Ok(())
     }
 }
 ```
+
+There is no `validate_with_profile` method or `ValidationError::new` constructor.
+Use supported error variants. Do not implement this upstream trait on
+`CoreSettings` in an application: both types would be foreign. Put extra
+application policy in an owned fragment or validate the composed settings at
+the application startup boundary.
 
 ## Fragment Composition Patterns
 

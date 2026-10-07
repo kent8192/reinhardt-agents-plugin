@@ -6,6 +6,10 @@ versions: ["0.1.x", "0.2.x", "0.3.x", "0.4.x"]
 
 # Reinhardt Pages (WASM Frontend)
 
+**0.4 baseline:** Current examples target `0.4.0-alpha.20`. Consult
+`compatibility/README.md` at the plugin root for the source pin and checks;
+explicit 0.1/0.2/0.3 sections are historical.
+
 Guide developers through building WASM frontend applications using reinhardt-pages.
 
 ## When to Use
@@ -54,7 +58,7 @@ Guide developers through building WASM frontend applications using reinhardt-pag
 - Event handlers in `page!` are auto-handled across platforms (no manual `#[cfg(wasm)]` needed)
 - Standard intrinsic events infer exact 0.4.x payload types such as `ClickEvent`, `InputEvent`, and `ChangeEvent`. Use `raw_event_handler` with `platform::Event` only for low-level or custom events; component event props keep their declared type.
 - Target extraction helpers such as `value()`, `checked()`, `selected_values()`, and `files()` return `Result` and read an owned `current_target` snapshot that remains valid across `await`.
-- Use `watch {}` for reactive conditionals (not static `if` with extracted Signal values)
+- In 0.4.0-alpha.20, write reactive `if`, `match`, and `for` directly in `page!`; `watch {}` is removed. Read Signals inside the macro rather than extracting their values before rendering.
 - Use route reverse helpers for `href`, `action`, and `formaction` when named routes exist; avoid hardcoded paths
 - For catalog-backed Pages UI in 0.4.x, enable both facade features `pages` and `i18n`, then use `I18nContext` with `t!` (or `tr` / `tn` / `tp` / `tnp`) instead of per-label asynchronous translation resources
 - In 0.4.x, keep locale updates validated through `I18nContext::set_locale()` / `locale()`; do not depend on the removed writable `locale_signal()` accessor
