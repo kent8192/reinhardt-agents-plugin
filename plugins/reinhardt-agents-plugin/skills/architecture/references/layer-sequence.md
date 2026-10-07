@@ -314,24 +314,24 @@ Write tests at three levels: unit, integration, and API.
 2. **Integration tests** — test with real database via TestContainers
 3. **API tests** — test HTTP endpoints end-to-end
 
-**Unit test example (endpoint-local helper):**
+**Unit test example (input validation):**
 
 ```rust
 #[rstest]
-fn test_build_product_success() {
+#[case("Test Product", true)]
+#[case("", false)]
+fn test_product_input_validation(#[case] name: &str, #[case] valid: bool) {
     // Arrange
     let input = SharedProductCreateInput {
-        name: "Test Product".into(),
+        name: name.into(),
         description: None,
     };
 
     // Act
-    let result = build_product(input);
+    let result = input.validate();
 
     // Assert
-    assert!(result.is_ok());
-    let product = result.unwrap();
-    assert_eq!(product.name, "Test Product");
+    assert_eq!(result.is_ok(), valid);
 }
 ```
 
