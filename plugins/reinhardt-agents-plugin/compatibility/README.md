@@ -13,7 +13,9 @@ instructions for a 0.4 application. Read the project's manifest first.
 
 `reinhardt-web-alpha20.json` contains the release's facade feature definitions.
 The context hook expands local feature edges for 0.4 declarations from this
-graph and reports `:feature-baseline "0.4.0-alpha.20"`.
+graph and reports `:feature-baseline "0.4.0-alpha.20"`. Cargo requirements are
+intersected with the 0.4 family: shortened requirements such as `0.4` are
+recognized, while ranges ending below `0.4.0` retain their legacy graph.
 Forwarded dependency features infer authentication capabilities and are not
 mislabeled as facade flags. Availability does not prove that the application
 configured a particular authentication method. Unversioned path/git dependencies

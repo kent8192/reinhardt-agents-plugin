@@ -497,9 +497,83 @@ def default_feature_graph(
     return forwarded, activated_dependencies
 
 
+def allows_04_family(requirement: str) -> bool:
+    """Intersect Cargo comparator ranges with the 0.4 release family."""
+    lower, lower_inclusive = (0, 4, 0), True
+    upper, upper_inclusive = (0, 5, 0), False
+
+    def restrict(low=None, low_inclusive=True, high=None, high_inclusive=False):
+        nonlocal lower, lower_inclusive, upper, upper_inclusive
+        if low is not None:
+            if low > lower:
+                lower, lower_inclusive = low, low_inclusive
+            elif low == lower:
+                lower_inclusive &= low_inclusive
+        if high is not None:
+            if high < upper:
+                upper, upper_inclusive = high, high_inclusive
+            elif high == upper:
+                upper_inclusive &= high_inclusive
+
+    for comparator in requirement.split(","):
+        match = re.fullmatch(
+            r"\s*(>=|<=|>|<|=|\^|~)?\s*"
+            r"([0-9]+|[xX*])(?:\.([0-9]+|[xX*]))?"
+            r"(?:\.([0-9]+|[xX*]))?(?:-[0-9A-Za-z.-]+)?"
+            r"(?:\+[0-9A-Za-z.-]+)?\s*", comparator
+        )
+        if match is None:
+            return False
+        operator, *parts = match.groups()
+        numeric = []
+        wildcard = False
+        for index, part in enumerate(parts):
+            if part is None or part in {"*", "x", "X"}:
+                wildcard |= part is not None
+            elif len(numeric) != index:
+                # Reject numeric components after a wildcard or omitted component.
+                return False
+            else:
+                numeric.append(int(part))
+        if not numeric:
+            if operator is not None:
+                return False
+            continue
+        value = tuple(numeric + [0] * (3 - len(numeric)))
+        last = len(numeric) - 1
+        next_prefix = tuple(numeric[:last] + [numeric[last] + 1] + [0] * (2 - last))
+        if wildcard:
+            if operator not in {None, "="}:
+                return False
+            restrict(value, high=next_prefix)
+        elif operator in {None, "^"}:
+            first_nonzero = next((i for i, part in enumerate(numeric) if part), last)
+            ceiling = tuple(numeric[:first_nonzero] + [numeric[first_nonzero] + 1]
+                            + [0] * (2 - first_nonzero))
+            restrict(value, high=ceiling)
+        elif operator == "~":
+            ceiling = (value[0] + 1, 0, 0) if len(numeric) == 1 else (value[0], value[1] + 1, 0)
+            restrict(value, high=ceiling)
+        elif operator == "=":
+            restrict(value, high=value if len(numeric) == 3 else next_prefix,
+                     high_inclusive=len(numeric) == 3)
+        elif operator == ">=":
+            restrict(value)
+        elif operator == ">":
+            restrict(value if len(numeric) == 3 else next_prefix,
+                     low_inclusive=len(numeric) != 3)
+        elif operator == "<":
+            restrict(high=value)
+        elif operator == "<=":
+            restrict(high=value if len(numeric) == 3 else next_prefix,
+                     high_inclusive=len(numeric) == 3)
+    first = lower if lower_inclusive else (lower[0], lower[1], lower[2] + 1)
+    return first < upper or (first == upper and upper_inclusive)
+
+
 def alpha20_features(version: str | None) -> dict[str, list[str]] | None:
-    # A pinned graph is authoritative for 0.4; older families retain their presets.
-    if version is None or not re.search(r"(?<![0-9])0\.4\.", version):
+    # A pinned graph describes the 0.4 family, including explicit alpha versions.
+    if version is None or not allows_04_family(version):
         return None
     snapshot = Path(__file__).resolve().parents[2] / "compatibility/reinhardt-web-alpha20.json"
     try:

@@ -41,6 +41,28 @@ class Alpha20Features(unittest.TestCase):
         self.assertEqual(hook.expand_features({"auth-session"}, "0.3.0"),
                          {"auth-session", "auth"})
 
+    def test_context_selects_graph_from_the_allowed_version_family(self):
+        requirements = {
+            "0.4": True, "^0.4": True, "~0.4": True,
+            "0.4.*": True, "=0.4.1": True,
+            ">=0.3, <0.4.0": False, ">=0.3, <0.4": False,
+            ">=0.4, <0.5": True, ">0.4.0, <0.4.2": True,
+            ">0.4.0, <0.4.1": False, "<=0.4": True,
+            "^0": True, "~0": True, "0.*": True,
+            ">0.4": False, "^0.0": False, "=0.4": True,
+            ">=0.5, <0.6": False, ">=0.5, <0.4.0": False,
+            "0.3": False, "~0.3": False,
+        }
+        for requirement, current in requirements.items():
+            with self.subTest(requirement=requirement):
+                metadata = hook.dependency_metadata({"dependencies": {"reinhardt": {
+                    "package": "reinhardt-web", "version": requirement,
+                    "default-features": False, "features": ["minimal"],
+                }}}, {})
+                self.assertEqual(metadata["feature_baseline"],
+                                 "0.4.0-alpha.20" if current else "legacy presets")
+                self.assertEqual("routing" in metadata["features"], current)
+
     def test_published_manifests_are_readable_and_features_exist(self):
         document = (ROOT / "skills/scaffolding/references/feature-flags.md").read_text()
         manifests = re.findall(r"```toml\n(.*?)```", document, re.S)
