@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Add native/WASM compatibility consumers and hook/manifest regression checks
+- Add a pinned facade feature graph and hook/manifest regression checks
   with an explicit framework version and source commit.
 
 ### Changed

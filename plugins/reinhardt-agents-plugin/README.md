@@ -65,7 +65,7 @@ older-version guidance for stable projects and migrations:
 | **0.2.x** | Legacy migration source | `reinhardt-web-v0.2.x` releases |
 | **0.1.x** | Legacy migration source | `reinhardt-web-v0.1.3` and earlier tags |
 
-The 0.4.x guidance is verified against [Reinhardt Web 0.4.0-alpha.20](https://github.com/kent8192/reinhardt-web/tree/81dba7c84d1dcdb26b6b2e6a56a0212b0c9e650f), not the moving branch tip. See [compatibility checks](compatibility/README.md) for the pinned feature graph and native/WASM consumer fixtures.
+The 0.4.x guidance is verified against [Reinhardt Web 0.4.0-alpha.20](https://github.com/kent8192/reinhardt-web/tree/81dba7c84d1dcdb26b6b2e6a56a0212b0c9e650f), not the moving branch tip. See [compatibility checks](compatibility/README.md) for the pinned feature graph and hook/manifest regression checks.
 
 Skills use inline version markers — `**(0.1.x)**` / `**(0.2.x)**` / `**(0.3.x)**` / `**(0.4.x)**` — where APIs diverge between versions. Check your project's `Cargo.toml` to determine which version family applies.
 
