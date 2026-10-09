@@ -49,9 +49,26 @@ plugin_hooks = true
 
 ### Claude Code
 
+Add this repository as a plugin marketplace and install the plugin in one step:
+
 ```bash
-claude install kent8192/reinhardt-agents-plugin
+claude plugin install reinhardt-agents-plugin --marketplace kent8192/reinhardt-agents-plugin
 ```
+
+Or register the marketplace first and install from it:
+
+```bash
+claude plugin marketplace add kent8192/reinhardt-agents-plugin
+claude plugin install reinhardt-agents-plugin@reinhardt-agents-plugin-dev
+```
+
+The marketplace is registered under the name declared in
+`.claude-plugin/marketplace.json` (`reinhardt-agents-plugin-dev`), so that is the
+suffix to use in `plugin@marketplace` identifiers such as
+`claude plugin enable reinhardt-agents-plugin@reinhardt-agents-plugin-dev`.
+The plugin is loaded from the next Claude Code session after installation.
+
+> `claude install` installs the Claude Code native build, not plugins.
 
 ## Supported Versions
 
